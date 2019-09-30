@@ -1,0 +1,3 @@
+#!/bin/bash
+gcc -o moptop moptop.c mop_utl.c mop_fts.c mop_log.c mop_cam.c mop_rot.c mop_opt.c -O3 -march=native -mtune=native -lm -lrt -lpthread -latcore -latutility -lcfitsio -lpi_pi_gcs2 -L/star-2018A/lib/ -I/star-2018A/include -I/usr/local/PI/include
+

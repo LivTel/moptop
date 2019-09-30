@@ -1,0 +1,10 @@
+#!/bin/bash
+#Slow version
+#gcc -o moptop1 moptop.c mop_utl.c mop_fts.c mop_log.c mop_cam.c mop_rot.c mop_opt.c -O0 -lm -lrt -lpthread -latcore1 -latutility1 -lcfitsio -lpi_pi_gcs2 -L/star-2018A/lib/ -I/star-2018A/include -I/usr/local/PI/include
+#gcc -o moptop1 moptop.c mop_utl.c mop_fts.c mop_log.c mop_cam.c mop_rot.c mop_opt.c -O0 -lm -lrt -lpthread -latcore1 -latutility1 -lcfitsio -lpi_pi_gcs2 -L/star-2018A/lib/ -I/star-2018A/include -I/usr/local/PI/include
+
+#Fully optimised
+gcc -o moptop2 moptop.c mop_utl.c mop_fts.c mop_log.c mop_cam.c mop_rot.c mop_opt.c -O3 -march=native -mtune=native -lm -lrt -lpthread -latcore1 -latutility1 -lcfitsio -lpi_pi_gcs2 -L/star-2018A/lib/ -I/star-2018A/include -I/usr/local/PI/include
+gcc -o moptop2 moptop.c mop_utl.c mop_fts.c mop_log.c mop_cam.c mop_rot.c mop_opt.c -O3 -march=native -mtune=native -lm -lrt -lpthread -latcore1 -latutility1 -lcfitsio -lpi_pi_gcs2 -L/star-2018A/lib/ -I/star-2018A/include -I/usr/local/PI/include
+sudo cp moptop1 /usr/local/bin
+sudo cp moptop2 /usr/local/bin
