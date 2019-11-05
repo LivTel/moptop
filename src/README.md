@@ -1,5 +1,8 @@
 MOPTOP source 
 
+This is a copy of the original source code written for moptop testing. This was superceded by
+the mopnet code due to reliability issues with multiple cameras Andor controlled by one control computer.
+
 build	- build script, fully optimised
 bldslow - build script, no-optimisation
 blddual - build script, dual executables moptop1 & 2
