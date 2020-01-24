@@ -1,0 +1,30 @@
+# $Header$
+
+PIROT_HOME	= pirot
+PIROT_SRC_HOME	= $(MOPTOP_SRC_HOME)/pirot
+PIROT_BIN_HOME	= $(MOPTOP_BIN_HOME)/pirot
+PIROT_DOC_HOME	= $(MOPTOP_DOC_HOME)/pirot
+
+#
+# PI rotator library
+#
+ifeq ("$(HOSTTYPE)","i386-linux") 
+PI_INCDIR	= $(LT_SRC_HOME)/moptop-nogit/PI/PI_C867/libpi_pi_gcs2_i686/include/
+PI_LIBDIR	= $(LT_SRC_HOME)/moptop-nogit/PI/PI_C867/libpi_pi_gcs2_i686/lib/
+PI_LIB		= -lpi_pi_gcs2
+else
+ifeq ("$(HOSTTYPE)","x86_64-linux") 
+PI_INCDIR	= $(LT_SRC_HOME)/moptop-nogit/PI/PI_C867/libpi_pi_gcs2_x86_64/include/
+PI_LIBDIR	= $(LT_SRC_HOME)/moptop-nogit/PI/PI_C867/libpi_pi_gcs2_x86_64/lib/
+PI_LIB		= -lpi_pi_gcs2
+else
+PI_INCDIR	= 
+PI_LIBDIR	= 
+PI_LIB		= 
+endif
+endif
+
+
+#
+# $Log$
+#

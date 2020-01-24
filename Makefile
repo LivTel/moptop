@@ -4,7 +4,7 @@
 include ../Makefile.common
 include Makefile.common
 
-DIRS 	= ccd c java 
+DIRS 	= pirot ccd c java 
 
 top:
 	@for i in $(DIRS); \
