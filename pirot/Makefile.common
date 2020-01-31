@@ -5,6 +5,8 @@ PIROT_SRC_HOME	= $(MOPTOP_SRC_HOME)/pirot
 PIROT_BIN_HOME	= $(MOPTOP_BIN_HOME)/pirot
 PIROT_DOC_HOME	= $(MOPTOP_DOC_HOME)/pirot
 
+PIROT_LIBNAME	= $(PIROT_HOME)
+
 #
 # PI rotator library
 #

@@ -4,7 +4,8 @@
 include ../Makefile.common
 include Makefile.common
 
-DIRS 	= pirot ccd c java 
+DIRS 	= pirot filter_wheel java 
+#ccd c 
 
 top:
 	@for i in $(DIRS); \
@@ -31,16 +32,6 @@ tidy:
 	do \
 		(echo tidy in $$i...; cd $$i; $(MAKE) tidy); \
 	done;
-
-backup: checkin
-	@for i in $(DIRS); \
-	do \
-		(echo backup in $$i...; cd $$i; $(MAKE) backup); \
-	done;
-	$(RM) $(RM_OPTIONS) $(TIDY_OPTIONS)
-	$(RM) $(RM_OPTIONS) */core
-	tar cvf $(BACKUP_DIR)/moptop.tar .
-	compress $(BACKUP_DIR)/moptop.tar
 
 #
 # $Log$

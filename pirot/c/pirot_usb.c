@@ -75,6 +75,8 @@ static struct USB_Struct USB_Data = {DEFAULT_CONNECTION_COUNT,-1};
  * @see #USB_Struct
  * @see #USB_Error_Number
  * @see #USB_Error_String
+ * @see pirot_general.html#PIROT_Mutex_Lock
+ * @see pirot_general.html#PIROT_Mutex_Unlock
  */
 int PIROT_USB_Open(char *device_name,int baud_rate)
 {
@@ -89,12 +91,14 @@ int PIROT_USB_Open(char *device_name,int baud_rate)
 	/* Have several attempts to connect to the rotator. The first few attempts after a reboot can fail */
 	USB_Data.Id = -1;
 	connection_count = 0;
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Lock())
 	{
 		USB_Error_Number = 2;
 		sprintf(USB_Error_String,"PIROT_USB_Open: Failed to obtain the mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 	while((USB_Data.Id < 0)&&(connection_count < USB_Data.Connection_Count))
 	{
 #if LOGGING > 0
@@ -113,12 +117,14 @@ int PIROT_USB_Open(char *device_name,int baud_rate)
 		sleep(1);
 		connection_count++;
 	}/* end while */
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Unlock())
 	{
 		USB_Error_Number = 4;
 		sprintf(USB_Error_String,"PIROT_USB_Open: Failed to release the mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 	/* if we have successfully connected the Id will be greater than -1 */
 	if(USB_Data.Id < 0)
 	{
@@ -147,8 +153,10 @@ int PIROT_USB_Open(char *device_name,int baud_rate)
 
 /**
  * Routine to close an open connection to the PI rotator, using PI_CloseConnection with the Id in USB_Data.
- * @return PI_CloseConnection has no failure mode, so the routine always returns  TRUE.
+ * @return The routine returns TRUE on success, and FALSE if it fails. 
  * @see #USB_Data
+ * @see pirot_general.html#PIROT_Mutex_Lock
+ * @see pirot_general.html#PIROT_Mutex_Unlock
  */
 int PIROT_USB_Close(void)
 {
@@ -158,7 +166,23 @@ int PIROT_USB_Close(void)
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"PIROT_USB_Close: Calling PI_CloseConnection(id=%d).",USB_Data.Id);
 #endif /* LOGGING */
+#ifdef MUTEXED
+	if(!PIROT_Mutex_Lock())
+	{
+		USB_Error_Number = 6;
+		sprintf(USB_Error_String,"PIROT_USB_Close: Failed to obtain the mutex.");
+		return FALSE;
+	}
+#endif /* MUTEXED */
 	PI_CloseConnection(USB_Data.Id);
+#ifdef MUTEXED
+	if(!PIROT_Mutex_Unlock())
+	{
+		USB_Error_Number = 7;
+		sprintf(USB_Error_String,"PIROT_USB_Close: Failed to release the mutex.");
+		return FALSE;
+	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"PIROT_USB_Close: Finished.");
 #endif /* LOGGING */

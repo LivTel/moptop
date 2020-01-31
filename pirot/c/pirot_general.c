@@ -27,9 +27,6 @@
 #include <pthread.h>
 #endif
 #include <sched.h> /* for sched_setscheduler */
-/*
-#include "pirot_driver.h"
-*/
 #include "pirot_general.h"
 #include "pirot_usb.h"
 #include "pirot_command.h"
@@ -46,8 +43,8 @@
 /**
  * Data type holding local data to pirot_general. This consists of the following:
  * <dl>
- * <dt>Mutex</dt> <dd>ptionally compiled mutex locking over sending commands down the serial link / socket / 
- *                USB connection and receiving a reply.</dd>
+ * <dt>Mutex</dt> <dd>Optionally compiled mutex locking over sending commands down the USB connection 
+ *                    and receiving a reply.</dd>
  * <dt>Log_Handler</dt> <dd>Function pointer to the routine that will log messages passed to it.</dd>
  * <dt>Log_Filter</dt> <dd>Function pointer to the routine that will filter log messages passed to it.
  * 		The funtion will return TRUE if the message should be logged, and FALSE if it shouldn't.</dd>
@@ -157,7 +154,7 @@ void PIROT_General_Error(void)
 	}
 	if(!found)
 	{
-		fprintf(stderr,"%s ErrorPIROT_General_Error:An unknown error has occured.\n",time_string);
+		fprintf(stderr,"%s PIROT_General_Error:An unknown error has occured.\n",time_string);
 	}
 }
 
@@ -276,7 +273,7 @@ void PIROT_Log_Format(int level,char *format,...)
 /**
  * Routine to log a message to a defined logging mechanism. If the string or General_Data.Log_Handler are NULL
  * the routine does not log the message. If the General_Data.Log_Filter function pointer is non-NULL, the
- * message is passed to it to determoine whether to log the message.
+ * message is passed to it to determine whether to log the message.
  * @param level An integer, used to decide whether this particular message has been selected for
  * 	logging or not.
  * @param string The message to log.

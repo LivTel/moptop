@@ -90,12 +90,14 @@ int PIROT_Command(char *command_string)
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command: Started.");
 #endif /* LOGGING */
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Lock())
 	{
 		Command_Error_Number = 15;
 		sprintf(Command_Error_String,"PIROT_Command: failed to lock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"PIROT_Command: PI_GcsCommandset(usb_id=%d,command_string=%s).",
 			 PIROT_USB_Get_ID(),command_string);
@@ -103,19 +105,23 @@ int PIROT_Command(char *command_string)
 	retval = PI_GcsCommandset(PIROT_USB_Get_ID(),command_string);
 	if(retval != TRUE)
 	{
+#ifdef MUTEXED
 		PIROT_Mutex_Unlock();
+#endif /* MUTEXED */
 		PIROT_Command_Get_PI_Library_Error(&pi_error_num,pi_error_string,STRING_LENGTH);
 		Command_Error_Number = 16;
 		sprintf(Command_Error_String,"PIROT_Command: PI_GcsCommandset failed (%d) : %s.",pi_error_num,
 			pi_error_string);
 		return FALSE;
 	}
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Unlock())
 	{
 		Command_Error_Number = 17;
 		sprintf(Command_Error_String,"PIROT_Command: failed to unlock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command: Finished.");
 #endif /* LOGGING */
@@ -169,37 +175,43 @@ int PIROT_Command_CTO(enum PIROT_COMMAND_CTO_PARAMETER_ENUM trigger_parameter,do
 		sprintf(Command_Error_String,"PIROT_Command_CTO: Invalid trigger parameter %d.",trigger_parameter);
 		return FALSE;
 	}
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Lock())
 	{
 		Command_Error_Number = 41;
 		sprintf(Command_Error_String,"PIROT_Command_CTO: failed to lock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 	trigger_output_id_list[0] = 1;
 	trigger_parameter_list[0] = trigger_parameter;
 	trigger_value_list[0] = value;
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
 			 "PIROT_Command_CTO: PI_CTO(usb_id=%d,trigger_output_id_list[0]=%d,"
-			 "trigger_parameter_list[0]=%d,trigger_value_list[0]=%d).",
+			 "trigger_parameter_list[0]=%d,trigger_value_list[0]=%.2f).",
 			 PIROT_USB_Get_ID(),trigger_output_id_list[0],trigger_parameter_list[0],trigger_value_list[0]);
 #endif /* LOGGING */
 	retval = PI_CTO(PIROT_USB_Get_ID(),trigger_output_id_list,trigger_parameter_list,trigger_value_list,1);
 	if(retval != TRUE)
 	{
+#ifdef MUTEXED
 		PIROT_Mutex_Unlock();
+#endif /* MUTEXED */
 		PIROT_Command_Get_PI_Library_Error(&pi_error_num,pi_error_string,STRING_LENGTH);
 		Command_Error_Number = 42;
 		sprintf(Command_Error_String,"PIROT_Command_CTO: PI_CTO failed (%d) : %s.",pi_error_num,
 			pi_error_string);
 		return FALSE;
 	}
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Unlock())
 	{
 		Command_Error_Number = 43;
 		sprintf(Command_Error_String,"PIROT_Command_CTO: failed to unlock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_CTO: Finished.");
 #endif /* LOGGING */
@@ -228,12 +240,14 @@ int PIROT_Command_FRF(void)
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_FRF(): Started.");
 #endif /* LOGGING */
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Lock())
 	{
 		Command_Error_Number = 38;
 		sprintf(Command_Error_String,"PIROT_Command_FRF: failed to lock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"PIROT_Command_FRF: PI_FRF(usb_id=%d,axes=%s).",
 			 PIROT_USB_Get_ID(),COMMAND_ROTATOR_AXIS);
@@ -241,19 +255,23 @@ int PIROT_Command_FRF(void)
 	retval = PI_FRF(PIROT_USB_Get_ID(),COMMAND_ROTATOR_AXIS);
 	if(retval != TRUE)
 	{
+#ifdef MUTEXED
 		PIROT_Mutex_Unlock();
+#endif /* MUTEXED */
 		PIROT_Command_Get_PI_Library_Error(&pi_error_num,pi_error_string,STRING_LENGTH);
 		Command_Error_Number = 39;
 		sprintf(Command_Error_String,"PIROT_Command_FRF: PI_FRF failed (%d) : %s.",pi_error_num,
 			pi_error_string);
 		return FALSE;
 	}
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Unlock())
 	{
 		Command_Error_Number = 40;
 		sprintf(Command_Error_String,"PIROT_Command_FRF: failed to unlock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_FRF: Finished.");
 #endif /* LOGGING */
@@ -289,12 +307,14 @@ int PIROT_Command_MOV(double position)
 			position,COMMAND_MOV_POSITION_MAX);
 		return FALSE;
 	}
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Lock())
 	{
 		Command_Error_Number = 5;
 		sprintf(Command_Error_String,"PIROT_Command_MOV: failed to lock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"PIROT_Command_MOV: PI_MOV(usb_id=%d,axes=%s,position=%.2f).",
 			 PIROT_USB_Get_ID(),COMMAND_ROTATOR_AXIS,position);
@@ -302,19 +322,23 @@ int PIROT_Command_MOV(double position)
 	retval = PI_MOV(PIROT_USB_Get_ID(),COMMAND_ROTATOR_AXIS,&position);
 	if(retval != TRUE)
 	{
+#ifdef MUTEXED
 		PIROT_Mutex_Unlock();
+#endif /* MUTEXED */
 		PIROT_Command_Get_PI_Library_Error(&pi_error_num,pi_error_string,STRING_LENGTH);
 		Command_Error_Number = 9;
 		sprintf(Command_Error_String,"PIROT_Command_MOV: PI_MOV failed (%d) : %s.",pi_error_num,
 			pi_error_string);
 		return FALSE;
 	}
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Unlock())
 	{
 		Command_Error_Number = 10;
 		sprintf(Command_Error_String,"PIROT_Command_MOV: failed to unlock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_MOV: Finished.");
 #endif /* LOGGING */
@@ -349,12 +373,14 @@ int PIROT_Command_SVO(int enable)
 		sprintf(Command_Error_String,"PIROT_Command_SVO: enable %d was not a boolean.",enable);
 		return FALSE;
 	}
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Lock())
 	{
 		Command_Error_Number = 35;
 		sprintf(Command_Error_String,"PIROT_Command_SVO: failed to lock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"PIROT_Command_SVO: PI_SVO(usb_id=%d,axes=%s,enable=%d).",
 			 PIROT_USB_Get_ID(),COMMAND_ROTATOR_AXIS,enable);
@@ -362,19 +388,23 @@ int PIROT_Command_SVO(int enable)
 	retval = PI_SVO(PIROT_USB_Get_ID(),COMMAND_ROTATOR_AXIS,&enable);
 	if(retval != TRUE)
 	{
+#ifdef MUTEXED
 		PIROT_Mutex_Unlock();
+#endif /* MUTEXED */
 		PIROT_Command_Get_PI_Library_Error(&pi_error_num,pi_error_string,STRING_LENGTH);
 		Command_Error_Number = 36;
 		sprintf(Command_Error_String,"PIROT_Command_SVO: PI_SVO failed (%d) : %s.",pi_error_num,
 			pi_error_string);
 		return FALSE;
 	}
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Unlock())
 	{
 		Command_Error_Number = 37;
 		sprintf(Command_Error_String,"PIROT_Command_SVO: failed to unlock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_SVO: Finished.");
 #endif /* LOGGING */
@@ -410,12 +440,14 @@ int PIROT_Command_TRO(int enable)
 		sprintf(Command_Error_String,"PIROT_Command_TRO: enable (%d) was not a boolean.",enable);
 		return FALSE;
 	}
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Lock())
 	{
 		Command_Error_Number = 25;
 		sprintf(Command_Error_String,"PIROT_Command_TRO: failed to lock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 	trigger_output_id_list[0] = 1;
 	trigger_state_list[0] = enable;
 #if LOGGING > 0
@@ -427,19 +459,23 @@ int PIROT_Command_TRO(int enable)
 	retval = PI_TRO(PIROT_USB_Get_ID(),trigger_output_id_list,trigger_state_list,1);
 	if(retval != TRUE)
 	{
+#ifdef MUTEXED
 		PIROT_Mutex_Unlock();
+#endif /* MUTEXED */
 		PIROT_Command_Get_PI_Library_Error(&pi_error_num,pi_error_string,STRING_LENGTH);
 		Command_Error_Number = 26;
 		sprintf(Command_Error_String,"PIROT_Command_TRO: PI_TRO failed (%d) : %s.",pi_error_num,
 			pi_error_string);
 		return FALSE;
 	}
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Unlock())
 	{
 		Command_Error_Number = 27;
 		sprintf(Command_Error_String,"PIROT_Command_TRO: failed to unlock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_TRO: Finished.");
 #endif /* LOGGING */
@@ -475,12 +511,14 @@ int PIROT_Command_VEL(double velocity)
 			velocity,COMMAND_ROTATOR_VELOCITY_MAX);
 		return FALSE;
 	}
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Lock())
 	{
 		Command_Error_Number = 31;
 		sprintf(Command_Error_String,"PIROT_Command_VEL: failed to lock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"PIROT_Command_VEL: PI_VEL(usb_id=%d,axes=%s,velocity=%.2f).",
 			 PIROT_USB_Get_ID(),COMMAND_ROTATOR_AXIS,velocity);
@@ -488,19 +526,23 @@ int PIROT_Command_VEL(double velocity)
 	retval = PI_VEL(PIROT_USB_Get_ID(),COMMAND_ROTATOR_AXIS,&velocity);
 	if(retval != TRUE)
 	{
+#ifdef MUTEXED
 		PIROT_Mutex_Unlock();
+#endif /* MUTEXED */
 		PIROT_Command_Get_PI_Library_Error(&pi_error_num,pi_error_string,STRING_LENGTH);
 		Command_Error_Number = 32;
 		sprintf(Command_Error_String,"PIROT_Command_VEL: PI_VEL failed (%d) : %s.",pi_error_num,
 			pi_error_string);
 		return FALSE;
 	}
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Unlock())
 	{
 		Command_Error_Number = 33;
 		sprintf(Command_Error_String,"PIROT_Command_VEL: failed to unlock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_VEL: Finished.");
 #endif /* LOGGING */
@@ -538,12 +580,14 @@ int PIROT_Command_Query_ERR(int *error_number)
 		sprintf(Command_Error_String,"PIROT_Command_Query_ERR: error_number was NULL.");
 		return FALSE;
 	}
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Lock())
 	{
 		Command_Error_Number = 22;
 		sprintf(Command_Error_String,"PIROT_Command_Query_ERR: failed to lock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"PIROT_Command_Query_ERR: PI_qERR(usb_id=%d,error_number=%p).",
 			 PIROT_USB_Get_ID(),error_number);
@@ -551,7 +595,9 @@ int PIROT_Command_Query_ERR(int *error_number)
 	retval = PI_qERR(PIROT_USB_Get_ID(),error_number);
 	if(retval != TRUE)
 	{
+#ifdef MUTEXED
 		PIROT_Mutex_Unlock();
+#endif /* MUTEXED */
 		PIROT_Command_Get_PI_Library_Error(&pi_error_num,pi_error_string,STRING_LENGTH);
 		Command_Error_Number = 23;
 		sprintf(Command_Error_String,"PIROT_Command_Query_ERR: PI_qERR failed (%d) : %s.",pi_error_num,
@@ -562,12 +608,14 @@ int PIROT_Command_Query_ERR(int *error_number)
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
 			 "PIROT_Command_Query_ERR: PI_qERR returned error_number %d,retval %d.",(*error_number),retval);
 #endif /* LOGGING */
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Unlock())
 	{
 		Command_Error_Number = 24;
 		sprintf(Command_Error_String,"PIROT_Command_Query_ERR: failed to unlock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"PIROT_Command_Query_ERR: Finished.");
 #endif /* LOGGING */
@@ -604,12 +652,14 @@ int PIROT_Command_Query_ONT(int *on_target)
 		sprintf(Command_Error_String,"PIROT_Command_Query_ONT: on_target was NULL.");
 		return FALSE;
 	}
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Lock())
 	{
 		Command_Error_Number = 12;
 		sprintf(Command_Error_String,"PIROT_Command_Query_ONT: failed to lock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"PIROT_Command_Query_ONT: PI_qONT(usb_id=%d,axes=%s,on_target=%p).",
 			 PIROT_USB_Get_ID(),COMMAND_ROTATOR_AXIS,on_target);
@@ -617,7 +667,9 @@ int PIROT_Command_Query_ONT(int *on_target)
 	retval = PI_qONT(PIROT_USB_Get_ID(),COMMAND_ROTATOR_AXIS,on_target);
 	if(retval != TRUE)
 	{
+#ifdef MUTEXED
 		PIROT_Mutex_Unlock();
+#endif /* MUTEXED */
 		PIROT_Command_Get_PI_Library_Error(&pi_error_num,pi_error_string,STRING_LENGTH);
 		Command_Error_Number = 13;
 		sprintf(Command_Error_String,"PIROT_Command_Query_ONT: PI_qONT failed (%d) : %s.",pi_error_num,
@@ -628,12 +680,14 @@ int PIROT_Command_Query_ONT(int *on_target)
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
 			 "PIROT_Command_Query_ONT: PI_qONT returned on_target %d,retval %d.",(*on_target),retval);
 #endif /* LOGGING */
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Unlock())
 	{
 		Command_Error_Number = 14;
 		sprintf(Command_Error_String,"PIROT_Command_Query_ONT: failed to unlock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"PIROT_Command_Query_ONT: Finished.");
 #endif /* LOGGING */
@@ -668,12 +722,14 @@ int PIROT_Command_Query_POS(double *position)
 		sprintf(Command_Error_String,"PIROT_Command_Query_POS: position was NULL.");
 		return FALSE;
 	}
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Lock())
 	{
 		Command_Error_Number = 2;
 		sprintf(Command_Error_String,"PIROT_Command_Query_POS: failed to lock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"PIROT_Command_Query_POS: PI_qPOS(usb_id=%d,axes=%s,position=%p).",
 			 PIROT_USB_Get_ID(),COMMAND_ROTATOR_AXIS,position);
@@ -681,7 +737,9 @@ int PIROT_Command_Query_POS(double *position)
 	retval = PI_qPOS(PIROT_USB_Get_ID(),COMMAND_ROTATOR_AXIS,position);
 	if(retval != TRUE)
 	{
+#ifdef MUTEXED
 		PIROT_Mutex_Unlock();
+#endif /* MUTEXED */
 		PIROT_Command_Get_PI_Library_Error(&pi_error_num,pi_error_string,STRING_LENGTH);
 		Command_Error_Number = 3;
 		sprintf(Command_Error_String,"PIROT_Command_Query_POS: PI_qPOS failed (%d) : %s.",pi_error_num,
@@ -692,12 +750,14 @@ int PIROT_Command_Query_POS(double *position)
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
 			 "PIROT_Command_Query_POS: PI_qPOS returned position %.2f,retval %d.",(*position),retval);
 #endif /* LOGGING */
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Unlock())
 	{
 		Command_Error_Number = 4;
 		sprintf(Command_Error_String,"PIROT_Command_Query_POS: failed to unlock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"PIROT_Command_Query_POS: Finished.");
 #endif /* LOGGING */
@@ -765,31 +825,37 @@ int PIROT_Command_STP(void)
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_STP: Started.");
 #endif /* LOGGING */
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Lock())
 	{
 		Command_Error_Number = 18;
 		sprintf(Command_Error_String,"PIROT_Command_STP: failed to lock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"PIROT_Command_STP: PI_STP(usb_id=%d).",PIROT_USB_Get_ID());
 #endif /* LOGGING */
 	retval = PI_STP(PIROT_USB_Get_ID());
 	if(retval != TRUE)
 	{
+#ifdef MUTEXED
 		PIROT_Mutex_Unlock();
+#endif /* MUTEXED */
 		PIROT_Command_Get_PI_Library_Error(&pi_error_num,pi_error_string,STRING_LENGTH);
 		Command_Error_Number = 19;
 		sprintf(Command_Error_String,"PIROT_Command_STP: PI_STP failed (%d) : %s.",pi_error_num,
 			pi_error_string);
 		return FALSE;
 	}
+#ifdef MUTEXED
 	if(!PIROT_Mutex_Unlock())
 	{
 		Command_Error_Number = 20;
 		sprintf(Command_Error_String,"PIROT_Command_STP: failed to unlock mutex.");
 		return FALSE;
 	}
+#endif /* MUTEXED */
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_STP: Finished.");
 #endif /* LOGGING */

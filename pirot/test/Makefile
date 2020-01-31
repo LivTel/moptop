@@ -12,18 +12,17 @@ CFLAGS 		= -g -I$(INCDIR) -I$(PI_INCDIR) $(LOG_UDP_CFLAGS)
 
 DOCFLAGS 	= -static
 
-SRCS 		= test_command.c test_mov.c test_query_pos.c test_query_on_target.c
+SRCS 		= test_command.c test_mov.c test_query_pos.c test_query_on_target.c test_setup_startup.c
 OBJS 		= $(SRCS:%.c=%.o)
 PROGS 		= $(SRCS:%.c=$(BINDIR)/%)
 DOCS 		= $(SRCS:%.c=$(DOCSDIR)/%.html)
 SCRIPT_SRCS	= 
 SCRIPT_BINS	= $(SCRIPT_SRCS:%=$(BINDIR)/%)
-LIBNAME		= $(PIROT_HOME)
 
 top: $(PROGS) scripts docs
 
 $(BINDIR)/%: %.o
-	$(CC) -o $@ $< -L$(LT_LIB_HOME) -L$(PI_LIBDIR) $(TIMELIB) $(SOCKETLIB) -lm -lc -l$(LIBNAME) $(PI_LIB)
+	$(CC) -o $@ $< -L$(LT_LIB_HOME) -L$(PI_LIBDIR) $(TIMELIB) $(SOCKETLIB) -lm -lc -l$(PIROT_LIBNAME) $(PI_LIB)
 
 scripts: $(SCRIPT_BINS)
 
@@ -46,7 +45,4 @@ clean:
 
 tidy:
 	$(RM) $(RM_OPTIONS) $(TIDY_OPTIONS)
-
-backup: tidy
-	$(RM) $(RM_OPTIONS) $(OBJS)
 

@@ -32,15 +32,6 @@ tidy:
 		(echo tidy in $$i...; $(MAKE) -C $$i tidy); \
 	done;
 
-backup: checkin
-	@for i in $(DIRS); \
-	do \
-		(echo backup in $$i...; $(MAKE) -C $$i backup); \
-	done;
-	$(RM) $(RM_OPTIONS) $(TIDY_OPTIONS)
-	$(RM) $(RM_OPTIONS) */*.fits
-	$(RM) $(RM_OPTIONS) */core.*
-
 #
 # $Log$
 #
