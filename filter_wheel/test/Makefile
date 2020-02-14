@@ -46,3 +46,42 @@ clean:
 
 tidy:
 	$(RM) $(RM_OPTIONS) $(TIDY_OPTIONS)
+# DO NOT DELETE
+
+filter_wheel_test_move.o: /usr/include/stdio.h /usr/include/features.h
+filter_wheel_test_move.o: /usr/include/stdc-predef.h /usr/include/sys/cdefs.h
+filter_wheel_test_move.o: /usr/include/bits/wordsize.h
+filter_wheel_test_move.o: /usr/include/gnu/stubs.h
+filter_wheel_test_move.o: /usr/lib/gcc/x86_64-redhat-linux/4.8.2/include/stddef.h
+filter_wheel_test_move.o: /usr/include/bits/types.h
+filter_wheel_test_move.o: /usr/include/bits/typesizes.h /usr/include/libio.h
+filter_wheel_test_move.o: /usr/include/_G_config.h /usr/include/wchar.h
+filter_wheel_test_move.o: /usr/lib/gcc/x86_64-redhat-linux/4.8.2/include/stdarg.h
+filter_wheel_test_move.o: /usr/include/bits/stdio_lim.h
+filter_wheel_test_move.o: /usr/include/bits/sys_errlist.h
+filter_wheel_test_move.o: /usr/include/string.h /usr/include/xlocale.h
+filter_wheel_test_move.o: /usr/include/time.h /usr/include/bits/time.h
+filter_wheel_test_move.o: /home/dev/src/log_udp/include/log_udp.h
+filter_wheel_test_move.o: /home/dev/src/moptop/filter_wheel/include/filter_wheel_command.h
+filter_wheel_test_move.o: /home/dev/src/moptop/filter_wheel/include/filter_wheel_general.h
+filter_wheel_test_get_position.o: /usr/include/stdio.h
+filter_wheel_test_get_position.o: /usr/include/features.h
+filter_wheel_test_get_position.o: /usr/include/stdc-predef.h
+filter_wheel_test_get_position.o: /usr/include/sys/cdefs.h
+filter_wheel_test_get_position.o: /usr/include/bits/wordsize.h
+filter_wheel_test_get_position.o: /usr/include/gnu/stubs.h
+filter_wheel_test_get_position.o: /usr/lib/gcc/x86_64-redhat-linux/4.8.2/include/stddef.h
+filter_wheel_test_get_position.o: /usr/include/bits/types.h
+filter_wheel_test_get_position.o: /usr/include/bits/typesizes.h
+filter_wheel_test_get_position.o: /usr/include/libio.h
+filter_wheel_test_get_position.o: /usr/include/_G_config.h
+filter_wheel_test_get_position.o: /usr/include/wchar.h
+filter_wheel_test_get_position.o: /usr/lib/gcc/x86_64-redhat-linux/4.8.2/include/stdarg.h
+filter_wheel_test_get_position.o: /usr/include/bits/stdio_lim.h
+filter_wheel_test_get_position.o: /usr/include/bits/sys_errlist.h
+filter_wheel_test_get_position.o: /usr/include/string.h
+filter_wheel_test_get_position.o: /usr/include/xlocale.h /usr/include/time.h
+filter_wheel_test_get_position.o: /usr/include/bits/time.h
+filter_wheel_test_get_position.o: /home/dev/src/log_udp/include/log_udp.h
+filter_wheel_test_get_position.o: /home/dev/src/moptop/filter_wheel/include/filter_wheel_command.h
+filter_wheel_test_get_position.o: /home/dev/src/moptop/filter_wheel/include/filter_wheel_general.h
