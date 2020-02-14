@@ -93,9 +93,9 @@ static struct Command_Struct Command_Data =
 static int Command_Error_Number = 0;
 /**
  * Local variable holding description of the last error that occured.
- * @see filter_wheel_general.html#FILTER_WHEEL_ERROR_STRING_LENGTH
+ * @see filter_wheel_general.html#FILTER_WHEEL_GENERAL_ERROR_STRING_LENGTH
  */
-static char Command_Error_String[FILTER_WHEEL_ERROR_STRING_LENGTH] = "";
+static char Command_Error_String[FILTER_WHEEL_GENERAL_ERROR_STRING_LENGTH] = "";
 
 /* =======================================
 **  external functions 
@@ -114,21 +114,22 @@ static char Command_Error_String[FILTER_WHEEL_ERROR_STRING_LENGTH] = "";
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String
- * @see filter_wheel_general.html#Filter_Wheel_Log_Format
- * @see filter_wheel_general.html#Filter_Wheel_Mutex_Lock
- * @see filter_wheel_general.html#Filter_Wheel_Mutex_Unlock
+ * @see filter_wheel_general.html#Filter_Wheel_General_Log_Format
+ * @see filter_wheel_general.html#Filter_Wheel_General_Mutex_Lock
+ * @see filter_wheel_general.html#Filter_Wheel_General_Mutex_Unlock
  */
 int Filter_Wheel_Command_Open(char *device_name)
 {
 	int open_errno,ioctl_retval;
 
 #if LOGGING > 0
-	Filter_Wheel_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Open(device_name=%s): Started.",device_name);
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Open(device_name=%s): Started.",
+					device_name);
 #endif /* LOGGING */
 	/* initialise error number */
 	Command_Error_Number = 0;
 #ifdef MUTEXED
-	if(!Filter_Wheel_Mutex_Lock())
+	if(!Filter_Wheel_General_Mutex_Lock())
 	{
 		Command_Error_Number = 6;
 		sprintf(Command_Error_String,"Filter_Wheel_Command_Open: failed to lock mutex.");
@@ -141,7 +142,7 @@ int Filter_Wheel_Command_Open(char *device_name)
 	{
 		open_errno = errno;
 #ifdef MUTEXED
-		Filter_Wheel_Mutex_Unlock();
+		Filter_Wheel_General_Mutex_Unlock();
 #endif /* MUTEXED */
 		Command_Error_Number = 1;
 		sprintf(Command_Error_String,"Filter_Wheel_Command_Open: open(%s) failed with errno %d.",device_name,
@@ -153,7 +154,7 @@ int Filter_Wheel_Command_Open(char *device_name)
 	if(ioctl_retval < 0)
 	{
 #ifdef MUTEXED
-		Filter_Wheel_Mutex_Unlock();
+		Filter_Wheel_General_Mutex_Unlock();
 #endif /* MUTEXED */
 		Command_Error_Number = 2;
 		sprintf(Command_Error_String,"Filter_Wheel_Command_Open: reading raw name failed with retval %d.",
@@ -162,11 +163,11 @@ int Filter_Wheel_Command_Open(char *device_name)
 
 	}
 #if LOGGING > 0
-	Filter_Wheel_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Open: Raw Name = '%s'.",
-				Command_Data.Raw_Name);
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Open: Raw Name = '%s'.",
+					Command_Data.Raw_Name);
 #endif /* LOGGING */
 #ifdef MUTEXED
-	if(!Filter_Wheel_Mutex_Unlock())
+	if(!Filter_Wheel_General_Mutex_Unlock())
 	{
 		Command_Error_Number = 7;
 		sprintf(Command_Error_String,"Filter_Wheel_Command_Open: failed to unlock mutex.");
@@ -174,7 +175,7 @@ int Filter_Wheel_Command_Open(char *device_name)
 	}
 #endif /* MUTEXED */
 #if LOGGING > 0
-	Filter_Wheel_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Open: Finished.");
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Open: Finished.");
 #endif /* LOGGING */
 	return TRUE;
 }
@@ -189,21 +190,21 @@ int Filter_Wheel_Command_Open(char *device_name)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String
- * @see filter_wheel_general.html#Filter_Wheel_Log_Format
- * @see filter_wheel_general.html#Filter_Wheel_Mutex_Lock
- * @see filter_wheel_general.html#Filter_Wheel_Mutex_Unlock
+ * @see filter_wheel_general.html#Filter_Wheel_General_Log_Format
+ * @see filter_wheel_general.html#Filter_Wheel_General_Mutex_Lock
+ * @see filter_wheel_general.html#Filter_Wheel_General_Mutex_Unlock
  */
 int Filter_Wheel_Command_Close(void)
 {
 	int close_retval, close_errno;
 
 #if LOGGING > 0
-	Filter_Wheel_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Close: Started.");
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Close: Started.");
 #endif /* LOGGING */
 	/* initialise error number */
 	Command_Error_Number = 0;
 #ifdef MUTEXED
-	if(!Filter_Wheel_Mutex_Lock())
+	if(!Filter_Wheel_General_Mutex_Lock())
 	{
 		Command_Error_Number = 8;
 		sprintf(Command_Error_String,"Filter_Wheel_Command_Close: failed to lock mutex.");
@@ -215,7 +216,7 @@ int Filter_Wheel_Command_Close(void)
 	{
 		close_errno = errno;
 #ifdef MUTEXED
-		Filter_Wheel_Mutex_Unlock();
+		Filter_Wheel_General_Mutex_Unlock();
 #endif /* MUTEXED */
 		Command_Error_Number = 3;
 		sprintf(Command_Error_String,"Filter_Wheel_Command_Close: close(%d) failed with errno %d.",
@@ -224,7 +225,7 @@ int Filter_Wheel_Command_Close(void)
 	}
 	Command_Data.Fd = -1;
 #ifdef MUTEXED
-	if(!Filter_Wheel_Mutex_Unlock())
+	if(!Filter_Wheel_General_Mutex_Unlock())
 	{
 		Command_Error_Number = 9;
 		sprintf(Command_Error_String,"Filter_Wheel_Command_Close: failed to unlock mutex.");
@@ -232,7 +233,7 @@ int Filter_Wheel_Command_Close(void)
 	}
 #endif /* MUTEXED */
 #if LOGGING > 0
-	Filter_Wheel_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Close: Finished.");
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Close: Finished.");
 #endif /* LOGGING */
 	return TRUE;
 }
@@ -270,9 +271,9 @@ int Filter_Wheel_Command_Close(void)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String
- * @see filter_wheel_general.html#Filter_Wheel_Log_Format
- * @see filter_wheel_general.html#Filter_Wheel_Mutex_Lock
- * @see filter_wheel_general.html#Filter_Wheel_Mutex_Unlock
+ * @see filter_wheel_general.html#Filter_Wheel_General_Log_Format
+ * @see filter_wheel_general.html#Filter_Wheel_General_Mutex_Lock
+ * @see filter_wheel_general.html#Filter_Wheel_General_Mutex_Unlock
  */
 int Filter_Wheel_Command_Move(int position)
 {
@@ -282,10 +283,11 @@ int Filter_Wheel_Command_Move(int position)
 	int byte_count,retval,in_position,current_position,write_errno,read_errno,loop_count;
 
 #if LOGGING > 0
-	Filter_Wheel_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Move: Started.");
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Move: Started.");
 #endif /* LOGGING */
 #if LOGGING > 0
-	Filter_Wheel_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Move: Move wheel to position %d.",position);
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Move: Move wheel to position %d.",
+					position);
 #endif /* LOGGING */
 	if((position < 1)||(position > Command_Data.Filter_Count))
 	{
@@ -311,13 +313,13 @@ int Filter_Wheel_Command_Move(int position)
 		/* only log once every 10 loops to reduce logging */
 		if((loop_count % 10) == 0)
 		{
-			Filter_Wheel_Log_Format(LOG_VERBOSITY_VERBOSE,
+			Filter_Wheel_General_Log_Format(LOG_VERBOSITY_VERBOSE,
 						"Filter_Wheel_Command_Move: Writing command bytes {%d,%d}, loop %d.",
 						write_data_packet[0],write_data_packet[1],loop_count);
 		}
 #endif /* LOGGING */
 #ifdef MUTEXED
-		if(!Filter_Wheel_Mutex_Lock())
+		if(!Filter_Wheel_General_Mutex_Lock())
 		{
 			Command_Error_Number = 10;
 			sprintf(Command_Error_String,"Filter_Wheel_Command_Move: failed to lock mutex.");
@@ -330,7 +332,7 @@ int Filter_Wheel_Command_Move(int position)
 		{
 			write_errno = errno;
 #ifdef MUTEXED
-			Filter_Wheel_Mutex_Unlock();
+			Filter_Wheel_General_Mutex_Unlock();
 #endif /* MUTEXED */
 			Command_Error_Number = 5;
 			sprintf(Command_Error_String,
@@ -349,8 +351,9 @@ int Filter_Wheel_Command_Move(int position)
 		/* only log once every 10 loops to reduce logging */
 		if((loop_count % 10) == 0)
 		{
-			Filter_Wheel_Log_Format(LOG_VERBOSITY_VERBOSE,
-						"Filter_Wheel_Command_Move: Reading command bytes, loop %d.",loop_count);
+			Filter_Wheel_General_Log_Format(LOG_VERBOSITY_VERBOSE,
+							"Filter_Wheel_Command_Move: Reading command bytes, loop %d.",
+							loop_count);
 		}
 #endif /* LOGGING */
 		byte_count = read(Command_Data.Fd,read_data_packet,2);
@@ -358,7 +361,7 @@ int Filter_Wheel_Command_Move(int position)
 		{
 			read_errno = errno;
 #ifdef MUTEXED
-			Filter_Wheel_Mutex_Unlock();
+			Filter_Wheel_General_Mutex_Unlock();
 #endif /* MUTEXED */
 			Command_Error_Number = 11;
 			sprintf(Command_Error_String,
@@ -367,7 +370,7 @@ int Filter_Wheel_Command_Move(int position)
 			return FALSE;
 		}
 #ifdef MUTEXED
-		if(!Filter_Wheel_Mutex_Unlock())
+		if(!Filter_Wheel_General_Mutex_Unlock())
 		{
 			Command_Error_Number = 12;
 			sprintf(Command_Error_String,"Filter_Wheel_Command_Move: failed to unlock mutex.");
@@ -382,7 +385,7 @@ int Filter_Wheel_Command_Move(int position)
 		/* only log once every 10 loops to reduce logging */
 		if((loop_count % 10) == 0)
 		{
-			Filter_Wheel_Log_Format(LOG_VERBOSITY_VERBOSE,
+			Filter_Wheel_General_Log_Format(LOG_VERBOSITY_VERBOSE,
 						"Filter_Wheel_Command_Move: Current Position %d, In Position %d, "
 						"Elapsed time %.2f s, loop count %d.",
 						current_position,in_position,fdifftime(current_time,loop_start_time),
@@ -393,7 +396,7 @@ int Filter_Wheel_Command_Move(int position)
 		loop_count++;
 	}/* end while */
 #if LOGGING > 0
-	Filter_Wheel_Log_Format(LOG_VERBOSITY_VERBOSE,
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_VERBOSE,
 				"Filter_Wheel_Command_Move: Finished loop: Current Position %d, In Position %d, "
 				"Elapsed time %.2f s, loop count %d.",
 				current_position,in_position,fdifftime(current_time,loop_start_time),loop_count);
@@ -418,7 +421,8 @@ int Filter_Wheel_Command_Move(int position)
 		return FALSE;		
 	}
 #if LOGGING > 0
-	Filter_Wheel_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Move: Finished Move to position %d.",position);
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Move: Finished Move to position %d.",
+					position);
 #endif /* LOGGING */
 	return TRUE;
 }
@@ -442,9 +446,9 @@ int Filter_Wheel_Command_Move(int position)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String
- * @see filter_wheel_general.html#Filter_Wheel_Log_Format
- * @see filter_wheel_general.html#Filter_Wheel_Mutex_Lock
- * @see filter_wheel_general.html#Filter_Wheel_Mutex_Unlock
+ * @see filter_wheel_general.html#Filter_Wheel_General_Log_Format
+ * @see filter_wheel_general.html#Filter_Wheel_General_Mutex_Lock
+ * @see filter_wheel_general.html#Filter_Wheel_General_Mutex_Unlock
  */
 int Filter_Wheel_Command_Get_Position(int *position)
 {
@@ -454,7 +458,7 @@ int Filter_Wheel_Command_Get_Position(int *position)
 	int byte_count,retval,write_errno,read_errno,current_filter_position,filter_count;
 
 #if LOGGING > 0
-	Filter_Wheel_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Get_Position: Started.");
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Get_Position: Started.");
 #endif /* LOGGING */
 	if(position == NULL)
 	{
@@ -465,7 +469,7 @@ int Filter_Wheel_Command_Get_Position(int *position)
 	/* initialise error number */
 	Command_Error_Number = 0;
 #ifdef MUTEXED
-	if(!Filter_Wheel_Mutex_Lock())
+	if(!Filter_Wheel_General_Mutex_Lock())
 	{
 		Command_Error_Number = 16;
 		sprintf(Command_Error_String,"Filter_Wheel_Command_Get_Position: failed to lock mutex.");
@@ -477,7 +481,7 @@ int Filter_Wheel_Command_Get_Position(int *position)
 	write_data_packet[1] = 0;	
 	/* write request to filter wheel */
 #if LOGGING > 5
-	Filter_Wheel_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
 				"Filter_Wheel_Command_Get_Position: Writing command bytes {%d,%d}.",
 				write_data_packet[0],write_data_packet[1]);
 #endif /* LOGGING */
@@ -486,7 +490,7 @@ int Filter_Wheel_Command_Get_Position(int *position)
 	{
 		write_errno = errno;
 #ifdef MUTEXED
-		Filter_Wheel_Mutex_Unlock();
+		Filter_Wheel_General_Mutex_Unlock();
 #endif /* MUTEXED */
 		Command_Error_Number = 17;
 		sprintf(Command_Error_String,
@@ -495,7 +499,8 @@ int Filter_Wheel_Command_Get_Position(int *position)
 		return FALSE;
 	}
 #if LOGGING > 5
-	Filter_Wheel_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"Filter_Wheel_Command_Get_Position: Sleeping for 10ms.");
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
+					"Filter_Wheel_Command_Get_Position: Sleeping for 10ms.");
 #endif /* LOGGING */
 	/* wait a bit (10ms) before reading a response */
 	sleep_time.tv_sec = 0;
@@ -503,15 +508,15 @@ int Filter_Wheel_Command_Get_Position(int *position)
 	nanosleep(&sleep_time,&sleep_time);
 	/* read reply from filter wheel */
 #if LOGGING > 5
-	Filter_Wheel_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
-				"Filter_Wheel_Command_Get_Position: Reading reply from filter wheel.");
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
+					"Filter_Wheel_Command_Get_Position: Reading reply from filter wheel.");
 #endif /* LOGGING */
 	byte_count = read(Command_Data.Fd,read_data_packet,2);
 	if(byte_count != 2)
 	{
 		read_errno = errno;
 #ifdef MUTEXED
-		Filter_Wheel_Mutex_Unlock();
+		Filter_Wheel_General_Mutex_Unlock();
 #endif /* MUTEXED */
 		Command_Error_Number = 18;
 		sprintf(Command_Error_String,
@@ -520,7 +525,7 @@ int Filter_Wheel_Command_Get_Position(int *position)
 		return FALSE;
 	}
 #ifdef MUTEXED
-	if(!Filter_Wheel_Mutex_Unlock())
+	if(!Filter_Wheel_General_Mutex_Unlock())
 	{
 		Command_Error_Number = 19;
 		sprintf(Command_Error_String,"Filter_Wheel_Command_Get_Position: failed to unlock mutex.");
@@ -531,14 +536,14 @@ int Filter_Wheel_Command_Get_Position(int *position)
 	current_filter_position = read_data_packet[0];
 	filter_count = read_data_packet[1];
 #if LOGGING > 0
-	Filter_Wheel_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
 				"Filter_Wheel_Command_Get_Position: Current position = %d, filter count = %d.",
 				current_filter_position,filter_count);
 #endif /* LOGGING */
 	/* return current position */
 	(*position) = current_filter_position;
 #if LOGGING > 0
-	Filter_Wheel_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Get_Position: Finished.");
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Get_Position: Finished.");
 #endif /* LOGGING */
 	return TRUE;
 }

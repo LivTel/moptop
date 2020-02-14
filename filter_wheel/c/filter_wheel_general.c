@@ -45,14 +45,14 @@
  * <dt>Log_Filter</dt> <dd>Function pointer to the routine that will filter log messages passed to it.
  * 		The funtion will return TRUE if the message should be logged, and FALSE if it shouldn't.</dd>
  * <dt>Log_Filter_Level</dt> <dd>A globally maintained log filter level. 
- * 		This is set using Filter_Wheel_Set_Log_Filter_Level.
- * 		Filter_Wheel_Log_Filter_Level_Absolute and Filter_Wheel_Log_Filter_Level_Bitwise 
+ * 		This is set using Filter_Wheel_General_Set_Log_Filter_Level.
+ * 		Filter_Wheel_Log_General_Filter_Level_Absolute and Filter_Wheel_General_Log_Filter_Level_Bitwise 
  *              test it against message levels to determine whether to log messages.</dd>
  * </dl>
- * @see #Filter_Wheel_Log
- * @see #Filter_Wheel_Set_Log_Filter_Level
- * @see #Filter_Wheel_Log_Filter_Level_Absolute
- * @see #Filter_Wheel_Log_Filter_Level_Bitwise
+ * @see #Filter_Wheel_General_Log
+ * @see #Filter_Wheel_General_Set_Log_Filter_Level
+ * @see #Filter_Wheel_General_Log_Filter_Level_Absolute
+ * @see #Filter_Wheel_General_Log_Filter_Level_Bitwise
  */
 struct General_Struct
 {
@@ -94,9 +94,9 @@ static struct General_Struct General_Data =
 static int General_Error_Number = 0;
 /**
  * Local variable holding description of the last error that occured.
- * @see #FILTER_WHEEL_ERROR_STRING_LENGTH
+ * @see #FILTER_WHEEL_GENERAL_ERROR_STRING_LENGTH
  */
-static char General_Error_String[FILTER_WHEEL_ERROR_STRING_LENGTH] = "";
+static char General_Error_String[FILTER_WHEEL_GENERAL_ERROR_STRING_LENGTH] = "";
 
 /* --------------------------------------------------------
 ** External Functions
@@ -206,15 +206,15 @@ void Filter_Wheel_General_Get_Current_Time_String(char *time_string,int string_l
 /**
  * Routine to log a message to a defined logging mechanism. This routine has an arbitary number of arguments,
  * and uses vsprintf to format them i.e. like fprintf. 
- * Filter_Wheel_Log is then called to handle the log message.
+ * Filter_Wheel_General_Log is then called to handle the log message.
  * @param level An integer, used to decide whether this particular message has been selected for
  * 	logging or not.
  * @param format A string, with formatting statements the same as fprintf would use to determine the type
  * 	of the following arguments.
- * @see #Filter_Wheel_Log
+ * @see #Filter_Wheel_General_Log
  * @see #LOG_BUFF_LENGTH
  */
-void Filter_Wheel_Log_Format(int level,char *format,...)
+void Filter_Wheel_General_Log_Format(int level,char *format,...)
 {
 	char buff[LOG_BUFF_LENGTH];
 	va_list ap;
@@ -224,7 +224,7 @@ void Filter_Wheel_Log_Format(int level,char *format,...)
 	vsprintf(buff,format,ap);
 	va_end(ap);
 /* call the log routine to log the results */
-	Filter_Wheel_Log(level,buff);
+	Filter_Wheel_General_Log(level,buff);
 }
 
 /**
@@ -236,7 +236,7 @@ void Filter_Wheel_Log_Format(int level,char *format,...)
  * @param string The message to log.
  * @see #General_Data
  */
-void Filter_Wheel_Log(int level,char *string)
+void Filter_Wheel_General_Log(int level,char *string)
 {
 /* If the string is NULL, don't log. */
 	if(string == NULL)
@@ -255,23 +255,23 @@ void Filter_Wheel_Log(int level,char *string)
 }
 
 /**
- * Routine to set the General_Data.Log_Handler used by Filter_Wheel_Log.
+ * Routine to set the General_Data.Log_Handler used by Filter_Wheel_General_Log.
  * @param log_fn A function pointer to a suitable handler.
  * @see #General_Data
- * @see #Filter_Wheel_Log
+ * @see #Filter_Wheel_General_Log
  */
-void Filter_Wheel_Set_Log_Handler_Function(void (*log_fn)(int level,char *string))
+void Filter_Wheel_General_Set_Log_Handler_Function(void (*log_fn)(int level,char *string))
 {
 	General_Data.Log_Handler = log_fn;
 }
 
 /**
- * Routine to set the General_Data.Log_Filter used by Filter_Wheel_Log.
+ * Routine to set the General_Data.Log_Filter used by Filter_Wheel_General_Log.
  * @param log_fn A function pointer to a suitable filter function.
  * @see #General_Data
- * @see #Filter_Wheel_Log
+ * @see #Filter_Wheel_General_Log
  */
-void Filter_Wheel_Set_Log_Filter_Function(int (*filter_fn)(int level,char *string))
+void Filter_Wheel_General_Set_Log_Filter_Function(int (*filter_fn)(int level,char *string))
 {
 	General_Data.Log_Filter = filter_fn;
 }
@@ -284,7 +284,7 @@ void Filter_Wheel_Set_Log_Filter_Function(int (*filter_fn)(int level,char *strin
  * @param string The log message to be logged. 
  * @see #Filter_Wheel_General_Get_Current_Time_String
  */
-void Filter_Wheel_Log_Handler_Stdout(int level,char *string)
+void Filter_Wheel_General_Log_Handler_Stdout(int level,char *string)
 {
 	char time_string[32];
 
@@ -298,7 +298,7 @@ void Filter_Wheel_Log_Handler_Stdout(int level,char *string)
  * Routine to set the General_Data.Log_Filter_Level.
  * @see #General_Data
  */
-void Filter_Wheel_Set_Log_Filter_Level(int level)
+void Filter_Wheel_General_Set_Log_Filter_Level(int level)
 {
 	General_Data.Log_Filter_Level = level;
 }
@@ -311,7 +311,7 @@ void Filter_Wheel_Set_Log_Filter_Level(int level)
  * 	otherwise it returns FALSE.
  * @see #General_Data
  */
-int Filter_Wheel_Log_Filter_Level_Absolute(int level,char *string)
+int Filter_Wheel_General_Log_Filter_Level_Absolute(int level,char *string)
 {
 	return (level <= General_Data.Log_Filter_Level);
 }
@@ -324,7 +324,7 @@ int Filter_Wheel_Log_Filter_Level_Absolute(int level,char *string)
  * 	General_Data.Log_Filter_Level, otherwise it returns FALSE.
  * @see #General_Data
  */
-int Filter_Wheel_Log_Filter_Level_Bitwise(int level,char *string)
+int Filter_Wheel_General_Log_Filter_Level_Bitwise(int level,char *string)
 {
 	return ((level & General_Data.Log_Filter_Level) > 0);
 }
@@ -337,7 +337,7 @@ int Filter_Wheel_Log_Filter_Level_Bitwise(int level,char *string)
  * 	FALSE if an error occured.
  * @see #General_Data
  */
-int Filter_Wheel_Mutex_Lock(void)
+int Filter_Wheel_General_Mutex_Lock(void)
 {
 	int error_number;
 
@@ -345,7 +345,7 @@ int Filter_Wheel_Mutex_Lock(void)
 	if(error_number != 0)
 	{
 		General_Error_Number = 1;
-		sprintf(General_Error_String,"Filter_Wheel_Mutex_Lock:Mutex lock failed '%d'.",error_number);
+		sprintf(General_Error_String,"Filter_Wheel_General_Mutex_Lock:Mutex lock failed '%d'.",error_number);
 		return FALSE;
 	}
 	return TRUE;
@@ -356,7 +356,7 @@ int Filter_Wheel_Mutex_Lock(void)
  * @return Returns TRUE if the mutex has been unlocked, FALSE if an error occured.
  * @see #General_Data
  */
-int Filter_Wheel_Mutex_Unlock(void)
+int Filter_Wheel_General_Mutex_Unlock(void)
 {
 	int error_number;
 
@@ -364,7 +364,8 @@ int Filter_Wheel_Mutex_Unlock(void)
 	if(error_number != 0)
 	{
 		General_Error_Number = 2;
-		sprintf(General_Error_String,"Filter_Wheel_Mutex_Unlock:Mutex unlock failed '%d'.",error_number);
+		sprintf(General_Error_String,"Filter_Wheel_General_Mutex_Unlock:Mutex unlock failed '%d'.",
+			error_number);
 		return FALSE;
 	}
 	return TRUE;

@@ -29,24 +29,24 @@
 /**
  * How long the error string is.
  */
-#define FILTER_WHEEL_ERROR_STRING_LENGTH        (1024)
+#define FILTER_WHEEL_GENERAL_ERROR_STRING_LENGTH (1024)
 
 /**
  * The number of nanoseconds in one second. A struct timespec has fields in nanoseconds.
  */
-#define FILTER_WHEEL_GENERAL_ONE_SECOND_NS	(1000000000)
+#define FILTER_WHEEL_GENERAL_ONE_SECOND_NS	 (1000000000)
 /**
  * The number of nanoseconds in one millisecond. A struct timespec has fields in nanoseconds.
  */
-#define FILTER_WHEEL_GENERAL_ONE_MILLISECOND_NS	(1000000)
+#define FILTER_WHEEL_GENERAL_ONE_MILLISECOND_NS	 (1000000)
 /**
  * The number of milliseconds in one second.
  */
-#define FILTER_WHEEL_GENERAL_ONE_SECOND_MS	(1000)
+#define FILTER_WHEEL_GENERAL_ONE_SECOND_MS	 (1000)
 /**
  * The number of nanoseconds in one microsecond.
  */
-#define FILTER_WHEEL_GENERAL_ONE_MICROSECOND_NS	(1000)
+#define FILTER_WHEEL_GENERAL_ONE_MICROSECOND_NS	 (1000)
 
 #ifndef fdifftime
 /**
@@ -65,17 +65,17 @@ extern void Filter_Wheel_General_Error_To_String(char *error_string);
 extern int Filter_Wheel_General_Get_Error_Number(void);
 extern void Filter_Wheel_General_Get_Current_Time_String(char *time_string,int string_length);
 
-extern void Filter_Wheel_Log_Format(int level,char *format,...);
-extern void Filter_Wheel_Log(int level,char *string);
-extern void Filter_Wheel_Set_Log_Handler_Function(void (*log_fn)(int level,char *string));
-extern void Filter_Wheel_Set_Log_Filter_Function(int (*filter_fn)(int level,char *string));
-extern void Filter_Wheel_Log_Handler_Stdout(int level,char *string);
-extern void Filter_Wheel_Set_Log_Filter_Level(int level);
-extern int Filter_Wheel_Log_Filter_Level_Absolute(int level,char *string);
-extern int Filter_Wheel_Log_Filter_Level_Bitwise(int level,char *string);
+extern void Filter_Wheel_General_Log_Format(int level,char *format,...);
+extern void Filter_Wheel_General_Log(int level,char *string);
+extern void Filter_Wheel_General_Set_Log_Handler_Function(void (*log_fn)(int level,char *string));
+extern void Filter_Wheel_General_Set_Log_Filter_Function(int (*filter_fn)(int level,char *string));
+extern void Filter_Wheel_General_Log_Handler_Stdout(int level,char *string);
+extern void Filter_Wheel_General_Set_Log_Filter_Level(int level);
+extern int Filter_Wheel_General_Log_Filter_Level_Absolute(int level,char *string);
+extern int Filter_Wheel_General_Log_Filter_Level_Bitwise(int level,char *string);
 
-extern int Filter_Wheel_Mutex_Lock(void);
-extern int Filter_Wheel_Mutex_Unlock(void);
+extern int Filter_Wheel_General_Mutex_Lock(void);
+extern int Filter_Wheel_General_Mutex_Unlock(void);
 
 /*
 ** $Log$

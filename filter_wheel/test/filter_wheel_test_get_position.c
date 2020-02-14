@@ -39,11 +39,11 @@ static void Help(void);
  * @see #Parse_Arguments
  * @see #Device_Name
  * @see #Log_Level
- * @see ../cdocs/filter_wheel_general.html#Filter_Wheel_Set_Log_Filter_Level
- * @see ../cdocs/filter_wheel_general.html#Filter_Wheel_Set_Log_Filter_Function
- * @see ../cdocs/filter_wheel_general.html#Filter_Wheel_Log_Filter_Level_Absolute
- * @see ../cdocs/filter_wheel_general.html#Filter_Wheel_Set_Log_Handler_Function
- * @see ../cdocs/filter_wheel_general.html#Filter_Wheel_Log_Handler_Stdout
+ * @see ../cdocs/filter_wheel_general.html#Filter_Wheel_General_Set_Log_Filter_Level
+ * @see ../cdocs/filter_wheel_general.html#Filter_Wheel_General_Set_Log_Filter_Function
+ * @see ../cdocs/filter_wheel_general.html#Filter_Wheel_General_Log_Filter_Level_Absolute
+ * @see ../cdocs/filter_wheel_general.html#Filter_Wheel_General_Set_Log_Handler_Function
+ * @see ../cdocs/filter_wheel_general.html#Filter_Wheel_General_Log_Handler_Stdout
  * @see ../cdocs/filter_wheel_general.html#Filter_Wheel_Log
  * @see ../cdocs/filter_wheel_general.html#Filter_Wheel_General_Error
  * @see ../cdocs/filter_wheel_command.html#Filter_Wheel_Command_Open
@@ -58,11 +58,11 @@ int main(int argc, char *argv[])
 	fprintf(stdout,"test_filter_wheel_get_position : Parsing Arguments.\n");
 	if(!Parse_Arguments(argc,argv))
 		return 1;
-	Filter_Wheel_Set_Log_Filter_Level(Log_Level);
-	Filter_Wheel_Set_Log_Filter_Function(Filter_Wheel_Log_Filter_Level_Absolute);
-	Filter_Wheel_Set_Log_Handler_Function(Filter_Wheel_Log_Handler_Stdout);
+	Filter_Wheel_General_Set_Log_Filter_Level(Log_Level);
+	Filter_Wheel_General_Set_Log_Filter_Function(Filter_Wheel_General_Log_Filter_Level_Absolute);
+	Filter_Wheel_General_Set_Log_Handler_Function(Filter_Wheel_General_Log_Handler_Stdout);
         /* open device */
-	Filter_Wheel_Log(LOG_VERBOSITY_TERSE,"test_filter_wheel_get_position : Connecting to controller.");
+	Filter_Wheel_General_Log(LOG_VERBOSITY_TERSE,"test_filter_wheel_get_position : Connecting to controller.");
 	if(!Filter_Wheel_Command_Open(Device_Name))
 	{
 		Filter_Wheel_General_Error();
