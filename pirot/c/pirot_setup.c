@@ -28,8 +28,12 @@
 
 /**
  * The initial angle to start a run of exposures from in degrees.
+ * The rotator is set to start triggering at 0 degrees, we therefore set the initial angle to be less than that,
+ * so the rotator has time to speed up to the correct velocity before starting to generate triggers for the camera.
+ * We currently only support postive (clockwise) velocities, if we supported negative (counter clockwise) velocities
+ * this start position should then be positive.
  */
-#define SETUP_ROTATOR_INITIAL_ANGLE (22.0)
+#define SETUP_ROTATOR_INITIAL_ANGLE (-22.0)
 
 /**
  * The maximum position angle the rotator can move to in degrees.
