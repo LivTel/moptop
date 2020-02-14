@@ -1,0 +1,23 @@
+# $Header$
+
+CCD_HOME	= ccd
+CCD_SRC_HOME	= $(MOPTOP_SRC_HOME)/$(CCD_HOME)
+CCD_BIN_HOME	= $(MOPTOP_BIN_HOME)/$(CCD_HOME)
+CCD_DOC_HOME	= $(MOPTOP_DOC_HOME)/$(CCD_HOME)
+
+CCD_LIBNAME	= $(MOPTOP_HOME)_$(CCD_HOME)
+
+#
+# Andor SDK 3
+#
+ifeq ("$(HOSTTYPE)","i386-linux") 
+ANDOR_INCDIR	= $(LT_SRC_HOME)/moptop-nogit/andor/andor-sdk3-3.14.30038.0/inc/
+ANDOR_LIBDIR	= $(LT_SRC_HOME)/moptop-nogit/andor/andor-sdk3-3.14.30038.0/x86/
+ANDOR_LIBS	= -latcore -latutility
+else
+ifeq ("$(HOSTTYPE)","x86_64-linux") 
+ANDOR_INCDIR	= /usr/local/include/
+ANDOR_LIBDIR	= /usr/local/lib/
+ANDOR_LIBS	= -latcore -latutility
+endif
+endif
