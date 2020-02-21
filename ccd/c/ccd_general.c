@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include "ccd_general.h"
 #include "ccd_command.h"
+#include "ccd_exposure.h"
 #include "ccd_setup.h"
 
 /* defines */
@@ -97,6 +98,8 @@ static char General_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * @see #CCD_General_Get_Current_Time_String
  * @see ccd_command.html#CCD_Command_Get_Error_Number
  * @see ccd_command.html#CCD_Command_Error
+ * @see ccd_exposure.html#CCD_Exposure_Get_Error_Number
+ * @see ccd_exposure.html#CCD_Exposure_Error
  * @see ccd_setup.html#CCD_Setup_Get_Error_Number
  * @see ccd_setup.html#CCD_Setup_Error
  */
@@ -109,6 +112,11 @@ void CCD_General_Error(void)
 	{
 		found = TRUE;
 		CCD_Setup_Error();
+	}
+	if(CCD_Exposure_Get_Error_Number() != 0)
+	{
+		found = TRUE;
+		CCD_Exposure_Error();
 	}
 	if(CCD_Command_Get_Error_Number() != 0)
 	{
@@ -138,6 +146,8 @@ void CCD_General_Error(void)
  * @see #CCD_General_Get_Current_Time_String
  * @see ccd_command.html#CCD_Command_Get_Error_Number
  * @see ccd_command.html#CCD_Command_Error_String
+ * @see ccd_exposure.html#CCD_Exposure_Get_Error_Number
+ * @see ccd_exposure.html#CCD_Exposure_Error_String
  * @see ccd_setup.html#CCD_Setup_Get_Error_Number
  * @see ccd_setup.html#CCD_Setup_Error_String
  */
@@ -149,6 +159,10 @@ void CCD_General_Error_To_String(char *error_string)
 	if(CCD_Setup_Get_Error_Number() != 0)
 	{
 		CCD_Setup_Error_String(error_string);
+	}
+	if(CCD_Exposure_Get_Error_Number() != 0)
+	{
+		CCD_Exposure_Error_String(error_string);
 	}
 	if(CCD_Command_Get_Error_Number() != 0)
 	{
@@ -208,12 +222,12 @@ void CCD_General_Get_Current_Time_String(char *time_string,int string_length)
 /**
  * Routine to log a message to a defined logging mechanism. This routine has an arbitary number of arguments,
  * and uses vsprintf to format them i.e. like fprintf. 
- * Filter_Wheel_Log is then called to handle the log message.
+ * CCD_General_Log is then called to handle the log message.
  * @param level An integer, used to decide whether this particular message has been selected for
  * 	logging or not.
  * @param format A string, with formatting statements the same as fprintf would use to determine the type
  * 	of the following arguments.
- * @see #Filter_Wheel_Log
+ * @see #CCD_General_Log
  * @see #LOG_BUFF_LENGTH
  */
 void CCD_General_Log_Format(int level,char *format,...)
@@ -273,7 +287,7 @@ void CCD_General_Set_Log_Handler_Function(void (*log_fn)(int level,char *string)
  * @see #General_Data
  * @see #CCD_General_Log
  */
-void Filter_Wheel_Set_Log_Filter_Function(int (*filter_fn)(int level,char *string))
+void CCD_General_Set_Log_Filter_Function(int (*filter_fn)(int level,char *string))
 {
 	General_Data.Log_Filter = filter_fn;
 }

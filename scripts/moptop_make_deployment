@@ -24,14 +24,20 @@ switch ( ${machine_name} )
     case "moptop":
     case "moptop1":
 	set install_java_software = 1
+	set install_filter_wheel_software = 1
+	set install_rotator_software = 1
 	setenv HOSTTYPE "x86_64-linux"
 	breaksw
     case "moptop2":
 	set install_java_software = 0
+	set install_filter_wheel_software = 0
+	set install_rotator_software = 0
 	setenv HOSTTYPE "x86_64-linux"
 	breaksw
     default:
 	set install_java_software = 1
+	set install_filter_wheel_software = 1
+	set install_rotator_software = 1
 	setenv HOSTTYPE "x86_64-linux"
 endsw
 set camera_name = "moptop"
@@ -72,9 +78,15 @@ endif
 echo "Creating directory structure..."
 set dir_count = 0
 # ${deployment_bin_dir}/libdprt/object/test/${HOSTTYPE} 
-set dir_list = "${deployment_dir} ${deployment_dir}/${init_d_dir} ${deployment_icc_dir} ${deployment_bin_dir} ${deployment_dir}/icc/tmp ${deployment_dir}/icc/tmp/log_archive ${deployment_dir}/icc/log ${deployment_icc_dir}/config ${deployment_icc_dir}/dprt/dark ${deployment_icc_dir}/dprt/flat ${deployment_bin_dir}/scripts ${deployment_bin_dir}/moptop/scripts ${deployment_bin_dir}/moptop/c/${HOSTTYPE} ${deployment_bin_dir}/moptop/ccd/test/${HOSTTYPE} ${deployment_bin_dir}/moptop/pirot/test/${HOSTTYPE} ${deployment_bin_dir}/moptop/filter_wheel/test/${HOSTTYPE} ${deployment_bin_dir}/ics_util/c/${HOSTTYPE} ${deployment_bin_dir}/ccd/misc/${HOSTTYPE} ${deployment_bin_dir}/lib/${HOSTTYPE} ${deployment_bin_dir}/log_udp/test/${HOSTTYPE} ${deployment_bin_dir}/commandserver/test/${HOSTTYPE} ${deployment_bin_dir}/ngatastro/test/${HOSTTYPE} ${deployment_bin_dir}/javalib ${deployment_bin_dir}/autobooter/java "
+set dir_list = "${deployment_dir} ${deployment_dir}/${init_d_dir} ${deployment_icc_dir} ${deployment_bin_dir} ${deployment_dir}/icc/tmp ${deployment_dir}/icc/tmp/log_archive ${deployment_dir}/icc/log ${deployment_icc_dir}/config ${deployment_icc_dir}/dprt/dark ${deployment_icc_dir}/dprt/flat ${deployment_bin_dir}/scripts ${deployment_bin_dir}/moptop/scripts ${deployment_bin_dir}/moptop/c/${HOSTTYPE} ${deployment_bin_dir}/moptop/ccd/test/${HOSTTYPE} ${deployment_bin_dir}/ics_util/c/${HOSTTYPE} ${deployment_bin_dir}/ccd/misc/${HOSTTYPE} ${deployment_bin_dir}/lib/${HOSTTYPE} ${deployment_bin_dir}/log_udp/test/${HOSTTYPE} ${deployment_bin_dir}/commandserver/test/${HOSTTYPE} ${deployment_bin_dir}/ngatastro/test/${HOSTTYPE} ${deployment_bin_dir}/javalib ${deployment_bin_dir}/autobooter/java "
 if( ${install_java_software} ) then
     set dir_list = "${dir_list} ${deployment_bin_dir}/moptop/test ${deployment_bin_dir}/moptop/java/ ${deployment_bin_dir}/ccs_gui/java ${deployment_bin_dir}/ccs_gui/java/wav "
+endif
+if( ${install_filter_wheel_software} ) then
+    set dir_list = "${dir_list} ${deployment_bin_dir}/moptop/filter_wheel/test/${HOSTTYPE}"
+endif
+if( ${install_rotator_software} ) then
+    set dir_list = "${dir_list} ${deployment_bin_dir}/moptop/pirot/test/${HOSTTYPE}"
 endif
 foreach dir ( ${dir_list} )
 	mkdir -p ${dir}
@@ -169,8 +181,9 @@ echo "${java_class_dir_count} Java class directories copied with ${java_class_fi
 # C libraries
 #
 echo "Copying C libraries..."
-set clib_list = "libcfitsio.so libngatastro.so libngatutil.so libestar_config.so liblog_udp.so libcommandserver.so libpirot.so libmoptop_filter_wheel.so"
-# libmoptop_ccd.so 
+# The C layer on moptop2 will still need access to the rotator and filter wheel libraries 
+# unless they are dynamically (at run time) linked
+set clib_list = "libcfitsio.so libngatastro.so libngatutil.so libestar_config.so liblog_udp.so libcommandserver.so libmoptop_ccd.so libpirot.so libmoptop_filter_wheel.so"
 set clib_count = 0
 foreach clib ( ${clib_list} )
 	echo "C Library : ${clib}"
@@ -208,8 +221,14 @@ echo "${clib_count} C libraries copied."
 # C programs
 #
 echo "Copying C program directories..."
-set dir_list = "ics_util/c/${HOSTTYPE} ccd/misc/${HOSTTYPE} log_udp/test/${HOSTTYPE} ngatastro/test/${HOSTTYPE} commandserver/test/${HOSTTYPE} moptop/pirot/test/${HOSTTYPE} moptop/filter_wheel/test/${HOSTTYPE}"
-# moptop/ccd/test/${HOSTTYPE} moptop/c/${HOSTTYPE} 
+set dir_list = "ics_util/c/${HOSTTYPE} ccd/misc/${HOSTTYPE} log_udp/test/${HOSTTYPE} ngatastro/test/${HOSTTYPE} commandserver/test/${HOSTTYPE} moptop/ccd/test/${HOSTTYPE} "
+# moptop/c/${HOSTTYPE} 
+if( ${install_filter_wheel_software} ) then
+    set dir_list = "${dir_list} moptop/filter_wheel/test/${HOSTTYPE}"
+endif
+if( ${install_rotator_software} ) then
+    set dir_list = "${dir_list} moptop/pirot/test/${HOSTTYPE}"
+endif
 set dir_count = 0
 set file_count = 0
 # clean out deployment_tmp_dir

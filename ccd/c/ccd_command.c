@@ -52,7 +52,7 @@
 #error AT_TRUE does not match TRUE.
 #endif
 
-/* defines */
+/* hash defines */
 /**
  * The default number of times to retry certain Andor library commands, before returning an error.
  */
@@ -294,14 +294,14 @@ int CCD_Command_Open(void)
 		Command_Error_Number = 6;
 		sprintf(Command_Error_String,
 			"CCD_Command_Open: AT_Open(camera index = %d) failed (%d) : %s after %d attempts.",
-			Command_Data.Camera_Index,retval,Command_Get_Andor_Error_String(retval),(retry_index+1));
+			Command_Data.Camera_Index,retval,Command_Get_Andor_Error_String(retval),retry_index);
 		return FALSE;
 	}
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
 			       "CCD_Command_Open: AT_Open(camera index = %d) returned camera handle %d "
 			       "after %d attempts.",
-			       Command_Data.Camera_Index,Command_Data.Handle,(retry_index+1));
+			       Command_Data.Camera_Index,Command_Data.Handle,retry_index);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Open: Finished.");
@@ -369,13 +369,13 @@ int CCD_Command_Close(void)
 		Command_Error_Number = 8;
 		sprintf(Command_Error_String,
 			"CCD_Command_Close: AT_Close(camera handle = %d) failed (%d) : %s after %d attempts.",
-			Command_Data.Handle,retval,Command_Get_Andor_Error_String(retval),(retry_index+1));
+			Command_Data.Handle,retval,Command_Get_Andor_Error_String(retval),retry_index);
 		return FALSE;
 	}
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
 			       "CCD_Command_Close: AT_Close(camera handle = %d) succeeded after %d attempts.",
-			       Command_Data.Handle,(retry_index+1));
+			       Command_Data.Handle,retry_index);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Close: Finished.");
@@ -452,13 +452,13 @@ int CCD_Command_Command(char *feature_name_string)
 		sprintf(Command_Error_String,"CCD_Command_Command: AT_Command(camera handle = %d,"
 			"feature name = '%s') failed (%d) : %s after %d attempts.",
 			Command_Data.Handle,feature_name_string,retval,Command_Get_Andor_Error_String(retval),
-			(retry_index+1));
+			retry_index);
 		return FALSE;
 	}
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Command: AT_Command(camera handle = %d,"
 			       "feature name = '%s') succeeded after %d attempts.",
-			       Command_Data.Handle,feature_name_string,(retry_index+1));
+			       Command_Data.Handle,feature_name_string,retry_index);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Command: Finished.");
@@ -526,13 +526,13 @@ int CCD_Command_Flush(void)
 		Command_Error_Number = 45;
 		sprintf(Command_Error_String,
 			"CCD_Command_Flush: AT_Flush(camera handle = %d) failed (%d) : %s after %d attempts.",
-			Command_Data.Handle,retval,Command_Get_Andor_Error_String(retval),(retry_index+1));
+			Command_Data.Handle,retval,Command_Get_Andor_Error_String(retval),retry_index);
 		return FALSE;
 	}
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
 			       "CCD_Command_Flush: AT_Flush(camera handle = %d) succeeded after %d attempts.",
-			       Command_Data.Handle,(retry_index+1));
+			       Command_Data.Handle,retry_index);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Flush: Finished.");
@@ -617,13 +617,13 @@ int CCD_Command_Get_Bool(char *feature_name_string,int *value)
 		sprintf(Command_Error_String,"CCD_Command_Get_Bool: AT_GetBool(camera handle = %d,"
 			"feature name = '%s', value = %p) failed (%d) : %s after %d attempts.",
 			Command_Data.Handle,feature_name_string,value,retval,Command_Get_Andor_Error_String(retval),
-			(retry_index+1));
+			retry_index);
 		return FALSE;
 	}
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Get_Bool: AT_GetBool(camera handle = %d,"
 			       "feature name = '%s', value = %d) succeeded after %d attempts.",
-			       Command_Data.Handle,feature_name_string,(*value),(retry_index+1));
+			       Command_Data.Handle,feature_name_string,(*value),retry_index);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Get_Bool: Finished.");
@@ -708,14 +708,14 @@ int CCD_Command_Get_Enum_Index(char *feature_name_string,int *value)
 		sprintf(Command_Error_String,"CCD_Command_Get_Enum_Index: AT_GetEnumIndex(camera handle = %d,"
 			"feature name = '%s', value = %p) failed (%d) : %s after %d attempts.",
 			Command_Data.Handle,feature_name_string,value,retval,Command_Get_Andor_Error_String(retval),
-			(retry_index+1));
+			retry_index);
 		return FALSE;
 	}
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
 			       "CCD_Command_Get_Enum_Index: AT_GetEnumIndex(camera handle = %d,"
 			       "feature name = '%s', value = %d) succeeded after %d attempts.",
-			       Command_Data.Handle,feature_name_string,(*value),(retry_index+1));
+			       Command_Data.Handle,feature_name_string,(*value),retry_index);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Get_Enum_Index: Finished.");
@@ -812,7 +812,7 @@ int CCD_Command_Get_Enum_String_By_Index(char *feature_name_string,int index,
 			"AT_GetEnumStringByIndex(camera handle = %d,"
 			"feature name = '%s',index = %d) failed (%d) : %s after %d attempts.",
 			Command_Data.Handle,feature_name_string,index,retval,Command_Get_Andor_Error_String(retval),
-			(retry_index+1));
+			retry_index);
 		return FALSE;
 	}
 	/* convert value_wide_string to value */
@@ -822,7 +822,7 @@ int CCD_Command_Get_Enum_String_By_Index(char *feature_name_string,int index,
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Get_Enum_String_By_Index: "
 			       "AT_GetEnumStringByIndex(camera handle = %d,"
 			       "feature name = '%s', index = %d, value = '%s') succeeded after %d attempts.",
-			       Command_Data.Handle,feature_name_string,index,value_string,(retry_index+1));
+			       Command_Data.Handle,feature_name_string,index,value_string,retry_index);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Get_Enum_String_By_Index: Finished.");
@@ -907,13 +907,13 @@ int CCD_Command_Get_Float(char *feature_name_string,double *value)
 		sprintf(Command_Error_String,"CCD_Command_Get_Float: AT_GetFloat(camera handle = %d,"
 			"feature name = '%s', value = %p) failed (%d) : %s after %d attempts.",
 			Command_Data.Handle,feature_name_string,value,retval,Command_Get_Andor_Error_String(retval),
-			(retry_index+1));
+			retry_index);
 		return FALSE;
 	}
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Get_Float: AT_GetFloat(camera handle = %d,"
 			       "feature name = '%s', value = %.2f) succeeded after %d attempts.",
-			       Command_Data.Handle,feature_name_string,(*value),(retry_index+1));
+			       Command_Data.Handle,feature_name_string,(*value),retry_index);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Get_Float: Finished.");
@@ -998,14 +998,14 @@ int CCD_Command_Get_Float_Min(char *feature_name_string,double *value)
 		sprintf(Command_Error_String,"CCD_Command_Get_Float_Min: AT_GetFloatMin(camera handle = %d,"
 			"feature name = '%s', value = %p) failed (%d) : %s after %d attempts.",
 			Command_Data.Handle,feature_name_string,value,retval,Command_Get_Andor_Error_String(retval),
-			(retry_index+1));
+			retry_index);
 		return FALSE;
 	}
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
 			       "CCD_Command_Get_Float_Min: AT_GetFloatMin(camera handle = %d,"
 			       "feature name = '%s', value = %.2f) succeeded after %d attempts.",
-			       Command_Data.Handle,feature_name_string,(*value),(retry_index+1));
+			       Command_Data.Handle,feature_name_string,(*value),retry_index);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Get_Float_Min: Finished.");
@@ -1091,14 +1091,14 @@ int CCD_Command_Get_Float_Max(char *feature_name_string,double *value)
 		sprintf(Command_Error_String,"CCD_Command_Get_Float_Max: AT_GetFloatMax(camera handle = %d,"
 			"feature name = '%s', value = %p) failed (%d) : %s after %d attempts.",
 			Command_Data.Handle,feature_name_string,value,retval,Command_Get_Andor_Error_String(retval),
-			(retry_index+1));
+			retry_index);
 		return FALSE;
 	}
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
 			       "CCD_Command_Get_Float_Max: AT_GetFloatMax(camera handle = %d,"
 			       "feature name = '%s', value = %.2f) succeeded after %d attempts.",
-			       Command_Data.Handle,feature_name_string,(*value),(retry_index+1));
+			       Command_Data.Handle,feature_name_string,(*value),retry_index);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Get_Float_Max: Finished.");
@@ -1184,7 +1184,7 @@ int CCD_Command_Get_Int(char *feature_name_string,int *value)
 		sprintf(Command_Error_String,"CCD_Command_Get_Int: AT_GetInt(camera handle = %d,"
 			"feature name = '%s', value = %p) failed (%d) : %s after %d attempts.",
 			Command_Data.Handle,feature_name_string,value,retval,Command_Get_Andor_Error_String(retval),
-			(retry_index+1));
+			retry_index);
 		return FALSE;
 	}
 	/* convert andor return value to an integer */
@@ -1192,7 +1192,7 @@ int CCD_Command_Get_Int(char *feature_name_string,int *value)
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Get_Int: AT_GetInt(camera handle = %d,"
 			       "feature name = '%s', value = %ld = %d) succeeded after %d attempts.",
-			       Command_Data.Handle,feature_name_string,andor_value,(*value),(retry_index+1));
+			       Command_Data.Handle,feature_name_string,andor_value,(*value),retry_index);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Get_Int: Finished.");
@@ -1280,7 +1280,7 @@ int CCD_Command_Get_String(char *feature_name_string,char *value,int value_lengt
 		sprintf(Command_Error_String,"CCD_Command_Get_String: AT_GetString(camera handle = %d,"
 			"feature name = '%s') failed (%d) : %s after %d attempts.",
 			Command_Data.Handle,feature_name_string,retval,Command_Get_Andor_Error_String(retval),
-			(retry_index+1));
+			retry_index);
 		return FALSE;
 	}
 	/* convert value_wide_string to value */
@@ -1289,7 +1289,7 @@ int CCD_Command_Get_String(char *feature_name_string,char *value,int value_lengt
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Get_String: AT_GetString(camera handle = %d,"
 			       "feature name = '%s', value = '%s') succeeded after %d attempts.",
-			       Command_Data.Handle,feature_name_string,value,(retry_index+1));
+			       Command_Data.Handle,feature_name_string,value,retry_index);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Get_String: Finished.");
@@ -1374,13 +1374,13 @@ int CCD_Command_Is_Readonly(char *feature_name_string,int *is_readonly)
 		sprintf(Command_Error_String,"CCD_Command_Is_Readonly: AT_IsReadOnly(camera handle = %d,"
 			"feature name = '%s', is_readonly = %p) failed (%d) : %s after %d attempts.",
 			Command_Data.Handle,feature_name_string,is_readonly,retval,
-			Command_Get_Andor_Error_String(retval),(retry_index+1));
+			Command_Get_Andor_Error_String(retval),retry_index);
 		return FALSE;
 	}
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Is_Readonly: AT_IsReadOnly(camera handle = %d,"
 			       "feature name = '%s', is_readonly = %d) succeeded after %d attempts.",
-			       Command_Data.Handle,feature_name_string,(*is_readonly),(retry_index+1));
+			       Command_Data.Handle,feature_name_string,(*is_readonly),retry_index);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Is_Readonly: Finished.");
@@ -1465,13 +1465,13 @@ int CCD_Command_Set_Bool(char *feature_name_string,int value)
 		sprintf(Command_Error_String,"CCD_Command_Set_Bool: AT_SetBool(camera handle = %d,"
 			"feature name = '%s', value = %d) failed (%d) : %s after %d attempts.",
 			Command_Data.Handle,feature_name_string,value,retval,Command_Get_Andor_Error_String(retval),
-			(retry_index+1));
+			retry_index);
 		return FALSE;
 	}
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Set_Bool: AT_SetBool(camera handle = %d,"
 			       "feature name = '%s', value = %d) succeeded after %d attempts.",
-			       Command_Data.Handle,feature_name_string,value,(retry_index+1));
+			       Command_Data.Handle,feature_name_string,value,retry_index);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Set_Bool: Finished.");
@@ -1556,14 +1556,14 @@ int CCD_Command_Set_Enum_String(char *feature_name_string,char *enum_value_strin
 		sprintf(Command_Error_String,"CCD_Command_Set_Enum_String: AT_SetEnumString(camera handle = %d,"
 			"feature name = '%s', value = '%s') failed (%d) : %s after %d attempts.",
 			Command_Data.Handle,feature_name_string,enum_value_string,retval,
-			Command_Get_Andor_Error_String(retval),(retry_index+1));
+			Command_Get_Andor_Error_String(retval),retry_index);
 		return FALSE;
 	}
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
 			       "CCD_Command_Set_Enum_String: AT_SetEnumString(camera handle = %d,"
 			       "feature name = '%s', value = '%s') succeeded after %d attempts.",
-			       Command_Data.Handle,feature_name_string,enum_value_string,(retry_index+1));
+			       Command_Data.Handle,feature_name_string,enum_value_string,retry_index);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Set_Enum_String: Finished.");
@@ -1641,13 +1641,13 @@ int CCD_Command_Set_Float(char *feature_name_string,double value)
 		sprintf(Command_Error_String,"CCD_Command_Set_Float: AT_SetFloat(camera handle = %d,"
 			"feature name = '%s', value = %.2f) failed (%d) : %s after %d attempts.",
 			Command_Data.Handle,feature_name_string,value,retval,Command_Get_Andor_Error_String(retval),
-			(retry_index+1));
+			retry_index);
 		return FALSE;
 	}
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Set_Float: AT_SetFloat(camera handle = %d,"
 			       "feature name = '%s', value = %.2f) succeeded after %d attempts.",
-			       Command_Data.Handle,feature_name_string,value,(retry_index+1));
+			       Command_Data.Handle,feature_name_string,value,retry_index);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Set_Float: Finished.");
