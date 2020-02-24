@@ -27,6 +27,7 @@
 #include "ccd_command.h"
 #include "ccd_exposure.h"
 #include "ccd_setup.h"
+#include "ccd_temperature.h"
 
 /* defines */
 /**
@@ -102,12 +103,19 @@ static char General_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * @see ccd_exposure.html#CCD_Exposure_Error
  * @see ccd_setup.html#CCD_Setup_Get_Error_Number
  * @see ccd_setup.html#CCD_Setup_Error
+ * @see ccd_temperature.html#CCD_Temperature_Get_Error_Number
+ * @see ccd_temperature.html#CCD_Temperature_Error
  */
 void CCD_General_Error(void)
 {
 	char time_string[32];
 	int found = FALSE;
 
+	if(CCD_Temperature_Get_Error_Number() != 0)
+	{
+		found = TRUE;
+		CCD_Temperature_Error();
+	}
 	if(CCD_Setup_Get_Error_Number() != 0)
 	{
 		found = TRUE;
@@ -150,12 +158,18 @@ void CCD_General_Error(void)
  * @see ccd_exposure.html#CCD_Exposure_Error_String
  * @see ccd_setup.html#CCD_Setup_Get_Error_Number
  * @see ccd_setup.html#CCD_Setup_Error_String
+ * @see ccd_temperature.html#CCD_Temperature_Get_Error_Number
+ * @see ccd_temperature.html#CCD_Temperature_Error_String
  */
 void CCD_General_Error_To_String(char *error_string)
 {
 	char time_string[32];
 
 	strcpy(error_string,"");
+	if(CCD_Temperature_Get_Error_Number() != 0)
+	{
+		CCD_Temperature_Error_String(error_string);
+	}
 	if(CCD_Setup_Get_Error_Number() != 0)
 	{
 		CCD_Setup_Error_String(error_string);

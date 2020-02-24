@@ -15,7 +15,7 @@ CFLAGS 		= -g -I$(INCDIR) -I$(ANDOR_INCDIR) $(LOGGING_CFLAGS) $(MUTEX_CFLAGS) \
 LDFLAGS		= -L$(ANDOR_LIBDIR) $(ANDOR_LIBS)
 DOCFLAGS 	= -static
 
-SRCS 		= ccd_general.c ccd_command.c ccd_exposure.c ccd_setup.c
+SRCS 		= ccd_general.c ccd_command.c ccd_exposure.c ccd_setup.c ccd_temperature.c
 HEADERS		= $(SRCS:%.c=$(INCDIR)/%.h)
 OBJS 		= $(SRCS:%.c=$(BINDIR)/%.o)
 DOCS 		= $(SRCS:%.c=$(DOCSDIR)/%.html)

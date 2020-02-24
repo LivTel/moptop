@@ -632,6 +632,100 @@ int CCD_Command_Get_Bool(char *feature_name_string,int *value)
 }
 
 /**
+ * Get the number (count) of enumeration values of the specified feature_name_string.
+ * @param feature_name_string The name of the feature to get the number of values for, as a normal string. 
+ *        The routine will fail if
+ *        the string is longer than COMMAND_MAX_FEATURE_NAME_LENGTH, which is used to allocate space
+ *        for the wide character version of this string passed into the Andor API.
+ * @param count A pointer to an integer, that on success will be set to 
+ *        the number of enumeration values for the specified feature_name.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #COMMAND_MAX_FEATURE_NAME_LENGTH
+ * @see #Command_Data
+ * @see #Command_Get_Andor_Error_String
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see #Command_MBS_To_WCS_String
+ * @see ccd_general.html#CCD_GENERAL_ONE_SECOND_MS
+ * @see ccd_general.html#CCD_GENERAL_ONE_MILLISECOND_NS
+ * @see ccd_general.html#CCD_GENERAL_ONE_SECOND_NS
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Get_Enum_Count(char *feature_name_string,int *count)
+{
+	struct timespec sleep_time;
+	AT_WC feature_name_wide_string[COMMAND_MAX_FEATURE_NAME_LENGTH+1];
+	int retval,retry_index;
+
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Get_Enum_Count: Started.");
+#endif /* LOGGING */
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Get_Enum_Count: Get enumeration count for '%s'.",
+			       feature_name_string);
+#endif /* LOGGING */
+	if(count == NULL)
+	{
+		Command_Error_Number = 52;
+		sprintf(Command_Error_String,"CCD_Command_Get_Enum_Count: '%s' count is NULL.",feature_name_string);
+		return FALSE;
+	}
+	/* convert feature name to a wide character string, suitable for the Andor API */
+	if(!Command_MBS_To_WCS_String(feature_name_string,feature_name_wide_string,COMMAND_MAX_FEATURE_NAME_LENGTH+1))
+		return FALSE;
+	/* initialse loop variables */
+	retry_index = 0;
+	/* AT_SUCCESS is 0, so this initialises retval to something other than AT_SUCCESS, currently -1 */
+	retval = AT_SUCCESS-1; 
+	while((retval != AT_SUCCESS)&&(retry_index < Command_Data.Retry_Count))
+	{
+#if LOGGING > 0
+		CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+				       "CCD_Command_Get_Enum_Count: Calling AT_GetEnumCount(camera handle = %d,"
+				       "feature name = '%s', count = %p), attempt %d.",
+				       Command_Data.Handle,feature_name_string,count,(retry_index+1));
+#endif /* LOGGING */
+		retval = AT_GetEnumCount(Command_Data.Handle,feature_name_wide_string,count);
+		if(retval != AT_SUCCESS)
+		{
+			Command_Error_Number = 53;
+			sprintf(Command_Error_String,"CCD_Command_Get_Enum_Count: AT_GetEnumCount(camera handle = %d,"
+				"feature name = '%s', count = %p) attempt %d, failed (%d) : %s.",
+				Command_Data.Handle,feature_name_string,count,(retry_index+1),retval,
+				Command_Get_Andor_Error_String(retval));
+			/* don't fail here, just retry. Log the error though. */
+			CCD_General_Error();
+			/* also sleep for a time before retrying */
+			sleep_time.tv_sec = Command_Data.Retry_Sleep_Time_Ms/CCD_GENERAL_ONE_SECOND_MS;
+			sleep_time.tv_nsec = (Command_Data.Retry_Sleep_Time_Ms*CCD_GENERAL_ONE_MILLISECOND_NS)%
+				CCD_GENERAL_ONE_SECOND_NS;
+			nanosleep(&sleep_time,&sleep_time);
+		}/* end if retval was not a success */
+		retry_index ++;
+	}/* end while */
+	/* if we retried too many times without success, give up and return an error */
+	if(retry_index >= Command_Data.Retry_Count)
+	{
+		Command_Error_Number = 54;
+		sprintf(Command_Error_String,"CCD_Command_Get_Enum_Count: AT_GetEnumCount(camera handle = %d,"
+			"feature name = '%s', count = %p) failed (%d) : %s after %d attempts.",
+			Command_Data.Handle,feature_name_string,count,retval,Command_Get_Andor_Error_String(retval),
+			retry_index);
+		return FALSE;
+	}
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+			       "CCD_Command_Get_Enum_Count: AT_GetEnumCount(camera handle = %d,"
+			       "feature name = '%s', count = %d) succeeded after %d attempts.",
+			       Command_Data.Handle,feature_name_string,(*count),retry_index);
+#endif /* LOGGING */
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Get_Enum_Count: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
  * Get the enumeration index value of the specified feature_name_string.
  * @param feature_name_string The name of the feature to get the value of, as a normal string. The routine will fail if
  *        the string is longer than COMMAND_MAX_FEATURE_NAME_LENGTH, which is used to allocate space

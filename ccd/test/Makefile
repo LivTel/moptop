@@ -15,7 +15,7 @@ CFLAGS 		= -g -I$(INCDIR) $(LOGGING_CFLAGS) $(LOG_UDP_CFLAGS) $(SHARED_LIB_CFLAG
 LDFLAGS		= -L$(ANDOR_LIBDIR) $(ANDOR_LIBS)
 DOCFLAGS 	= -static
 
-SRCS 		= test_setup_startup.c test_mbsrtowcs.c test_mbstowcs.c
+SRCS 		= test_setup_startup.c test_temperature_control.c test_mbsrtowcs.c test_mbstowcs.c
 OBJS 		= $(SRCS:%.c=%.o)
 PROGS 		= $(SRCS:%.c=$(BINDIR)/%)
 DOCS 		= $(SRCS:%.c=$(DOCSDIR)/%.html)

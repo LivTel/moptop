@@ -1,6 +1,4 @@
-/* ccd_command.h
-** $Header$
-*/
+/* ccd_command.h */
 
 #ifndef CCD_COMMAND_H
 #define CCD_COMMAND_H
@@ -378,6 +376,22 @@
  * @see #CCD_Command_Get_Float_Max
  */
 #define CCD_Command_Get_Exposure_Time_Max(f) CCD_Command_Get_Float_Max("ExposureTime",f)
+/**
+ * Get the number of temperature control enumeration values from the Andor SDK.
+ * Uses the CCD_Command_Get_Enum_Count with feature name "TemperatureControl".
+ * @param f The address of an integer to store the number of enumeration values for TemperatureControl.
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see #CCD_Command_Get_Enum_Count
+ */
+#define CCD_Command_Get_Temperature_Control_Count(c) CCD_Command_Get_Enum_Count("TemperatureControl",c)
+/**
+ * Get the sensor temperature from the camera/Andor library.
+ * Uses the CCD_Command_Get_Float with feature name "SensorTemperature".
+ * @param f The address of a double to store the sensor temperature, in degrees centigrade.
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see #CCD_Command_Get_Float
+ */
+#define CCD_Command_Get_Sensor_Temperature(f) CCD_Command_Get_Float("SensorTemperature",f)
 
 /* functions */
 extern int CCD_Command_Initialise(void);
@@ -387,7 +401,7 @@ extern int CCD_Command_Close(void);
 extern int CCD_Command_Command(char *feature_name_string);
 extern int CCD_Command_Flush(void);
 extern int CCD_Command_Get_Bool(char *feature_name_string,int *value);
-/* diddly todo extern int CCD_Command_Get_Enum_Count(char *feature_name_string,int *count);*/
+extern int CCD_Command_Get_Enum_Count(char *feature_name_string,int *count);
 extern int CCD_Command_Get_Enum_Index(char *feature_name_string,int *value);
 extern int CCD_Command_Get_Enum_String_By_Index(char *feature_name_string,int index,
 						char *value_string,int value_length);
@@ -403,8 +417,5 @@ extern int CCD_Command_Set_Float(char *feature_name_string,double value);
 extern int CCD_Command_Get_Error_Number(void);
 extern void CCD_Command_Error(void);
 extern void CCD_Command_Error_String(char *error_string);
-/*
-** $Log$
-*/
 
 #endif
