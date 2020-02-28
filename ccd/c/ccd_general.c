@@ -24,6 +24,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include "ccd_general.h"
+#include "ccd_buffer.h"
 #include "ccd_command.h"
 #include "ccd_exposure.h"
 #include "ccd_setup.h"
@@ -97,6 +98,8 @@ static char General_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * @see #General_Error_Number
  * @see #General_Error_String
  * @see #CCD_General_Get_Current_Time_String
+ * @see ccd_buffer.html#CCD_Buffer_Get_Error_Number
+ * @see ccd_buffer.html#CCD_Buffer_Error
  * @see ccd_command.html#CCD_Command_Get_Error_Number
  * @see ccd_command.html#CCD_Command_Error
  * @see ccd_exposure.html#CCD_Exposure_Get_Error_Number
@@ -131,6 +134,11 @@ void CCD_General_Error(void)
 		found = TRUE;
 		CCD_Command_Error();
 	}
+	if(CCD_Buffer_Get_Error_Number() != 0)
+	{
+		found = TRUE;
+		CCD_Buffer_Error();
+	}
 	if(General_Error_Number != 0)
 	{
 		found = TRUE;
@@ -152,6 +160,8 @@ void CCD_General_Error(void)
  * @see #General_Error_Number
  * @see #General_Error_String
  * @see #CCD_General_Get_Current_Time_String
+ * @see ccd_buffer.html#CCD_Buffer_Get_Error_Number
+ * @see ccd_buffer.html#CCD_Buffer_Error_String
  * @see ccd_command.html#CCD_Command_Get_Error_Number
  * @see ccd_command.html#CCD_Command_Error_String
  * @see ccd_exposure.html#CCD_Exposure_Get_Error_Number
@@ -181,6 +191,10 @@ void CCD_General_Error_To_String(char *error_string)
 	if(CCD_Command_Get_Error_Number() != 0)
 	{
 		CCD_Command_Error_String(error_string);
+	}
+	if(CCD_Buffer_Get_Error_Number() != 0)
+	{
+		CCD_Buffer_Error_String(error_string);
 	}
 	if(General_Error_Number != 0)
 	{
@@ -359,6 +373,3 @@ int CCD_General_Log_Filter_Level_Bitwise(int level,char *string)
 	return ((level & General_Data.Log_Filter_Level) > 0);
 }
 
-/*
-** $Log$
-*/

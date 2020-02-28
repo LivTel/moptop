@@ -1,6 +1,4 @@
-/* ccd_exposure.h
-** $Header$
-*/
+/* ccd_exposure.h */
 
 #ifndef CCD_EXPOSURE_H
 #define CCD_EXPOSURE_H

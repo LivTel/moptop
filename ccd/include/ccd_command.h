@@ -414,6 +414,8 @@ extern int CCD_Command_Is_Readonly(char *feature_name_string,int *is_readonly);
 extern int CCD_Command_Set_Bool(char *feature_name_string,int value);
 extern int CCD_Command_Set_Enum_String(char *feature_name_string,char *enum_value_string);
 extern int CCD_Command_Set_Float(char *feature_name_string,double value);
+extern int CCD_Command_Queue_Buffer(AT_U8* buffer_ptr,int buffer_length);
+extern int CCD_Command_Wait_Buffer(AT_U8** buffer_ptr,int *buffer_length,unsigned int timeout);
 extern int CCD_Command_Get_Error_Number(void);
 extern void CCD_Command_Error(void);
 extern void CCD_Command_Error_String(char *error_string);

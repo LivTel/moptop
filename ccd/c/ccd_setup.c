@@ -447,6 +447,8 @@ int CCD_Setup_Shutdown(void)
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Setup_Shutdown: Started.");
 #endif /* LOGGING */
+	/* turn off image acquisition */
+
 	/* close the open connection to the CCD camera */
 	if(!CCD_Command_Close())
 	{

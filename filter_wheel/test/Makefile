@@ -13,7 +13,7 @@ CFLAGS 		= -g -I$(INCDIR) $(LOG_UDP_CFLAGS)
 DOCFLAGS 	= -static
 
 SRCS 		= filter_wheel_test_move.c filter_wheel_test_get_position.c 
-OBJS 		= $(SRCS:%.c=%.o)
+OBJS 		= $(SRCS:%.c=$(BINDIR)/%.o)
 PROGS 		= $(SRCS:%.c=$(BINDIR)/%)
 DOCS 		= $(SRCS:%.c=$(DOCSDIR)/%.html)
 SCRIPT_SRCS	= 
@@ -22,8 +22,11 @@ SCRIPT_BINS	= $(SCRIPT_SRCS:%=$(BINDIR)/%)
 
 top: $(PROGS) scripts docs
 
-$(BINDIR)/%: %.o
+$(BINDIR)/%: $(BINDIR)/%.o
 	$(CC) -o $@ $< -L$(LT_LIB_HOME) $(TIMELIB) $(SOCKETLIB) -lm -lc -l$(FILTER_WHEEL_LIBNAME)
+
+$(BINDIR)/%.o: %.c
+	$(CC) -c $(CFLAGS) $< -o $@  
 
 scripts: $(SCRIPT_BINS)
 

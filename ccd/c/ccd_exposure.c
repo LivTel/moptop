@@ -1,6 +1,5 @@
 /* ccd_exposure.c
 ** Moptop Andor Zyla CCD library
-** $Header$
 */
 /**
  * Exposure routines to drive the Andor Zyla CMOS CCD.
@@ -42,7 +41,6 @@
  * </dl>
  * @see #EXPOSURE_ENUM_VALUE_STRING_LENGTH
  */
-
 struct Exposure_Struct
 {
 	char Trigger_Mode[EXPOSURE_ENUM_VALUE_STRING_LENGTH];
@@ -60,7 +58,6 @@ static char rcsid[] = "$Id$";
  * <dt>Trigger_Mode</dt> <dd>""</dd>
  * </dl>
  */
-
 static struct Exposure_Struct Exposure_Data = 
 {
 	""

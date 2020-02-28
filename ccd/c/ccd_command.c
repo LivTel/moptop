@@ -1750,6 +1750,84 @@ int CCD_Command_Set_Float(char *feature_name_string,double value)
 }
 
 /**
+ * Routine to pass the specified buffer into the Andor libraries queue of buffers to put image data into.
+ * @param buffer_ptr A pointer to the image buffer to add to the queue. 
+ *        The buffer's start address has to be aligned to an 8-byte boundary according to the Andor SDK manual.
+ * @param buffer_length The length of the image buffer in bytes.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see #Command_Data
+ */
+int CCD_Command_Queue_Buffer(AT_U8* buffer_ptr,int buffer_length)
+{
+	int retval;
+
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Queue_Buffer: Started.");
+#endif /* LOGGING */
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Queue_Buffer: AT_QueueBuffer(camera handle = %d,"
+			       "buffer ptr = %p, buffer length = %d).",Command_Data.Handle,buffer_ptr,buffer_length);
+#endif /* LOGGING */
+	retval = AT_QueueBuffer(Command_Data.Handle,buffer_ptr,buffer_length);
+	if(retval != AT_SUCCESS)
+	{
+		Command_Error_Number = 55;
+		sprintf(Command_Error_String,"CCD_Command_Queue_Buffer: AT_QueueBuffer(camera handle = %d,"
+			"buffer ptr = %p, buffer length = %d) failed (%d) : %s.",
+			Command_Data.Handle,buffer_ptr,buffer_length,retval,Command_Get_Andor_Error_String(retval));
+		return FALSE;
+	}
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Queue_Buffer: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Wait for a read-out buffer to become available.
+ * @param buffer_ptr The address of a pointer to store a pointer to the newly acquired data into.
+ * @param buffer_length The address of an integer to store the returned buffer length.
+ * @param timeout How long to wait for new data to appear before returning an error. Use AT_INFINITE to wait forever. 
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see #Command_Data
+ */
+int CCD_Command_Wait_Buffer(AT_U8** buffer_ptr,int *buffer_length,unsigned int timeout)
+{
+	int retval;
+
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Wait_Buffer: Started.");
+#endif /* LOGGING */
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Wait_Buffer: Calling "
+			       "AT_WaitBuffer(handle = %d, buffer ptr = %p, buffer length address = %p, timeout = %d).",
+			       Command_Data.Handle,buffer_ptr,buffer_length,timeout);
+#endif /* LOGGING */
+	retval = AT_WaitBuffer(Command_Data.Handle,buffer_ptr,buffer_length,timeout);
+	if(retval != AT_SUCCESS)
+	{
+		Command_Error_Number = 56;
+		sprintf(Command_Error_String,"CCD_Command_Wait_Buffer: AT_WaitBuffer(camera handle = %d,"
+			"buffer ptr = %p, buffer length = %d) failed (%d) : %s.",
+			Command_Data.Handle,buffer_ptr,buffer_length,retval,Command_Get_Andor_Error_String(retval));
+		return FALSE;
+	}
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,
+			       "CCD_Command_Wait_Buffer: AT_WaitBuffer returned buffer %p of length %d .",
+			       (*buffer_ptr),(*buffer_length));
+#endif /* LOGGING */
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Wait_Buffer: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
  * Get the current value of the error number.
  * @return The current value of the error number.
  * @see #Command_Error_Number
