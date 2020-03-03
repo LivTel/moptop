@@ -31,7 +31,7 @@
 /* atutility.h contains Andor conversion utils.
 ** However the function prototypes only work with C++.
 ** Therefore the installed copy of atutility.h (in /usr/local/include) has to be modified to work with C.
-** This is done by removing the '&' from the following function prototypes:
+** This is done by replacing the '&' with a '*' from the following function prototypes:
 ** - AT_GetWidthFromMetadata 
 ** - AT_GetHeightFromMetadata 
 ** - AT_GetStrideFromMetadata 
@@ -1759,7 +1759,7 @@ int CCD_Command_Set_Float(char *feature_name_string,double value)
  * @see #Command_Error_String
  * @see #Command_Data
  */
-int CCD_Command_Queue_Buffer(AT_U8* buffer_ptr,int buffer_length)
+int CCD_Command_Queue_Buffer(unsigned char* buffer_ptr,int buffer_length)
 {
 	int retval;
 
@@ -1795,7 +1795,7 @@ int CCD_Command_Queue_Buffer(AT_U8* buffer_ptr,int buffer_length)
  * @see #Command_Error_String
  * @see #Command_Data
  */
-int CCD_Command_Wait_Buffer(AT_U8** buffer_ptr,int *buffer_length,unsigned int timeout)
+int CCD_Command_Wait_Buffer(unsigned char** buffer_ptr,int *buffer_length,unsigned int timeout)
 {
 	int retval;
 
@@ -1823,6 +1823,42 @@ int CCD_Command_Wait_Buffer(AT_U8** buffer_ptr,int *buffer_length,unsigned int t
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Wait_Buffer: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Wrapper round Andor utility routine to get the timestamp from a returned image buffer (containing metadata).
+ * @param buffer The returned image data containing the timestamp metadata.
+ * @param buffer_length The length of the data buffer, in bytes.
+ * @param timestamp The address of an long long integer (AT_64) to return the extracted timestamp.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Get_Timestamp_From_Metadata(unsigned char* buffer,int buffer_length,long long int *timestamp)
+{
+	int retval;
+
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Get_Timestamp_From_Metadata: Started.");
+#endif /* LOGGING */
+	retval = AT_GetTimeStampFromMetadata(buffer,buffer_length,timestamp);
+	if(retval != AT_SUCCESS)
+	{
+		Command_Error_Number = 57;
+		sprintf(Command_Error_String,"CCD_Command_Get_Timestamp_From_Metadata: "
+			"AT_GetTimeStampFromMetadata(buffer = %p, buffer length = %d, timestamp= %p) failed (%d) : %s.",
+			buffer,buffer_length,timestamp,retval,Command_Get_Andor_Error_String(retval));
+		return FALSE;
+	}
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+			       "CCD_Command_Get_Timestamp_From_Metadata: Returned timestamp %lld.",(*timestamp));
+#endif /* LOGGING */
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Get_Timestamp_From_Metadata: Finished.");
 #endif /* LOGGING */
 	return TRUE;
 }

@@ -29,6 +29,7 @@
 #include "ccd_exposure.h"
 #include "ccd_setup.h"
 #include "ccd_temperature.h"
+#include "ccd_fits_header.h"
 
 /* defines */
 /**
@@ -104,6 +105,8 @@ static char General_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * @see ccd_command.html#CCD_Command_Error
  * @see ccd_exposure.html#CCD_Exposure_Get_Error_Number
  * @see ccd_exposure.html#CCD_Exposure_Error
+ * @see ccd_fits_header.html#CCD_Fits_Header_Get_Error_Number
+ * @see ccd_fits_header.html#CCD_Fits_Header_Error
  * @see ccd_setup.html#CCD_Setup_Get_Error_Number
  * @see ccd_setup.html#CCD_Setup_Error
  * @see ccd_temperature.html#CCD_Temperature_Get_Error_Number
@@ -123,6 +126,11 @@ void CCD_General_Error(void)
 	{
 		found = TRUE;
 		CCD_Setup_Error();
+	}
+	if(CCD_Fits_Header_Get_Error_Number() != 0)
+	{
+		found = TRUE;
+		CCD_Fits_Header_Error();
 	}
 	if(CCD_Exposure_Get_Error_Number() != 0)
 	{
@@ -164,6 +172,8 @@ void CCD_General_Error(void)
  * @see ccd_buffer.html#CCD_Buffer_Error_String
  * @see ccd_command.html#CCD_Command_Get_Error_Number
  * @see ccd_command.html#CCD_Command_Error_String
+ * @see ccd_fits_header.html#CCD_Fits_Header_Get_Error_Number
+ * @see ccd_fits_header.html#CCD_Fits_Header_Error
  * @see ccd_exposure.html#CCD_Exposure_Get_Error_Number
  * @see ccd_exposure.html#CCD_Exposure_Error_String
  * @see ccd_setup.html#CCD_Setup_Get_Error_Number
@@ -183,6 +193,10 @@ void CCD_General_Error_To_String(char *error_string)
 	if(CCD_Setup_Get_Error_Number() != 0)
 	{
 		CCD_Setup_Error_String(error_string);
+	}
+	if(CCD_Fits_Header_Get_Error_Number() != 0)
+	{
+		CCD_Fits_Header_Error_String(error_string);
 	}
 	if(CCD_Exposure_Get_Error_Number() != 0)
 	{

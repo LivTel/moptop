@@ -246,7 +246,7 @@
  * Uses the CCD_Command_Set_Enum_String with feature name "TriggerMode".
  * See possible values in Andor_SDK3_Manual.pdf, P52.
  * @param s A string representing camera trigger mode, one of: CCD_COMMAND_TRIGGER_MODE_SOFTWARE, 
- *          CCD_COMMAND_TRIGGER_MODE_EXTERNAL
+ *          CCD_COMMAND_TRIGGER_MODE_EXTERNAL .
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #CCD_COMMAND_TRIGGER_MODE_SOFTWARE
  * @see #CCD_COMMAND_TRIGGER_MODE_EXTERNAL
@@ -392,6 +392,27 @@
  * @see #CCD_Command_Get_Float
  */
 #define CCD_Command_Get_Sensor_Temperature(f) CCD_Command_Get_Float("SensorTemperature",f)
+/**
+ * Command to start an acquisition of images by taking exposures.
+ * Uses the CCD_Command_Command with feature name "AcquisitionStart".
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see #CCD_Command_Command
+ */
+#define CCD_Command_Acquisition_Start() CCD_Command_Command("AcquisitionStart")
+/**
+ * Command to stop an acquisition of images.
+ * Uses the CCD_Command_Command with feature name "AcquisitionStop".
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see #CCD_Command_Command
+ */
+#define CCD_Command_Acquisition_Stop() CCD_Command_Command("AcquisitionStop")
+/**
+ * Command to reset the clock supplying image timestamps to zero.
+ * Uses the CCD_Command_Command with feature name "TimestampClockReset".
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see #CCD_Command_Command
+ */
+#define CCD_Command_Timestamp_Clock_Reset() CCD_Command_Command("TimestampClockReset")
 
 /* functions */
 extern int CCD_Command_Initialise(void);
@@ -414,8 +435,9 @@ extern int CCD_Command_Is_Readonly(char *feature_name_string,int *is_readonly);
 extern int CCD_Command_Set_Bool(char *feature_name_string,int value);
 extern int CCD_Command_Set_Enum_String(char *feature_name_string,char *enum_value_string);
 extern int CCD_Command_Set_Float(char *feature_name_string,double value);
-extern int CCD_Command_Queue_Buffer(AT_U8* buffer_ptr,int buffer_length);
-extern int CCD_Command_Wait_Buffer(AT_U8** buffer_ptr,int *buffer_length,unsigned int timeout);
+extern int CCD_Command_Queue_Buffer(unsigned char* buffer_ptr,int buffer_length);
+extern int CCD_Command_Wait_Buffer(unsigned char** buffer_ptr,int *buffer_length,unsigned int timeout);
+extern int CCD_Command_Get_Timestamp_From_Metadata(unsigned char* buffer,int buffer_length,long long int *timestamp);
 extern int CCD_Command_Get_Error_Number(void);
 extern void CCD_Command_Error(void);
 extern void CCD_Command_Error_String(char *error_string);

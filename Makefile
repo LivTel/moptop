@@ -4,8 +4,8 @@
 include ../Makefile.common
 include Makefile.common
 
-DIRS 	= pirot filter_wheel java 
-#ccd c 
+DIRS 	= pirot filter_wheel ccd java 
+#c 
 
 top:
 	@for i in $(DIRS); \
