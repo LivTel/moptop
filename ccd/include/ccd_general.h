@@ -60,6 +60,7 @@
 #endif
 
 /* external functions */
+extern int CCD_General_Is_Error(void);
 extern void CCD_General_Error(void);
 extern void CCD_General_Error_To_String(char *error_string);
 extern int CCD_General_Get_Error_Number(void);

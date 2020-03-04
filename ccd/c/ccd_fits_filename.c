@@ -78,26 +78,12 @@ static int Fits_Filename_Error_Number = 0;
  */
 static char Fits_Filename_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
 /**
- * Array of Fits_Filename_Structs, used for computing FITS filenames for CCD_FITS_FILENAME_CAMERA_COUNT cameras.
+ * The FITS filename data associated with the camera.
  * @see #Fits_Filename_Struct
- * @see #DEFAULT_INSTRUMENT_CODE0
- * @see #DEFAULT_INSTRUMENT_CODE1
- * @see #CCD_FITS_FILENAME_CAMERA_COUNT
  */
-static struct Fits_Filename_Struct Fits_Filename_Data_List[CCD_FITS_FILENAME_CAMERA_COUNT] = 
+static struct Fits_Filename_Struct Fits_Filename_Data = 
 {
-	{"",CCD_FITS_FILENAME_DEFAULT_INSTRUMENT_CODE0,0,0,0,0},
-	{"",CCD_FITS_FILENAME_DEFAULT_INSTRUMENT_CODE1,0,0,0,0}
-};
-
-/**
- * A list of default instrument codes to be used for cameras in Moptop.
- * Mainly used for command line testing.
- */
-char CCD_Fits_Filename_Default_Instrument_Code_List[] = 
-{
-	CCD_FITS_FILENAME_DEFAULT_INSTRUMENT_CODE0,
-	CCD_FITS_FILENAME_DEFAULT_INSTRUMENT_CODE1
+	"",CCD_FITS_FILENAME_DEFAULT_INSTRUMENT_CODE0,0,0,0,0
 };
 
 /* internal functions */
@@ -113,21 +99,19 @@ static int fexist(char *filename);
  * Initialise FITS filename data, using the given data directory and the current (astronomical) day of year.
  * Retrieves current FITS images in directory, find the one with the highest multrun number, and sets
  * the current multrun number to it.
- * @param camera_index An integer from 0..CCD_FITS_FILENAME_CAMERA_COUNT. Which camera to use.
  * @param instrument_code A character describing which instrument code to associate with this camera, which appears in
  *        the resulting FITS filenames.
  * @param data_dir A string containing the directory name containing FITS images.
  * @return Returns TRUE if the routine succeeds and returns FALSE if an error occurs.
- * @see #Fits_Filename_Data_List
+ * @see #Fits_Filename_Data
  * @see #Fits_Filename_File_Select
  * @see #Fits_Filename_Get_Date_Number
- * @see #CCD_FITS_FILENAME_CAMERA_COUNT
  * @see #Fits_Filename_Error_Number
  * @see #Fits_Filename_Error_String
  * @see ccd_general.html#CCD_GENERAL_ERROR_STRING_LENGTH
  * @see ccd_general.html#CCD_General_Log
  */
-int CCD_Fits_Filename_Initialise(int camera_index,char instrument_code,char *data_dir)
+int CCD_Fits_Filename_Initialise(char instrument_code,char *data_dir)
 {
 	struct dirent **name_list = NULL;
 	int name_list_count,i,retval,date_number,multrun_number,fully_parsed;
@@ -143,13 +127,6 @@ int CCD_Fits_Filename_Initialise(int camera_index,char instrument_code,char *dat
 #if LOGGING > 1
 	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Fits_Filename_Initialise:Started.");
 #endif
-	if((camera_index < 0)||(camera_index >= CCD_FITS_FILENAME_CAMERA_COUNT))
-	{
-		Fits_Filename_Error_Number = 25;
-		sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Initialise:camera_index %d out of range 0..%d.",
-			camera_index,CCD_FITS_FILENAME_CAMERA_COUNT);
-		return FALSE;
-	}
 	if(data_dir == NULL)
 	{
 		Fits_Filename_Error_Number = 1;
@@ -165,23 +142,22 @@ int CCD_Fits_Filename_Initialise(int camera_index,char instrument_code,char *dat
 
 	}
 	/* instrument code */
-	Fits_Filename_Data_List[camera_index].Instrument_Code = instrument_code;
+	Fits_Filename_Data.Instrument_Code = instrument_code;
 	/* setup data_dir */
-	strcpy(Fits_Filename_Data_List[camera_index].Data_Dir,data_dir);
+	strcpy(Fits_Filename_Data.Data_Dir,data_dir);
 #if LOGGING > 5
 	CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"CCD_Fits_Filename_Initialise:Data Dir set to %s.",
-			       Fits_Filename_Data_List[camera_index].Data_Dir);
+			       Fits_Filename_Data.Data_Dir);
 #endif
-	if(!Fits_Filename_Get_Date_Number(&(Fits_Filename_Data_List[camera_index].Current_Date_Number)))
+	if(!Fits_Filename_Get_Date_Number(&(Fits_Filename_Data.Current_Date_Number)))
 		return FALSE;
 #if LOGGING > 5
 	CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"CCD_Fits_Filename_Initialise:Current Date Number is %d.",
-			       Fits_Filename_Data_List[camera_index].Current_Date_Number);
+			       Fits_Filename_Data.Current_Date_Number);
 #endif
-	Fits_Filename_Data_List[camera_index].Current_Multrun_Number = 0;
-	Fits_Filename_Data_List[camera_index].Current_Run_Number = 0;
-	name_list_count = scandir(Fits_Filename_Data_List[camera_index].Data_Dir,&name_list,
-				  Fits_Filename_File_Select,alphasort);
+	Fits_Filename_Data.Current_Multrun_Number = 0;
+	Fits_Filename_Data.Current_Run_Number = 0;
+	name_list_count = scandir(Fits_Filename_Data.Data_Dir,&name_list,Fits_Filename_File_Select,alphasort);
 	for(i=0; i< name_list_count;i++)
 	{
 #if LOGGING > 9
@@ -240,7 +216,7 @@ int CCD_Fits_Filename_Initialise(int camera_index,char instrument_code,char *dat
 					       name_list[i]->d_name);
 #endif
 			/* check filename is for the right instrument (camera_index) */
-			if(inst_code[0] == Fits_Filename_Data_List[camera_index].Instrument_Code)
+			if(inst_code[0] == Fits_Filename_Data.Instrument_Code)
 			{
 				retval = sscanf(date_string,"%d",&date_number);
 #if LOGGING > 9
@@ -250,7 +226,7 @@ int CCD_Fits_Filename_Initialise(int camera_index,char instrument_code,char *dat
 #endif
 				/* check filename has right date number */
 				if((retval == 1)&&
-				   (date_number == Fits_Filename_Data_List[camera_index].Current_Date_Number))
+				   (date_number == Fits_Filename_Data.Current_Date_Number))
 				{
 					retval = sscanf(multrun_string,"%d",&multrun_number);
 #if LOGGING > 9
@@ -261,14 +237,14 @@ int CCD_Fits_Filename_Initialise(int camera_index,char instrument_code,char *dat
 #endif
 					/* check if multrun number is highest yet found */
 					if((retval == 1)&&
-				       (multrun_number > Fits_Filename_Data_List[camera_index].Current_Multrun_Number))
+				       (multrun_number > Fits_Filename_Data.Current_Multrun_Number))
 					{
-						Fits_Filename_Data_List[camera_index].Current_Multrun_Number = multrun_number;
+						Fits_Filename_Data.Current_Multrun_Number = multrun_number;
 #if LOGGING > 9
 						CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
 								       "CCD_Fits_Filename_Initialise:"
 								       "Current multrun number now %d.",
-								       Fits_Filename_Data_List[camera_index].Current_Multrun_Number);
+								       Fits_Filename_Data.Current_Multrun_Number);
 #endif
 					}/* end if multrun_number > Current_Multrun_Number */
 				}/* end if filename has right date number */
@@ -289,8 +265,8 @@ int CCD_Fits_Filename_Initialise(int camera_index,char instrument_code,char *dat
 		free(name_list[i]);
 	}
 	free(name_list);
-	Fits_Filename_Data_List[camera_index].Current_Run_Number = 1;
-	Fits_Filename_Data_List[camera_index].Current_Window_Number = 1;
+	Fits_Filename_Data.Current_Run_Number = 1;
+	Fits_Filename_Data.Current_Window_Number = 1;
 #if LOGGING > 1
 	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Fits_Filename_Initialise:Finished.");
 #endif
@@ -300,88 +276,60 @@ int CCD_Fits_Filename_Initialise(int camera_index,char instrument_code,char *dat
 /**
  * Start a new Multrun. Increments Current Multrun number, unless date has changed since last multrun,
  * when the date is changed and multrun number set to 1. Current run and Window number reset to 1.
- * @param camera_index An integer from 0..CCD_FITS_FILENAME_CAMERA_COUNT. Which camera to use.
  * @return Returns TRUE if the routine succeeds and returns FALSE if an error occurs.
  * @see #Fits_Filename_Get_Date_Number
- * @see #Fits_Filename_Data_List
+ * @see #Fits_Filename_Data
  * @see #Fits_Filename_Error_Number
  * @see #Fits_Filename_Error_String
- * @see #CCD_FITS_FILENAME_CAMERA_COUNT
  */
-int CCD_Fits_Filename_Next_Multrun(int camera_index)
+int CCD_Fits_Filename_Next_Multrun(void)
 {
 	int date_number;
 
-	if((camera_index < 0)||(camera_index >= CCD_FITS_FILENAME_CAMERA_COUNT))
-	{
-		Fits_Filename_Error_Number = 26;
-	       sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Next_Multrun:camera_index %d out of range 0..%d.",
-			camera_index,CCD_FITS_FILENAME_CAMERA_COUNT);
-		return FALSE;
-	}
 	if(!Fits_Filename_Get_Date_Number(&date_number))
 		return FALSE;
-	if(date_number != Fits_Filename_Data_List[camera_index].Current_Date_Number)
+	if(date_number != Fits_Filename_Data.Current_Date_Number)
 	{
-		if(!Fits_Filename_Get_Date_Number(&Fits_Filename_Data_List[camera_index].Current_Date_Number))
+		if(!Fits_Filename_Get_Date_Number(&Fits_Filename_Data.Current_Date_Number))
 			return FALSE;
-		Fits_Filename_Data_List[camera_index].Current_Multrun_Number = 0;/* incremented to 1 at end of routine */		
+		Fits_Filename_Data.Current_Multrun_Number = 0;/* incremented to 1 at end of routine */		
 	}
-	Fits_Filename_Data_List[camera_index].Current_Multrun_Number++;
+	Fits_Filename_Data.Current_Multrun_Number++;
 	/* this should get incremented to 1 before the filename is generated */
-	Fits_Filename_Data_List[camera_index].Current_Run_Number = 0; 
-	Fits_Filename_Data_List[camera_index].Current_Window_Number = 0;
+	Fits_Filename_Data.Current_Run_Number = 0; 
+	Fits_Filename_Data.Current_Window_Number = 0;
 	return TRUE;
 }
 
 /**
  * Increments Run within a Multrun. Increments current run number and resets window number.
- * @param camera_index An integer from 0..CCD_FITS_FILENAME_CAMERA_COUNT. Which camera to use.
  * @return Returns TRUE if the routine succeeds and returns FALSE if an error occurs.
- * @see #Fits_Filename_Data_List
- * @see #CCD_FITS_FILENAME_CAMERA_COUNT
+ * @see #Fits_Filename_Data
  * @see #Fits_Filename_Error_Number
  * @see #Fits_Filename_Error_String
  */
-int CCD_Fits_Filename_Next_Run(int camera_index)
+int CCD_Fits_Filename_Next_Run(void)
 {
-	if((camera_index < 0)||(camera_index >= CCD_FITS_FILENAME_CAMERA_COUNT))
-	{
-		Fits_Filename_Error_Number = 27;
-	        sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Next_Run:camera_index %d out of range 0..%d.",
-			camera_index,CCD_FITS_FILENAME_CAMERA_COUNT);
-		return FALSE;
-	}
-	Fits_Filename_Data_List[camera_index].Current_Run_Number++;
-	Fits_Filename_Data_List[camera_index].Current_Window_Number = 0;
+	Fits_Filename_Data.Current_Run_Number++;
+	Fits_Filename_Data.Current_Window_Number = 0;
 	return TRUE;
 }
 
 /**
  * Increments Window within a Run. Increments window number.
- * @param camera_index An integer from 0..CCD_FITS_FILENAME_CAMERA_COUNT. Which camera to use.
  * @return Returns TRUE if the routine succeeds and returns FALSE if an error occurs.
- * @see #Fits_Filename_Data_List
- * @see #CCD_FITS_FILENAME_CAMERA_COUNT
+ * @see #Fits_Filename_Data
  * @see #Fits_Filename_Error_Number
  * @see #Fits_Filename_Error_String
  */
-int CCD_Fits_Filename_Next_Window(int camera_index)
+int CCD_Fits_Filename_Next_Window(void)
 {
-	if((camera_index < 0)||(camera_index >= CCD_FITS_FILENAME_CAMERA_COUNT))
-	{
-		Fits_Filename_Error_Number = 28;
-	        sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Next_Window:camera_index %d out of range 0..%d.",
-			camera_index,CCD_FITS_FILENAME_CAMERA_COUNT);
-		return FALSE;
-	}
-	Fits_Filename_Data_List[camera_index].Current_Window_Number++;
+	Fits_Filename_Data.Current_Window_Number++;
 	return TRUE;
 }
 
 /**
  * Returns a filename based on the current filename data.
- * @param camera_index An integer from 0..CCD_FITS_FILENAME_CAMERA_COUNT. Which camera to use.
  * @param exposure_type What sort of exposure the filename will contain (exposure/bias/dark etc).
  * @param pipeline_flag Pipeline processing level.
  * @param filename Pointer to an array of characters filename_length long to store the filename.
@@ -389,25 +337,17 @@ int CCD_Fits_Filename_Next_Window(int camera_index)
  * @return Returns TRUE if the routine succeeds and returns FALSE if an error occurs.
  * @see #Fits_Filename_Error_Number
  * @see #Fits_Filename_Error_String
- * @see #Fits_Filename_Data_List
+ * @see #Fits_Filename_Data
  * @see #CCD_FITS_FILENAME_IS_EXPOSURE_TYPE
  * @see #CCD_FITS_FILENAME_EXPOSURE_TYPE
- * @see #CCD_FITS_FILENAME_CAMERA_COUNT
  */
-int CCD_Fits_Filename_Get_Filename(int camera_index,enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,
+int CCD_Fits_Filename_Get_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,
 				   enum CCD_FITS_FILENAME_PIPELINE_FLAG pipeline_flag,
 				   char *filename,int filename_length)
 {
 	char tmp_buff[256];
 	char exposure_type_string[7] = {'a','b','d','e','f','s','w'};
 
-	if((camera_index < 0)||(camera_index >= CCD_FITS_FILENAME_CAMERA_COUNT))
-	{
-		Fits_Filename_Error_Number = 29;
-	       sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Get_Filename:camera_index %d out of range 0..%d.",
-			camera_index,CCD_FITS_FILENAME_CAMERA_COUNT);
-		return FALSE;
-	}
 	if(filename == NULL)
 	{
 		Fits_Filename_Error_Number = 3;
@@ -429,19 +369,19 @@ int CCD_Fits_Filename_Get_Filename(int camera_index,enum CCD_FITS_FILENAME_EXPOS
 		return FALSE;
 	}
 	/* check data dir is not too long : 256 is length of tmp_buff, 37 is approx length of filename itself */
-	if(strlen(Fits_Filename_Data_List[camera_index].Data_Dir) > (256-37))
+	if(strlen(Fits_Filename_Data.Data_Dir) > (256-37))
 	{
 		Fits_Filename_Error_Number = 8;
 		sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Get_Filename:Data Dir too long (%d).",
-			strlen(Fits_Filename_Data_List[camera_index].Data_Dir));
+			strlen(Fits_Filename_Data.Data_Dir));
 		return FALSE;
 	}
-	sprintf(tmp_buff,"%s/%c_%c_%d_%d_%d_%d_%d.fits",Fits_Filename_Data_List[camera_index].Data_Dir,
-		Fits_Filename_Data_List[camera_index].Instrument_Code,exposure_type_string[exposure_type],
-		Fits_Filename_Data_List[camera_index].Current_Date_Number,
-		Fits_Filename_Data_List[camera_index].Current_Multrun_Number,
-		Fits_Filename_Data_List[camera_index].Current_Run_Number,
-		Fits_Filename_Data_List[camera_index].Current_Window_Number,pipeline_flag);
+	sprintf(tmp_buff,"%s/%c_%c_%d_%d_%d_%d_%d.fits",Fits_Filename_Data.Data_Dir,
+		Fits_Filename_Data.Instrument_Code,exposure_type_string[exposure_type],
+		Fits_Filename_Data.Current_Date_Number,
+		Fits_Filename_Data.Current_Multrun_Number,
+		Fits_Filename_Data.Current_Run_Number,
+		Fits_Filename_Data.Current_Window_Number,pipeline_flag);
 	if(strlen(tmp_buff) > (filename_length-1))
 	{
 		Fits_Filename_Error_Number = 4;
@@ -545,65 +485,38 @@ int CCD_Fits_Filename_List_Free(char ***filename_list,int *filename_count)
 
 /**
  * Get the current multrun number.
- * @param camera_index An integer from 0..CCD_FITS_FILENAME_CAMERA_COUNT. Which camera to use.
  * @return The current multrun number. -1 is returned if the camera_index is out of range.
- * @see #Fits_Filename_Data_List
- * @see #CCD_FITS_FILENAME_CAMERA_COUNT
+ * @see #Fits_Filename_Data
  * @see #Fits_Filename_Error_Number
  * @see #Fits_Filename_Error_String
  */
-int CCD_Fits_Filename_Multrun_Get(int camera_index)
+int CCD_Fits_Filename_Multrun_Get(void)
 {
-	if((camera_index < 0)||(camera_index >= CCD_FITS_FILENAME_CAMERA_COUNT))
-	{
-		Fits_Filename_Error_Number = 30;
-	       sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Multrun_Get:camera_index %d out of range 0..%d.",
-			camera_index,CCD_FITS_FILENAME_CAMERA_COUNT);
-		return -1;
-	}
-	return Fits_Filename_Data_List[camera_index].Current_Multrun_Number;
+	return Fits_Filename_Data.Current_Multrun_Number;
 }
 
 /**
  * Get the current run number.
- * @param camera_index An integer from 0..CCD_FITS_FILENAME_CAMERA_COUNT. Which camera to use.
  * @return The current run number. -1 is returned if the camera_index is out of range.
- * @see #Fits_Filename_Data_List
- * @see #CCD_FITS_FILENAME_CAMERA_COUNT
+ * @see #Fits_Filename_Data
  * @see #Fits_Filename_Error_Number
  * @see #Fits_Filename_Error_String
  */
-int CCD_Fits_Filename_Run_Get(int camera_index)
+int CCD_Fits_Filename_Run_Get(void)
 {
-	if((camera_index < 0)||(camera_index >= CCD_FITS_FILENAME_CAMERA_COUNT))
-	{
-		Fits_Filename_Error_Number = 31;
-	       sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Run_Get:camera_index %d out of range 0..%d.",
-			camera_index,CCD_FITS_FILENAME_CAMERA_COUNT);
-		return -1;
-	}
-	return Fits_Filename_Data_List[camera_index].Current_Run_Number;
+	return Fits_Filename_Data.Current_Run_Number;
 }
 
 /**
  * Get the current window number.
- * @param camera_index An integer from 0..CCD_FITS_FILENAME_CAMERA_COUNT. Which camera to use.
  * @return The current window number.
- * @see #Fits_Filename_Data_List
- * @see #CCD_FITS_FILENAME_CAMERA_COUNT
+ * @see #Fits_Filename_Data
  * @see #Fits_Filename_Error_Number
  * @see #Fits_Filename_Error_String
  */
-int CCD_Fits_Filename_Window_Get(int camera_index)
+int CCD_Fits_Filename_Window_Get(void)
 {
-	if((camera_index < 0)||(camera_index >= CCD_FITS_FILENAME_CAMERA_COUNT))
-	{
-		Fits_Filename_Error_Number = 32;
-	       sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Window_Get:camera_index %d out of range 0..%d.",
-			camera_index,CCD_FITS_FILENAME_CAMERA_COUNT);
-		return -1;
-	}
-	return Fits_Filename_Data_List[camera_index].Current_Window_Number;
+	return Fits_Filename_Data.Current_Window_Number;
 }
 
 /**
