@@ -221,8 +221,7 @@ echo "${clib_count} C libraries copied."
 # C programs
 #
 echo "Copying C program directories..."
-set dir_list = "ics_util/c/${HOSTTYPE} ccd/misc/${HOSTTYPE} log_udp/test/${HOSTTYPE} ngatastro/test/${HOSTTYPE} commandserver/test/${HOSTTYPE} moptop/ccd/test/${HOSTTYPE} "
-# moptop/c/${HOSTTYPE} 
+set dir_list = "ics_util/c/${HOSTTYPE} ccd/misc/${HOSTTYPE} log_udp/test/${HOSTTYPE} ngatastro/test/${HOSTTYPE} commandserver/test/${HOSTTYPE} moptop/c/${HOSTTYPE} moptop/ccd/test/${HOSTTYPE} "
 if( ${install_filter_wheel_software} ) then
     set dir_list = "${dir_list} moptop/filter_wheel/test/${HOSTTYPE}"
 endif
@@ -301,8 +300,7 @@ echo "${file_count} scripts copied."
 #
 # in bin sub-directories
 echo "Copying machine configuration files..."
-set file_list = "autobooter/java/${machine_name}.autobooter.properties "
-# moptop/c/${HOSTTYPE}/${machine_name}.moptop.c.properties 
+set file_list = "autobooter/java/${machine_name}.autobooter.properties moptop/c/${HOSTTYPE}/${machine_name}.moptop.c.properties "
 if( ${install_java_software} ) then
     set file_list = "${file_list} moptop/java/${machine_name}.fits.properties moptop/java/${machine_name}.moptop.net.properties moptop/java/${machine_name}.moptop.properties ccs_gui/java/${machine_name}.ccs_gui.properties ccs_gui/java/${machine_name}.ccs_gui_config.properties ccs_gui/java/${machine_name}.ccs_gui.fits.properties"
 endif
