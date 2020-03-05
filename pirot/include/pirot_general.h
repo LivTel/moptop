@@ -72,7 +72,7 @@ extern void PIROT_Log(int level,char *string);
 extern void PIROT_Set_Log_Handler_Function(void (*log_fn)(int level,char *string));
 extern void PIROT_Set_Log_Filter_Function(int (*filter_fn)(int level,char *string));
 extern void PIROT_Log_Handler_Stdout(int level,char *string);
-extern void PIROT_Set_Log_Filter_Level(int level);
+extern void PIROT_General_Set_Log_Filter_Level(int level);
 extern int PIROT_Log_Filter_Level_Absolute(int level,char *string);
 extern int PIROT_Log_Filter_Level_Bitwise(int level,char *string);
 

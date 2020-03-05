@@ -49,12 +49,12 @@
  * <dt>Log_Filter</dt> <dd>Function pointer to the routine that will filter log messages passed to it.
  * 		The funtion will return TRUE if the message should be logged, and FALSE if it shouldn't.</dd>
  * <dt>Log_Filter_Level</dt> <dd>A globally maintained log filter level. 
- * 		This is set using PIROT_Set_Log_Filter_Level.
+ * 		This is set using PIROT_General_Set_Log_Filter_Level.
  * 		PIROT_Log_Filter_Level_Absolute and PIROT_Log_Filter_Level_Bitwise 
  *              test it against message levels to determine whether to log messages.</dd>
  * </dl>
  * @see #PIROT_Log
- * @see #PIROT_Set_Log_Filter_Level
+ * @see #PIROT_General_Set_Log_Filter_Level
  * @see #PIROT_Log_Filter_Level_Absolute
  * @see #PIROT_Log_Filter_Level_Bitwise
  */
@@ -205,14 +205,6 @@ void PIROT_General_Error_To_String(char *error_string)
 	char time_string[32];
 
 	strcpy(error_string,"");
-	if(PIROT_USB_Get_Error_Number() != 0)
-	{
-		PIROT_USB_Error_String(error_string);
-	}
-	if(PIROT_Command_Get_Error_Number() != 0)
-	{
-		PIROT_Command_Error_String(error_string);
-	}
 	if(PIROT_Setup_Get_Error_Number() != 0)
 	{
 		PIROT_Setup_Error_String(error_string);
@@ -220,6 +212,14 @@ void PIROT_General_Error_To_String(char *error_string)
 	if(PIROT_Move_Get_Error_Number() != 0)
 	{
 		PIROT_Move_Error_String(error_string);
+	}
+	if(PIROT_Command_Get_Error_Number() != 0)
+	{
+		PIROT_Command_Error_String(error_string);
+	}
+	if(PIROT_USB_Get_Error_Number() != 0)
+	{
+		PIROT_USB_Error_String(error_string);
 	}
 	if(General_Error_Number != 0)
 	{
@@ -367,7 +367,7 @@ void PIROT_Log_Handler_Stdout(int level,char *string)
  * Routine to set the General_Data.Log_Filter_Level.
  * @see #General_Data
  */
-void PIROT_Set_Log_Filter_Level(int level)
+void PIROT_General_Set_Log_Filter_Level(int level)
 {
 	General_Data.Log_Filter_Level = level;
 }

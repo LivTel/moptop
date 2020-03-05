@@ -199,6 +199,14 @@ void Moptop_General_Error(char *sub_system,char *source_filename,char *function,
 		fflush(stderr);
 		General_Data.Error_Fp = stderr;
 	}
+	if(Moptop_General_Error_Number != 0)
+	{
+		found = TRUE;
+		Moptop_General_Get_Current_Time_String(time_string,32);
+		fprintf(General_Data.Error_Fp,"%s Moptop_General:Error(%d) : %s:%s\n",time_string,
+			Moptop_General_Error_Number,function,Moptop_General_Error_String);
+		fflush(General_Data.Error_Fp);
+	}
 	strcpy(buff,"");
 	strcpy(buff,"");
 	if(Command_Server_Is_Error())
@@ -233,14 +241,6 @@ void Moptop_General_Error(char *sub_system,char *source_filename,char *function,
 		found = TRUE;
 		Filter_Wheel_General_Error_To_String(buff);
 		fprintf(General_Data.Error_Fp,"\t%s\n",buff);
-		fflush(General_Data.Error_Fp);
-	}
-	if(Moptop_General_Error_Number != 0)
-	{
-		found = TRUE;
-		Moptop_General_Get_Current_Time_String(time_string,32);
-		fprintf(General_Data.Error_Fp,"%s Moptop_General:Error(%d) : %s:%s\n",time_string,
-			Moptop_General_Error_Number,function,Moptop_General_Error_String);
 		fflush(General_Data.Error_Fp);
 	}
 	if(!found)
@@ -305,7 +305,7 @@ void Moptop_General_Get_Current_Time_String(char *time_string,int string_length)
 
 	clock_gettime(CLOCK_REALTIME,&current_time);
 	gmtime_r(&(current_time.tv_sec),&utc_time);
-	strftime(time_string,string_length,"%d-%m-%YT%H:%M:%S",&utc_time);
+	strftime(time_string,string_length,"%Y-%m-%dT%H:%M:%S",&utc_time);
 	sprintf(millsecond_string,"%03d",(current_time.tv_nsec/MOPTOP_GENERAL_ONE_MILLISECOND_NS));
 	strftime(timezone_string,16,"%z",&utc_time);
 	if((strlen(time_string)+strlen(millsecond_string)+strlen(timezone_string)+3) < string_length)
@@ -423,7 +423,7 @@ void Moptop_General_Call_Log_Handlers_CCD(int level,char *message)
  * Routine that goes through the General_Data.Log_Handler_List and invokes each non-null handler for logging
  * of the filter wheel subsystem. We call Moptop_General_Call_Log_Handlers with parameters as follows: 
  * "sub_system" and "category" are set to "FILTER_WHEEL". 
- * "source_filename" and "function" are set to NULL. "level" and "message" are passed through.
+ * "source_filename" and "function" are set to an empty string. "level" and "message" are passed through.
  * @param level At what level is the log message (TERSE/high level or VERBOSE/low level), 
  *         a valid member of LOG_VERBOSITY.
  * @param message The message to log.
@@ -431,14 +431,14 @@ void Moptop_General_Call_Log_Handlers_CCD(int level,char *message)
  */
 void Moptop_General_Call_Log_Handlers_Filter_Wheel(int level,char *message)
 {
-	Moptop_General_Call_Log_Handlers("FILTER_WHEEL",NULL,NULL,level,"FILTER_WHEEL",message);
+	Moptop_General_Call_Log_Handlers("FILTER_WHEEL","","",level,"FILTER_WHEEL",message);
 }
 
 /**
  * Routine that goes through the General_Data.Log_Handler_List and invokes each non-null handler for logging
  * of the filter wheel subsystem. We call Moptop_General_Call_Log_Handlers with parameters as follows: 
  * "sub_system" and "category" are set to "ROTATOR". 
- * "source_filename" and "function" are set to NULL. "level" and "message" are passed through.
+ * "source_filename" and "function" are set to an empty string. "level" and "message" are passed through.
  * @param level At what level is the log message (TERSE/high level or VERBOSE/low level), 
  *         a valid member of LOG_VERBOSITY.
  * @param message The message to log.
@@ -446,7 +446,7 @@ void Moptop_General_Call_Log_Handlers_Filter_Wheel(int level,char *message)
  */
 void Moptop_General_Call_Log_Handlers_Rotator(int level,char *message)
 {
-	Moptop_General_Call_Log_Handlers("ROTATOR",NULL,NULL,level,"ROTATOR",message);
+	Moptop_General_Call_Log_Handlers("ROTATOR","","",level,"ROTATOR",message);
 }
 
 /**
@@ -660,7 +660,7 @@ void Moptop_General_Log_Handler_Log_Hourly_File(char *sub_system,char *source_fi
 	General_Log_Handler_Hourly_File_Set_Fp(General_Data.Log_Directory,General_Data.Log_Filename_Root,
 					       General_Data.Log_Filename,&General_Data.Log_Fp);
 	Moptop_General_Get_Current_Time_String(time_string,32);
-	fprintf(General_Data.Log_Fp,"%s : %s:%s\n",time_string,function,message);
+	fprintf(General_Data.Log_Fp,"%s : %s: %s:%s\n",time_string,sub_system,function,message);
 	fflush(General_Data.Log_Fp);
 }
 

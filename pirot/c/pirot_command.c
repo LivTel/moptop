@@ -300,11 +300,11 @@ int PIROT_Command_MOV(double position)
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_MOV(position=%.2f): Started.",position);
 #endif /* LOGGING */
-	if((position < 0.0) || (position > COMMAND_MOV_POSITION_MAX))
+	if((position < -COMMAND_MOV_POSITION_MAX) || (position > COMMAND_MOV_POSITION_MAX))
 	{
 		Command_Error_Number = 28;
-		sprintf(Command_Error_String,"PIROT_Command_MOV: position %.2f out of range (0.0...%.2f).",
-			position,COMMAND_MOV_POSITION_MAX);
+		sprintf(Command_Error_String,"PIROT_Command_MOV: position %.2f out of range (%.2f...%.2f).",
+			position,-COMMAND_MOV_POSITION_MAX,COMMAND_MOV_POSITION_MAX);
 		return FALSE;
 	}
 #ifdef MUTEXED

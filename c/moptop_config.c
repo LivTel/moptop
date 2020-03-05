@@ -17,6 +17,7 @@
 #define _POSIX_C_SOURCE 199309L
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include "estar_config.h"

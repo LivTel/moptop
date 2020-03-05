@@ -21,9 +21,12 @@
 #include "ccd_setup.h"
 #include "ccd_temperature.h"
 
+#include "filter_wheel_command.h"
 #include "filter_wheel_general.h"
 
 #include "pirot_general.h"
+#include "pirot_setup.h"
+#include "pirot_usb.h"
 
 #include "moptop_general.h"
 #include "moptop_fits_header.h"
@@ -366,8 +369,6 @@ static int Moptop_Initialise_Mechanisms(void)
 	retval = Moptop_Startup_CCD();
 	if(retval == FALSE)
 	{
-		Moptop_General_Error_Number = 1;
-		sprintf(Moptop_General_Error_String,"Moptop_Initialise_Mechanisms:Moptop_Startup_CCD failed.");
 		return FALSE;
 	}
 	/* initialise connection to the PI rotator */
@@ -378,8 +379,6 @@ static int Moptop_Initialise_Mechanisms(void)
 	retval = Moptop_Startup_Rotator();
 	if(retval == FALSE)
 	{
-		Moptop_General_Error_Number = 2;
-		sprintf(Moptop_General_Error_String,"Moptop_Initialise_Mechanisms:Moptop_Startup_Rotator failed.");
 		return FALSE;
 	}
 	/* initialise connection to the filter wheel */
@@ -390,8 +389,6 @@ static int Moptop_Initialise_Mechanisms(void)
 	retval = Moptop_Startup_Filter_Wheel();
 	if(retval == FALSE)
 	{
-		Moptop_General_Error_Number = 3;
-		sprintf(Moptop_General_Error_String,"Moptop_Initialise_Mechanisms:Moptop_Startup_Filter_Wheel failed.");
 		return FALSE;
 	}
 #if MOPTOP_DEBUG > 1
@@ -428,8 +425,6 @@ static int Moptop_Shutdown_Mechanisms(void)
 	retval = Moptop_Shutdown_CCD();
 	if(retval == FALSE)
 	{
-		Moptop_General_Error_Number = 4;
-		sprintf(Moptop_General_Error_String,"Moptop_Shutdown_Mechanisms:Moptop_Shutdown_CCD failed.");
 		return FALSE;
 	}
 	/* shutdown rotator */
@@ -440,8 +435,6 @@ static int Moptop_Shutdown_Mechanisms(void)
 	retval = Moptop_Shutdown_Rotator();
 	if(retval == FALSE)
 	{
-		Moptop_General_Error_Number = 5;
-		sprintf(Moptop_General_Error_String,"Moptop_Shutdown_Mechanisms:Moptop_Shutdown_Rotator failed.");
 		return FALSE;
 	}
 	/* shutdown filter wheel */
@@ -452,8 +445,6 @@ static int Moptop_Shutdown_Mechanisms(void)
 	retval = Moptop_Shutdown_Filter_Wheel();
 	if(retval == FALSE)
 	{
-		Moptop_General_Error_Number = 6;
-		sprintf(Moptop_General_Error_String,"Moptop_Shutdown_Mechanisms:Moptop_Shutdown_Filter_Wheel failed.");
 		return FALSE;
 	}
 #if MOPTOP_DEBUG > 1
@@ -502,13 +493,150 @@ static int Moptop_Shutdown_CCD(void)
 	return TRUE;
 }
 
+/**
+ * If the rotator is enabled, open a connection to the PI rotator.
+ * <ul>
+ * <li>Use Moptop_Config_Get_Boolean to get "rotator.enable" to see whether the rotator is enabled.
+ * <li>If it is _not_ enabled, log and return success.
+ * <li>Use Moptop_Config_Get_String to get the device name to use for the 
+ *     filter wheel connection ("rotator.device_name").
+ * <li>Call PIROT_USB_Open to connect to the PI rotator at PIROT_USB_BAUD_RATE.
+ * <li>Call PIROT_Setup_Rotator to configure the rotator.
+ * </ul>
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see moptop_config.html#Moptop_Config_Get_Boolean
+ * @see moptop_config.html#Moptop_Config_Get_String
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
+ * @see moptop_general.html#Moptop_General_Log
+ * @see moptop_general.html#Moptop_General_Log_Format
+ * @see ../pirot/cdocs/pirot_setup.html#PIROT_Setup_Rotator
+ * @see ../pirot/cdocs/pirot_usb.html#PIROT_USB_Open
+ * @see ../pirot/cdocs/pirot_usb.html#PIROT_USB_BAUD_RATE
+ */
 static int Moptop_Startup_Rotator(void)
 {
+	char *device_name = NULL;
+	int enabled;
+
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Startup_Rotator",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Started.");
+#endif
+	/* is the rotator active/enabled for this instance of the C layer */
+	if(!Moptop_Config_Get_Boolean("rotator.enable",&enabled))
+	{
+		Moptop_General_Error_Number = 12;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_Rotator:"
+			"Failed to get whether rotator is enabled.");
+		return FALSE;
+	}
+	/* if the rotator is _not_ active, just return OK here */
+	if(enabled == FALSE)
+	{
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("main","moptop_main.c","Moptop_Startup_Rotator",LOG_VERBOSITY_TERSE,"STARTUP",
+				   "Finished (rotator NOT enabled).");
+#endif
+		return TRUE;
+	}
+	/* get device name */
+	if(!Moptop_Config_Get_String("rotator.device_name",&device_name))
+	{
+		Moptop_General_Error_Number = 13;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_Rotator:"
+			"Failed to get rotator device_name.");
+		return FALSE;
+	}
+        /* open device */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Startup_Rotator",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Open a connection to the rotator using device '%s'.",device_name);
+#endif
+	if(!PIROT_USB_Open(device_name,PIROT_USB_BAUD_RATE))
+	{
+		Moptop_General_Error_Number = 14;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_Rotator:"
+			"PIROT_USB_Open(%s) failed.",device_name);
+		/* free allocated data */
+		if(device_name != NULL)
+			free(device_name);
+		return FALSE;
+	}
+	/* free allocated data */
+	if(device_name != NULL)
+		free(device_name);
+	/* call the setup rotator routine */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Startup_Rotator",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Setup the rotator.");
+#endif
+	if(!PIROT_Setup_Rotator())
+	{
+		Moptop_General_Error_Number = 15;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_Rotator:PIROT_Setup_Rotator failed.");
+		return FALSE;
+	}
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Startup_Rotator",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Finished.");
+#endif
 	return TRUE;
 }
 
+/**
+ * Shutdown a previously opened connection to the rotator.
+ * <ul>
+ * <li>Use Moptop_Config_Get_Boolean to get "rotator.enable" to see whether the rotator is enabled.
+ * <li>If it is _not_ enabled, log and return success.
+ * <li>Use PIROT_USB_Close to close the connection to the rotator.
+ * </ul>
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see moptop_config.html#Moptop_Config_Get_Boolean
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
+ * @see moptop_general.html#Moptop_General_Log
+ * @see ../pirot/cdocs/pirot_usb.html#PIROT_USB_Close
+ */
 static int Moptop_Shutdown_Rotator(void)
 {
+	int enabled;
+
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_Rotator",LOG_VERBOSITY_TERSE,"STARTUP","Started.");
+#endif
+	/* is the rotator active/enabled for this instance of the C layer */
+	if(!Moptop_Config_Get_Boolean("rotator.enable",&enabled))
+	{
+		Moptop_General_Error_Number = 16;
+		sprintf(Moptop_General_Error_String,"Moptop_Shutdown_Rotator:"
+			"Failed to get whether rotator is enabled.");
+		return FALSE;
+	}
+	/* if the rotator is _not_ active, just return OK here */
+	if(enabled == FALSE)
+	{
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_Rotator",LOG_VERBOSITY_TERSE,"STARTUP",
+				   "Finished (rotator NOT enabled).");
+#endif
+		return TRUE;
+	}
+	/* shutdown the connection */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Shutdown_Rotator",LOG_VERBOSITY_TERSE,"STARTUP",
+				  "Calling PIROT_USB_Close.");
+#endif
+	if(!PIROT_USB_Close())
+	{
+		Moptop_General_Error_Number = 18;
+		sprintf(Moptop_General_Error_String,"Moptop_Shutdown_Rotator:PIROT_USB_Close failed.");
+		return FALSE;
+	}
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_Rotator",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Finished.");
+#endif
 	return TRUE;
 }
 
@@ -629,6 +757,10 @@ static int Moptop_Shutdown_Filter_Wheel(void)
 		return TRUE;
 	}
 	/* shutdown the connection */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Shutdown_Filter_Wheel",LOG_VERBOSITY_TERSE,"STARTUP",
+				  "Calling Filter_Wheel_Command_Close.");
+#endif
 	if(!Filter_Wheel_Command_Close())
 	{
 		Moptop_General_Error_Number = 11;
@@ -652,6 +784,8 @@ static void Help(void)
 	fprintf(stdout,"moptop [-co[nfig_filename] <filename>]\n");
 	fprintf(stdout,"\t[-moptop_log_level|-ll <level>\n");
 	fprintf(stdout,"\t[-ccd_log_level|-ccdll <level>\n");
+	fprintf(stdout,"\t[-filter_wheel_log_level|-fwll <level>\n");
+	fprintf(stdout,"\t[-rotator_log_level|-rll <level>\n");
 	fprintf(stdout,"\t[-command_server_log_level|-csll <level>\n");
 	fprintf(stdout,"\t<level> is an integer from 1..5.\n");
 }
@@ -664,6 +798,8 @@ static void Help(void)
  * @see moptop_general.html#Moptop_General_Set_Config_Filename
  * @see moptop_general.html#Moptop_General_Set_Log_Filter_Level
  * @see ../ccd/cdocs/ccd_general.html#CCD_General_Set_Log_Filter_Level
+ * @see ../filter_wheel/cdocs/filter_wheel_general.html#Filter_Wheel_General_Set_Log_Filter_Level
+ * @see ../pirot/cdocs/pirot_general.html#PIROT_General_Set_Log_Filter_Level
  * @see ../../commandserver/cdocs/command_server.html#Command_Server_Set_Log_Filter_Level
  */
 static int Parse_Arguments(int argc, char *argv[])
@@ -747,10 +883,48 @@ static int Parse_Arguments(int argc, char *argv[])
 				return FALSE;
 			}
 		}
+		else if((strcmp(argv[i],"-filter_wheel_log_level")==0)||(strcmp(argv[i],"-fwll")==0))
+		{
+			if((i+1)<argc)
+			{
+				retval = sscanf(argv[i+1],"%d",&log_level);
+				if(retval != 1)
+				{
+					fprintf(stderr,"Parse_Arguments:Parsing log level %s failed.\n",argv[i+1]);
+					return FALSE;
+				}
+				Filter_Wheel_General_Set_Log_Filter_Level(log_level);
+				i++;
+			}
+			else
+			{
+				fprintf(stderr,"Parse_Arguments:Log Level requires a level.\n");
+				return FALSE;
+			}
+		}
 		else if((strcmp(argv[i],"-help")==0)||(strcmp(argv[i],"-h")==0))
 		{
 			Help();
 			exit(0);
+		}
+		else if((strcmp(argv[i],"-rotator_log_level")==0)||(strcmp(argv[i],"-rll")==0))
+		{
+			if((i+1)<argc)
+			{
+				retval = sscanf(argv[i+1],"%d",&log_level);
+				if(retval != 1)
+				{
+					fprintf(stderr,"Parse_Arguments:Parsing log level %s failed.\n",argv[i+1]);
+					return FALSE;
+				}
+				PIROT_General_Set_Log_Filter_Level(log_level);
+				i++;
+			}
+			else
+			{
+				fprintf(stderr,"Parse_Arguments:Log Level requires a level.\n");
+				return FALSE;
+			}
 		}
 		else
 		{

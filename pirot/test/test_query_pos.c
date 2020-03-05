@@ -37,7 +37,7 @@ static void Help(void);
  * @see #Parse_Arguments
  * @see #Log_Level
  * @see #Device_Name
- * @see ../cdocs/pirot_general.html#PIROT_Set_Log_Filter_Level
+ * @see ../cdocs/pirot_general.html#PIROT_General_Set_Log_Filter_Level
  * @see ../cdocs/pirot_general.html#PIROT_Set_Log_Filter_Function
  * @see ../cdocs/pirot_general.html#PIROT_Log_Filter_Level_Absolute
  * @see ../cdocs/pirot_general.html#PIROT_Set_Log_Handler_Function
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 	fprintf(stdout,"test_get_position : Parsing Arguments.\n");
 	if(!Parse_Arguments(argc,argv))
 		return 1;
-	PIROT_Set_Log_Filter_Level(Log_Level);
+	PIROT_General_Set_Log_Filter_Level(Log_Level);
 	PIROT_Set_Log_Filter_Function(PIROT_Log_Filter_Level_Absolute);
 	PIROT_Set_Log_Handler_Function(PIROT_Log_Handler_Stdout);
         /* open device */
