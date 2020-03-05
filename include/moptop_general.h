@@ -90,6 +90,8 @@ extern void Moptop_General_Log(char *sub_system,char *source_filename,char *func
 extern void Moptop_General_Call_Log_Handlers(char *sub_system,char *source_filename,char *function,int level,
 					  char *category,char *message);
 extern void Moptop_General_Call_Log_Handlers_CCD(int level,char *message);
+extern void Moptop_General_Call_Log_Handlers_Filter_Wheel(int level,char *message);
+extern void Moptop_General_Call_Log_Handlers_Rotator(int level,char *message);
 extern int Moptop_General_Add_Log_Handler_Function(void (*log_fn)(char *sub_system,char *source_filename,
 							char *function,int level,char *category,char *message));
 extern void Moptop_General_Set_Log_Filter_Function(int (*filter_fn)(char *sub_system,char *source_filename,

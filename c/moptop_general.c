@@ -164,6 +164,7 @@ static void General_Log_Handler_Filename_To_Fp(char *log_filename,FILE **log_fp)
  * to print the error string and 
  * get a string copy of it, only one of the error routines can be called after an error has been generated .
  * A second call to one of these routines will generate a 'Error not found' error!.
+ * This routine also logs errors found in the CCD, filter wheel and pirot (PI rotator) libraries.
  * @param sub_system The sub system. Can be NULL.
  * @param source_file The source filename. Can be NULL.
  * @param function The function calling the log. Can be NULL.
@@ -178,6 +179,10 @@ static void General_Log_Handler_Filename_To_Fp(char *log_filename,FILE **log_fp)
  * @see ../commandserver/cdocs/command_server.html#Command_Server_Error_To_String
  * @see ../ccd/cdocs/ccd_general.html#CCD_General_Is_Error
  * @see ../ccd/cdocs/ccd_general.html#CCD_General_Error_To_String
+ * @see ../pirot/cdocs/pirot_general.html#PIROT_General_Is_Error
+ * @see ../pirot/cdocs/pirot_general.html#PIROT_General_Error_To_String
+ * @see ../filter_wheel/cdocs/filter_wheel_general.html#Filter_Wheel_General_Is_Error
+ * @see ../filter_wheel/cdocs/filter_wheel_general.html#Filter_Wheel_General_Error_To_String
  */
 void Moptop_General_Error(char *sub_system,char *source_filename,char *function,int level,char *category)
 {
@@ -209,6 +214,24 @@ void Moptop_General_Error(char *sub_system,char *source_filename,char *function,
 	{
 		found = TRUE;
 		CCD_General_Error_To_String(buff);
+		fprintf(General_Data.Error_Fp,"\t%s\n",buff);
+		fflush(General_Data.Error_Fp);
+	}
+	strcpy(buff,"");
+	strcpy(buff,"");
+	if(PIROT_General_Is_Error())
+	{
+		found = TRUE;
+		PIROT_General_Error_To_String(buff);
+		fprintf(General_Data.Error_Fp,"\t%s\n",buff);
+		fflush(General_Data.Error_Fp);
+	}
+	strcpy(buff,"");
+	strcpy(buff,"");
+	if(Filter_Wheel_General_Is_Error())
+	{
+		found = TRUE;
+		Filter_Wheel_General_Error_To_String(buff);
 		fprintf(General_Data.Error_Fp,"\t%s\n",buff);
 		fflush(General_Data.Error_Fp);
 	}
@@ -394,6 +417,36 @@ void Moptop_General_Call_Log_Handlers(char *sub_system,char *source_filename,cha
 void Moptop_General_Call_Log_Handlers_CCD(int level,char *message)
 {
 	Moptop_General_Call_Log_Handlers("CCD",NULL,NULL,level,"CCD",message);
+}
+
+/**
+ * Routine that goes through the General_Data.Log_Handler_List and invokes each non-null handler for logging
+ * of the filter wheel subsystem. We call Moptop_General_Call_Log_Handlers with parameters as follows: 
+ * "sub_system" and "category" are set to "FILTER_WHEEL". 
+ * "source_filename" and "function" are set to NULL. "level" and "message" are passed through.
+ * @param level At what level is the log message (TERSE/high level or VERBOSE/low level), 
+ *         a valid member of LOG_VERBOSITY.
+ * @param message The message to log.
+ * @see #Moptop_General_Call_Log_Handlers
+ */
+void Moptop_General_Call_Log_Handlers_Filter_Wheel(int level,char *message)
+{
+	Moptop_General_Call_Log_Handlers("FILTER_WHEEL",NULL,NULL,level,"FILTER_WHEEL",message);
+}
+
+/**
+ * Routine that goes through the General_Data.Log_Handler_List and invokes each non-null handler for logging
+ * of the filter wheel subsystem. We call Moptop_General_Call_Log_Handlers with parameters as follows: 
+ * "sub_system" and "category" are set to "ROTATOR". 
+ * "source_filename" and "function" are set to NULL. "level" and "message" are passed through.
+ * @param level At what level is the log message (TERSE/high level or VERBOSE/low level), 
+ *         a valid member of LOG_VERBOSITY.
+ * @param message The message to log.
+ * @see #Moptop_General_Call_Log_Handlers
+ */
+void Moptop_General_Call_Log_Handlers_Rotator(int level,char *message)
+{
+	Moptop_General_Call_Log_Handlers("ROTATOR",NULL,NULL,level,"ROTATOR",message);
 }
 
 /**

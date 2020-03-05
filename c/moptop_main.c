@@ -21,6 +21,10 @@
 #include "ccd_setup.h"
 #include "ccd_temperature.h"
 
+#include "filter_wheel_general.h"
+
+#include "pirot_general.h"
+
 #include "moptop_general.h"
 #include "moptop_fits_header.h"
 #include "moptop_server.h"
@@ -34,8 +38,14 @@ static char rcsid[] = "$Id$";
 /* internal routines */
 static int Moptop_Initialise_Signal(void);
 static int Moptop_Initialise_Logging(void);
+static int Moptop_Initialise_Mechanisms(void);
+static int Moptop_Shutdown_Mechanisms(void);
 static int Moptop_Startup_CCD(void);
 static int Moptop_Shutdown_CCD(void);
+static int Moptop_Startup_Rotator(void);
+static int Moptop_Shutdown_Rotator(void);
+static int Moptop_Startup_Filter_Wheel(void);
+static int Moptop_Shutdown_Filter_Wheel(void);
 static int Parse_Arguments(int argc, char *argv[]);
 static void Help(void);
 
@@ -44,9 +54,31 @@ static void Help(void);
 ** ------------------------------------------------------------------ */
 /**
  * Main program.
+ * <ul>
+ * <li>We parse the command line arguments using Parse_Arguments.
+ * <li>We setup signal handling (so the server doesn't crash when a client does) using Moptop_Initialise_Signal.
+ * <li>We load the configuration file using Moptop_Config_Load, using the config file returned by 
+ *     Moptop_General_Get_Config_Filename.
+ * <li>We initialise the logging using Moptop_Initialise_Logging.
+ * <li>We initialise the mechanisms (CCD/rotator, filter wheel) using Moptop_Initialise_Mechanisms.
+ * <li>We intialise the server using Moptop_Server_Initialise.
+ * <li>We start the server to handle incoming commands with Moptop_Server_Start. This routine finishes
+ *     when the server/progam is told to terminate.
+ * <li>We shutdown the connection to the mechanisms using Moptop_Shutdown_Mechanisms.
+ * </ul>
  * @param argc The number of arguments to the program.
  * @param argv An array of argument strings.
  * @return This function returns 0 if the program succeeds, and a positive integer if it fails.
+ * @see #Parse_Arguments
+ * @see #Moptop_Initialise_Signal
+ * @see #Moptop_Config_Load
+ * @see #Moptop_Initialise_Logging
+ * @see #Moptop_Initialise_Mechanisms
+ * @see #Moptop_Server_Initialise
+ * @see #Moptop_Server_Start
+ * @see #Moptop_Shutdown_Mechanisms
+ * @see moptop_general.html#Moptop_General_Get_Config_Filename
+ * @see moptop_general.html#Moptop_General_Error
  */
 int main(int argc, char *argv[])
 {
@@ -90,18 +122,17 @@ int main(int argc, char *argv[])
 		Moptop_General_Error("main","moptop_main.c","main",LOG_VERBOSITY_VERY_TERSE,"STARTUP");
 		return 4;
 	}
-	/* initialise connection to the CCD */
+	/* initialise mechanisms */
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("main","moptop_main.c","main",LOG_VERBOSITY_VERY_TERSE,"STARTUP",
-			   "Moptop_Startup_CCD.");
+			   "Moptop_Initialise_Mechanisms.");
 #endif
-	retval = Moptop_Startup_CCD();
+	retval = Moptop_Initialise_Mechanisms();
 	if(retval == FALSE)
 	{
 		Moptop_General_Error("main","moptop_main.c","main",LOG_VERBOSITY_VERY_TERSE,"STARTUP");
 		return 3;
 	}
-	/* initialise command server */
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("main","moptop_main.c","main",LOG_VERBOSITY_VERY_TERSE,"STARTUP",
 			       "Moptop_Server_Initialise.");
@@ -110,8 +141,8 @@ int main(int argc, char *argv[])
 	if(retval == FALSE)
 	{
 		Moptop_General_Error("main","moptop_main.c","main",LOG_VERBOSITY_VERY_TERSE,"STARTUP");
-		/* ensure CCD is warmed up */
-		Moptop_Shutdown_CCD();
+		/* shutdown mechanisms */
+		Moptop_Shutdown_Mechanisms();
 		return 4;
 	}
 	/* start server */
@@ -123,16 +154,16 @@ int main(int argc, char *argv[])
 	if(retval == FALSE)
 	{
 		Moptop_General_Error("main","moptop_main.c","main",LOG_VERBOSITY_VERY_TERSE,"STARTUP");
-		/* ensure CCD is warmed up */
-		Moptop_Shutdown_CCD();
+		/* shutdown mechanisms */
+		Moptop_Shutdown_Mechanisms();
 		return 4;
 	}
 	/* shutdown */
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("main","moptop_main.c","main",LOG_VERBOSITY_VERY_TERSE,"STARTUP",
-			       "Moptop_Shutdown_CCD");
+			       "Moptop_Shutdown_Mechanisms");
 #endif
-	retval = Moptop_Shutdown_CCD();
+	retval = Moptop_Shutdown_Mechanisms();
 	if(retval == FALSE)
 	{
 		Moptop_General_Error("main","moptop_main.c","main",LOG_VERBOSITY_VERY_TERSE,"STARTUP");
@@ -170,7 +201,10 @@ static int Moptop_Initialise_Signal(void)
 /**
  * Setup logging. Get directory name from config "logging.directory_name".
  * Get UDP logging config. Setup log handlers for Moptop software and subsystems.
- * @return The routine returns TRUE on success and FALSE on failure.
+ * @return The routine returns TRUE on success and FALSE on failure. Moptop_General_Error_Number / 
+ *         Moptop_General_Error_String are set on failure.
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_general.html#Moptop_General_Log_Set_Directory
  * @see moptop_general.html#Moptop_General_Log_Set_Root
  * @see moptop_general.html#Moptop_General_Log_Set_Error_Root
@@ -179,6 +213,9 @@ static int Moptop_Initialise_Signal(void)
  * @see moptop_general.html#Moptop_General_Log_Handler_Log_Hourly_File
  * @see moptop_general.html#Moptop_General_Log_Handler_Log_UDP
  * @see moptop_general.html#Moptop_General_Call_Log_Handlers
+ * @see moptop_general.html#Moptop_General_Call_Log_Handlers_CCD
+ * @see moptop_general.html#Moptop_General_Call_Log_Handlers_Filter_Wheel
+ * @see moptop_general.html#Moptop_General_Call_Log_Handlers_Rotator
  * @see moptop_general.html#Moptop_General_Set_Log_Filter_Function
  * @see moptop_general.html#Moptop_General_Log_Filter_Level_Absolute
  * @see moptop_config.html#Moptop_Config_Get_Boolean
@@ -187,6 +224,12 @@ static int Moptop_Initialise_Signal(void)
  * @see ../ccd/cdocs/ccd_general.html#CCD_General_Set_Log_Handler_Function
  * @see ../ccd/cdocs/ccd_general.html#CCD_General_Set_Log_Filter_Function
  * @see ../ccd/cdocs/ccd_general.html#CCD_General_Log_Filter_Level_Absolute
+ * @see ../filter_wheel/cdocs/filter_wheel_general.html#Filter_Wheel_General_Set_Log_Handler_Function
+ * @see ../filter_wheel/cdocs/filter_wheel_general.html#Filter_Wheel_General_Set_Log_Filter_Function
+ * @see ../filter_wheel/cdocs/filter_wheel_general.html#Filter_Wheel_General_Log_Filter_Level_Absolute
+ * @see ../pirot/cdocs/pirot_general.html#PIROT_Set_Log_Handler_Function
+ * @see ../pirot/cdocs/pirot_general.html#PIROT_Set_Log_Filter_Function
+ * @see ../pirot/cdocs/pirot_general.html#PIROT_Log_Filter_Level_Absolute
  * @see ../../commandserver/cdocs/command_server.html#Command_Server_Set_Log_Handler_Function
  * @see ../../commandserver/cdocs/command_server.html#Command_Server_Set_Log_Filter_Function
  * @see ../../commandserver/cdocs/command_server.html#Command_Server_Log_Filter_Level_Absolute
@@ -285,10 +328,11 @@ static int Moptop_Initialise_Logging(void)
 	CCD_General_Set_Log_Handler_Function(Moptop_General_Call_Log_Handlers_CCD);
 	CCD_General_Set_Log_Filter_Function(CCD_General_Log_Filter_Level_Absolute);
 	/* filter wheel */
-	/* diddly */
+	Filter_Wheel_General_Set_Log_Handler_Function(Moptop_General_Call_Log_Handlers_Filter_Wheel);
+	Filter_Wheel_General_Set_Log_Filter_Function(Filter_Wheel_General_Log_Filter_Level_Absolute);
 	/* rotator */
-	/* diddly */
-
+	PIROT_Set_Log_Handler_Function(Moptop_General_Call_Log_Handlers_Rotator);
+	PIROT_Set_Log_Filter_Function(PIROT_Log_Filter_Level_Absolute);
 	/* setup command server logging */
 	Command_Server_Set_Log_Handler_Function(Moptop_General_Call_Log_Handlers);
 	Command_Server_Set_Log_Filter_Function(Command_Server_Log_Filter_Level_Absolute);
@@ -296,8 +340,136 @@ static int Moptop_Initialise_Logging(void)
 }
 
 /**
+ * Initialise the moptop mechanisms. Calls Moptop_Startup_CCD,Moptop_Startup_Rotator,Moptop_Startup_Filter_Wheel.
+ * @return The routine returns TRUE on success and FALSE on failure. Moptop_General_Error_Number / 
+ *         Moptop_General_Error_String are set on failure.
+ * @see #Moptop_Startup_CCD
+ * @see #Moptop_Startup_Rotator
+ * @see #Moptop_Startup_Filter_Wheel
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
+ * @see moptop_general.html#Moptop_General_Log
+ */
+static int Moptop_Initialise_Mechanisms(void)
+{
+	int retval;
+
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Initialise_Mechanisms",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Started.");
+#endif
+	/* initialise connection to the CCD */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Initialise_Mechanisms",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Calling Moptop_Startup_CCD.");
+#endif
+	retval = Moptop_Startup_CCD();
+	if(retval == FALSE)
+	{
+		Moptop_General_Error_Number = 1;
+		sprintf(Moptop_General_Error_String,"Moptop_Initialise_Mechanisms:Moptop_Startup_CCD failed.");
+		return FALSE;
+	}
+	/* initialise connection to the PI rotator */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Initialise_Mechanisms",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Calling Moptop_Startup_Rotator.");
+#endif
+	retval = Moptop_Startup_Rotator();
+	if(retval == FALSE)
+	{
+		Moptop_General_Error_Number = 2;
+		sprintf(Moptop_General_Error_String,"Moptop_Initialise_Mechanisms:Moptop_Startup_Rotator failed.");
+		return FALSE;
+	}
+	/* initialise connection to the filter wheel */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Initialise_Mechanisms",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Calling Moptop_Startup_Filter_Wheel.");
+#endif
+	retval = Moptop_Startup_Filter_Wheel();
+	if(retval == FALSE)
+	{
+		Moptop_General_Error_Number = 3;
+		sprintf(Moptop_General_Error_String,"Moptop_Initialise_Mechanisms:Moptop_Startup_Filter_Wheel failed.");
+		return FALSE;
+	}
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Initialise_Mechanisms",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Finished.");
+#endif
+	return TRUE;
+}
+
+/**
+ * Shutdown the moptop mechanisms. Calls Moptop_Shutdown_CCD,Moptop_Shutdown_Rotator,Moptop_Shutdown_Filter_Wheel.
+ * @return The routine returns TRUE on success and FALSE on failure. Moptop_General_Error_Number / 
+ *         Moptop_General_Error_String are set on failure.
+ * @see #Moptop_Shutdown_CCD
+ * @see #Moptop_Shutdown_Rotator
+ * @see #Moptop_Shutdown_Filter_Wheel
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
+ * @see moptop_general.html#Moptop_General_Log
+ */
+static int Moptop_Shutdown_Mechanisms(void)
+{
+	int retval;
+
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_Mechanisms",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Started.");
+#endif
+	/* shutdown ccd */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_Mechanisms",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Calling Moptop_Shutdown_CCD.");
+#endif
+	retval = Moptop_Shutdown_CCD();
+	if(retval == FALSE)
+	{
+		Moptop_General_Error_Number = 4;
+		sprintf(Moptop_General_Error_String,"Moptop_Shutdown_Mechanisms:Moptop_Shutdown_CCD failed.");
+		return FALSE;
+	}
+	/* shutdown rotator */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_Mechanisms",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Calling Moptop_Shutdown_Rotator.");
+#endif
+	retval = Moptop_Shutdown_Rotator();
+	if(retval == FALSE)
+	{
+		Moptop_General_Error_Number = 5;
+		sprintf(Moptop_General_Error_String,"Moptop_Shutdown_Mechanisms:Moptop_Shutdown_Rotator failed.");
+		return FALSE;
+	}
+	/* shutdown filter wheel */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_Mechanisms",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Calling Moptop_Shutdown_Filter_Wheel.");
+#endif
+	retval = Moptop_Shutdown_Filter_Wheel();
+	if(retval == FALSE)
+	{
+		Moptop_General_Error_Number = 6;
+		sprintf(Moptop_General_Error_String,"Moptop_Shutdown_Mechanisms:Moptop_Shutdown_Filter_Wheel failed.");
+		return FALSE;
+	}
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_Mechanisms",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Finished.");
+#endif
+	return TRUE;
+}
+
+
+/**
  * Initialise the CCD connection, initialise the CCD and set the temperature.
  * <ul>
+ * <li>
+ * <li>
+ * <li>
  * <li>
  * </ul>
  * @return The routine returns TRUE on success and FALSE on failure.
@@ -306,14 +478,20 @@ static int Moptop_Initialise_Logging(void)
  * @see moptop_config.html#Moptop_Config_Get_Double
  * @see moptop_config.html#Moptop_Config_Get_String
  * @see moptop_fits_header.html#Moptop_Fits_Header_Initialise
-  */
+ */
 static int Moptop_Startup_CCD(void)
 {
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Startup_CCD",LOG_VERBOSITY_TERSE,"STARTUP","Started.");
+#endif
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Startup_CCD",LOG_VERBOSITY_TERSE,"STARTUP","Finished.");
+#endif
 	return TRUE;
 }
 
 /**
- * Shutdown the CCD conenction.
+ * Shutdown the CCD connection.
  * <ul>
  * <li>
  * </ul>
@@ -321,6 +499,147 @@ static int Moptop_Startup_CCD(void)
  */
 static int Moptop_Shutdown_CCD(void)
 {
+	return TRUE;
+}
+
+static int Moptop_Startup_Rotator(void)
+{
+	return TRUE;
+}
+
+static int Moptop_Shutdown_Rotator(void)
+{
+	return TRUE;
+}
+
+/**
+ * If the filter wheel is enabled, open a connection to the filter wheel.
+ * <ul>
+ * <li>Use Moptop_Config_Get_Boolean to get "filter_wheel.enable" to see whether the filter wheel is enabled.
+ * <li>If it is _not_ enabled, log and return success.
+ * <li>Use Moptop_Config_Get_String to get the device name to use for the 
+ *     filter wheel connection ("filter_wheel.device_name").
+ * <li>Use Filter_Wheel_Command_Open to open a connection to the filter wheel.
+ * </ul>
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see moptop_config.html#Moptop_Config_Get_Boolean
+ * @see moptop_config.html#Moptop_Config_Get_String
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
+ * @see moptop_general.html#Moptop_General_Log
+ * @see moptop_general.html#Moptop_General_Log_Format
+ * @see ../filter_wheel/cdocs/filter_wheel_command.html#Filter_Wheel_Command_Open
+ */
+static int Moptop_Startup_Filter_Wheel(void)
+{
+	char *device_name = NULL;
+	int enabled;
+
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Startup_Filter_Wheel",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Started.");
+#endif
+	/* is the filter wheel active/enabled for this instance of the C layer */
+	if(!Moptop_Config_Get_Boolean("filter_wheel.enable",&enabled))
+	{
+		Moptop_General_Error_Number = 7;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_Filter_Wheel:"
+			"Failed to get whether filter wheel is enabled.");
+		return FALSE;
+	}
+	/* if the filter wheel is _not_ active, just return OK here */
+	if(enabled == FALSE)
+	{
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("main","moptop_main.c","Moptop_Startup_Filter_Wheel",LOG_VERBOSITY_TERSE,"STARTUP",
+				   "Finished (filter wheel NOT enabled).");
+#endif
+		return TRUE;
+	}
+	/* get device name */
+	if(!Moptop_Config_Get_String("filter_wheel.device_name",&device_name))
+	{
+		Moptop_General_Error_Number = 8;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_Filter_Wheel:"
+			"Failed to get filter wheel device_name.");
+		return FALSE;
+	}
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Startup_Filter_Wheel",LOG_VERBOSITY_TERSE,"STARTUP",
+				  "Opening connection to filter wheel using device '%s'.",device_name);
+#endif
+	/* open connection to the filter wheel */
+	if(!Filter_Wheel_Command_Open(device_name))
+	{
+		Moptop_General_Error_Number = 9;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_Filter_Wheel:"
+			"Filter_Wheel_Command_Open(%s) failed.",device_name);
+		/* free allocated data */
+		if(device_name != NULL)
+			free(device_name);
+		return FALSE;
+	}
+	/* free allocated data */
+	if(device_name != NULL)
+		free(device_name);
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Startup_Filter_Wheel",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Finished.");
+#endif
+	return TRUE;
+}
+
+/**
+ * Shutdown a previously opened connection to the filter wheel.
+ * <ul>
+ * <li>Use Moptop_Config_Get_Boolean to get "filter_wheel.enable" to see whether the filter wheel is enabled.
+ * <li>If it is _not_ enabled, log and return success.
+ * <li>Use Filter_Wheel_Command_Close to close the connection to the filter wheel.
+ * </ul>
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see moptop_config.html#Moptop_Config_Get_Boolean
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
+ * @see moptop_general.html#Moptop_General_Log
+ * @see ../filter_wheel/cdocs/filter_wheel_command.html#Filter_Wheel_Command_Close
+ */
+static int Moptop_Shutdown_Filter_Wheel(void)
+{
+	int enabled;
+
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_Filter_Wheel",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Started.");
+#endif
+	/* is the filter wheel active/enabled for this instance of the C layer */
+	if(!Moptop_Config_Get_Boolean("filter_wheel.enable",&enabled))
+	{
+		Moptop_General_Error_Number = 10;
+		sprintf(Moptop_General_Error_String,"Moptop_Shutdown_Filter_Wheel:"
+			"Failed to get whether filter wheel is enabled.");
+		return FALSE;
+	}
+	/* if the filter wheel is _not_ active, just return OK here */
+	if(enabled == FALSE)
+	{
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_Filter_Wheel",LOG_VERBOSITY_TERSE,"STARTUP",
+				   "Finished (filter wheel NOT enabled).");
+#endif
+		return TRUE;
+	}
+	/* shutdown the connection */
+	if(!Filter_Wheel_Command_Close())
+	{
+		Moptop_General_Error_Number = 11;
+		sprintf(Moptop_General_Error_String,"Moptop_Shutdown_Filter_Wheel:Filter_Wheel_Command_Close failed.");
+		return FALSE;
+	}
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_Filter_Wheel",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Finished.");
+#endif
+
 	return TRUE;
 }
 

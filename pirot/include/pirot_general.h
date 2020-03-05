@@ -61,6 +61,7 @@
 #endif
 
 /* external functions */
+extern int PIROT_General_Is_Error(void);
 extern void PIROT_General_Error(void);
 extern void PIROT_General_Error_To_String(char *error_string);
 extern int PIROT_General_Get_Error_Number(void);

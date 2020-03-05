@@ -102,6 +102,23 @@ static char General_Error_String[FILTER_WHEEL_GENERAL_ERROR_STRING_LENGTH] = "";
 ** External Functions
 ** -------------------------------------------------------- */
 /**
+ * Routine to return whether an error has been set in the library.
+ * @return The routine returns TRUE if an error has been set, and FALSE if no error has been set.
+ * @see #General_Error_Number
+ * @see filter_wheel_command.html#Filter_Wheel_Command_Get_Error_Number
+ */
+int Filter_Wheel_General_Is_Error(void)
+{
+	int found = FALSE;
+
+	if(Filter_Wheel_Command_Get_Error_Number() != 0)
+		found = TRUE;
+	if(General_Error_Number != 0)
+		found = TRUE;
+	return found;
+}
+
+/**
  * Basic error reporting routine, to stderr.
  * @see #General_Error_Number
  * @see #General_Error_String

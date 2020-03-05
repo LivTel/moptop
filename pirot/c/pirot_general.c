@@ -106,6 +106,32 @@ static char General_Error_String[PIROT_ERROR_STRING_LENGTH] = "";
 ** External Functions
 ** -------------------------------------------------------- */
 /**
+ * Return whether an error has been set in the PIROT library.
+ * @return The routine returns TRUE if an error has been set, and FALSE if it has not been set.
+ * @see #General_Error_Number
+ * @see pirot_usb.html#PIROT_USB_Get_Error_Number
+ * @see pirot_command.html#PIROT_Command_Get_Error_Number
+ * @see pirot_setup.html#PIROT_Setup_Get_Error_Number
+ * @see pirot_move.html#PIROT_Move_Get_Error_Number
+ */
+int PIROT_General_Is_Error(void)
+{
+	int found = FALSE;
+
+	if(PIROT_USB_Get_Error_Number() != 0)
+		found = TRUE;
+	if(PIROT_Command_Get_Error_Number() != 0)
+		found = TRUE;
+	if(PIROT_Setup_Get_Error_Number() != 0)
+		found = TRUE;
+	if(PIROT_Move_Get_Error_Number() != 0)
+		found = TRUE;
+	if(General_Error_Number != 0)
+		found = TRUE;
+	return found;
+}
+
+/**
  * Basic error reporting routine, to stderr.
  * @see #General_Error_Number
  * @see #General_Error_String

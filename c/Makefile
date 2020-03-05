@@ -1,6 +1,8 @@
 include ../../Makefile.common
 include ../Makefile.common
 include ../ccd/Makefile.common
+include ../filter_wheel/Makefile.common
+include ../pirot/Makefile.common
 
 BINDIR			= $(MOPTOP_BIN_HOME)/c/$(HOSTTYPE)
 INCDIR 			= $(MOPTOP_SRC_HOME)/include
@@ -20,6 +22,14 @@ COMMAND_SERVER_LDFLAGS 	= -lcommandserver
 CCD_CFLAGS 		= -I$(CCD_SRC_HOME)/include
 CCD_LDFLAGS 		= -l$(CCD_LIBNAME)
 
+# filter wheel library
+FILTER_WHEEL_CFLAGS 	= -I$(FILTER_WHEEL_SRC_HOME)/include
+FILTER_WHEEL_LDFLAGS 	= -l$(FILTER_WHEEL_LIBNAME)
+
+# PI rotator library
+ROTATOR_CFLAGS 		= -I$(PIROT_SRC_HOME)/include -I$(PI_INCDIR)
+ROTATOR_LDFLAGS 	= -l$(PIROT_LIBNAME) -L$(PI_LIBDIR) $(PI_LIB)
+
 # CFITSIO
 CFITSIO_CFLAGS		= -I$(CFITSIOINCDIR) 
 CFITSIO_LDFLAGS		= -lcfitsio
@@ -32,7 +42,8 @@ MJD_LDFLAGS		= -lngatastro
 CONFIG_CFLAGS		= -I$(eSTAR_SRC_HOME)/config/include/
 CONFIG_LDFLAGS		= -L$(eSTAR_LIB_HOME) -lestar_config
 
-CFLAGS 			= -g -I$(INCDIR) $(DEBUG_CFLAGS) $(LOG_UDP_CFLAGS) $(CCD_CFLAGS) $(COMMAND_SERVER_CFLAGS) \
+CFLAGS 			= -g -I$(INCDIR) $(DEBUG_CFLAGS) $(LOG_UDP_CFLAGS) \
+				$(CCD_CFLAGS) $(FILTER_WHEEL_CFLAGS) $(ROTATOR_CFLAGS) $(COMMAND_SERVER_CFLAGS) \
 				$(CFITSIO_CFLAGS) $(MJD_CFLAGS) -I$(ANDOR_INCDIR) $(CONFIG_CFLAGS)
 DOCFLAGS 		= -static
 
@@ -51,7 +62,8 @@ CONFIG_BINS		= $(CONFIG_SRCS:%.properties=$(BINDIR)/%.properties)
 top: $(EXES) $(CONFIG_BINS) docs
 
 $(BINDIR)/moptop: $(OBJS)
-	$(CC) $^ -o $@  -L$(LT_LIB_HOME) $(COMMAND_SERVER_LDFLAGS) $(CCD_LDFLAGS) \
+	$(CC) $^ -o $@  -L$(LT_LIB_HOME) $(COMMAND_SERVER_LDFLAGS) \
+		$(CCD_LDFLAGS) $(FILTER_WHEEL_LDFLAGS) $(ROTATOR_LDFLAGS) \
 		$(LOG_UDP_LDFLAGS)  $(CFITSIO_LDFLAGS) $(OBJECT_LDFLAGS) $(MJD_LDFLAGS) \
 		-L$(ANDOR_LIBDIR) $(ANDOR_LIBS) \
 		$(CONFIG_LDFLAGS) $(TIMELIB) $(SOCKETLIB) -lm -lc
