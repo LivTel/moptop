@@ -170,7 +170,7 @@ static int Parse_Arguments(int argc, char *argv[])
 static void Help(void)
 {
 	fprintf(stdout,"Test Setup Startup:Help.\n");
-	fprintf(stdout,"This program calls the Moptop CCD librarie's startup routine.\n");
+	fprintf(stdout,"This program calls the Moptop CCD library's startup routine.\n");
 	fprintf(stdout,"test_setup_startup  [-help][-l[og_level <0..5>].\n");
 }
 /*

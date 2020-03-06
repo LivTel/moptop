@@ -42,7 +42,7 @@ static char rcsid[] = "$Id$";
 static int Moptop_Initialise_Signal(void);
 static int Moptop_Initialise_Logging(void);
 static int Moptop_Initialise_Mechanisms(void);
-static int Moptop_Shutdown_Mechanisms(void);
+static void Moptop_Shutdown_Mechanisms(void);
 static int Moptop_Startup_CCD(void);
 static int Moptop_Shutdown_CCD(void);
 static int Moptop_Startup_Rotator(void);
@@ -166,12 +166,7 @@ int main(int argc, char *argv[])
 	Moptop_General_Log("main","moptop_main.c","main",LOG_VERBOSITY_VERY_TERSE,"STARTUP",
 			       "Moptop_Shutdown_Mechanisms");
 #endif
-	retval = Moptop_Shutdown_Mechanisms();
-	if(retval == FALSE)
-	{
-		Moptop_General_Error("main","moptop_main.c","main",LOG_VERBOSITY_VERY_TERSE,"STARTUP");
-		return 2;
-	}
+	Moptop_Shutdown_Mechanisms();
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("main","moptop_main.c","main",LOG_VERBOSITY_VERY_TERSE,"STARTUP",
 			       "moptop completed.");
@@ -400,8 +395,6 @@ static int Moptop_Initialise_Mechanisms(void)
 
 /**
  * Shutdown the moptop mechanisms. Calls Moptop_Shutdown_CCD,Moptop_Shutdown_Rotator,Moptop_Shutdown_Filter_Wheel.
- * @return The routine returns TRUE on success and FALSE on failure. Moptop_General_Error_Number / 
- *         Moptop_General_Error_String are set on failure.
  * @see #Moptop_Shutdown_CCD
  * @see #Moptop_Shutdown_Rotator
  * @see #Moptop_Shutdown_Filter_Wheel
@@ -409,7 +402,7 @@ static int Moptop_Initialise_Mechanisms(void)
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_general.html#Moptop_General_Log
  */
-static int Moptop_Shutdown_Mechanisms(void)
+static void Moptop_Shutdown_Mechanisms(void)
 {
 	int retval;
 
@@ -425,7 +418,8 @@ static int Moptop_Shutdown_Mechanisms(void)
 	retval = Moptop_Shutdown_CCD();
 	if(retval == FALSE)
 	{
-		return FALSE;
+		/* log the error but do not exit, try to shutdown other mechanisms */
+		Moptop_General_Error("main","moptop_main.c","Moptop_Shutdown_Mechanisms",LOG_VERBOSITY_VERY_TERSE,"STARTUP");
 	}
 	/* shutdown rotator */
 #if MOPTOP_DEBUG > 1
@@ -435,7 +429,8 @@ static int Moptop_Shutdown_Mechanisms(void)
 	retval = Moptop_Shutdown_Rotator();
 	if(retval == FALSE)
 	{
-		return FALSE;
+		/* log the error but do not exit, try to shutdown other mechanisms */
+		Moptop_General_Error("main","moptop_main.c","Moptop_Shutdown_Mechanisms",LOG_VERBOSITY_VERY_TERSE,"STARTUP");
 	}
 	/* shutdown filter wheel */
 #if MOPTOP_DEBUG > 1
@@ -445,36 +440,121 @@ static int Moptop_Shutdown_Mechanisms(void)
 	retval = Moptop_Shutdown_Filter_Wheel();
 	if(retval == FALSE)
 	{
-		return FALSE;
+		/* log the error but do not exit, try to shutdown other mechanisms */
+		Moptop_General_Error("main","moptop_main.c","Moptop_Shutdown_Mechanisms",LOG_VERBOSITY_VERY_TERSE,"STARTUP");
 	}
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_Mechanisms",LOG_VERBOSITY_TERSE,"STARTUP",
 			   "Finished.");
 #endif
-	return TRUE;
 }
 
 
 /**
- * Initialise the CCD connection, initialise the CCD and set the temperature.
+ * If the CCD is enabled for initialisation, initialise the CCD.
  * <ul>
- * <li>
- * <li>
- * <li>
- * <li>
+ * <li>Use Moptop_Config_Get_Boolean to get "ccd.enable" to see whether the CCD is enabled for initialisation.
+ * <li>If it is _not_ enabled, log and return success.
+ * <li>Call CCD_Setup_Startup to initialise the CCD.
+ * <li>Call CCD_Buffer_Initialise to allocate space for the image buffers.
+ * <li>We call Moptop_Config_Get_Character to get the instrument code for this instance of the C layer/CCD
+ *     with property keyword: "file.fits.instrument_code".
+ * <li>We call Moptop_Config_Get_String to get the data directory to store generated FITS images in using the
+ *     property keyword: "file.fits.path".
+ * <li>We call CCD_Fits_Filename_Initialise to initialise FITS filename data and find the current MULTRUN number.
+ * <li>We call CCD_Fits_Header_Initialise to initialise FITS header data.
  * </ul>
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see moptop_config.html#Moptop_Config_Get_Boolean
- * @see moptop_config.html#Moptop_Config_Get_Integer
- * @see moptop_config.html#Moptop_Config_Get_Double
+ * @see moptop_config.html#Moptop_Config_Get_Character
  * @see moptop_config.html#Moptop_Config_Get_String
- * @see moptop_fits_header.html#Moptop_Fits_Header_Initialise
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
+ * @see moptop_general.html#Moptop_General_Log
+ * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Initialise
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Initialise
+ * @see ../ccd/cdocs/ccd_fits_header.html#CCD_Fits_Header_Initialise
+ * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Startup
  */
 static int Moptop_Startup_CCD(void)
 {
+	int enabled;
+	char instrument_code;
+	char* data_dir = NULL;
+
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("main","moptop_main.c","Moptop_Startup_CCD",LOG_VERBOSITY_TERSE,"STARTUP","Started.");
 #endif
+	/* do we want to initialise the CCD.
+	** The C layer always has a CCD attached, but if it is unplugged/broken, setting "ccd.enable" to FALSE
+	** allows the C layer to initialise to enable control of other mechanisms from the C layer. */
+	if(!Moptop_Config_Get_Boolean("ccd.enable",&enabled))
+	{
+		Moptop_General_Error_Number = 1;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_CCD:Failed to get whether CCD is enabled for initialisation.");
+		return FALSE;
+	}
+	/* if we don't want to initialise the CCD, just return here. */
+	if(enabled == FALSE)
+	{
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("main","moptop_main.c","Moptop_Startup_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
+				   "Finished (rotator NOT enabled).");
+#endif
+		return TRUE;
+	}
+	/* actually do initialisation of the CCD/Andor library */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
+				  "Calling CCD_Setup_Startup.");
+#endif
+	if(!CCD_Setup_Startup())
+	{
+		Moptop_General_Error_Number = 2;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_CCD:CCD_Setup_Startup failed.");
+		return FALSE;
+	}
+	/* allocate space for image buffers */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
+				  "Calling CCD_Buffer_Initialise.");
+#endif
+	if(!CCD_Buffer_Initialise())
+	{
+		Moptop_General_Error_Number = 3;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_CCD:CCD_Buffer_Initialise failed.");
+		return FALSE;
+	}
+	/* fits filename initialisation */
+	if(!Moptop_Config_Get_Character("file.fits.instrument_code",&instrument_code))
+		return FALSE;
+	if(!Moptop_Config_Get_String("file.fits.path",&data_dir))
+		return FALSE;
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
+				  "Calling CCD_Fits_Filename_Initialise(%c,%s).",instrument_code,data_dir);
+#endif
+	if(!CCD_Fits_Filename_Initialise(instrument_code,data_dir))
+	{
+		Moptop_General_Error_Number = 4;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_CCD:CCD_Fits_Filename_Initialise failed.");
+		if(data_dir != NULL)
+			free(data_dir);
+		return FALSE;
+	}
+	/* free allocated data */
+	if(data_dir != NULL)
+		free(data_dir);
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
+			   "Calling CCD_Fits_Header_Initialise.");
+#endif
+	if(!CCD_Fits_Header_Initialise())
+	{
+		Moptop_General_Error_Number = 5;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_CCD:CCD_Fits_Header_Initialise failed.");
+		return FALSE;
+	}
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("main","moptop_main.c","Moptop_Startup_CCD",LOG_VERBOSITY_TERSE,"STARTUP","Finished.");
 #endif
@@ -484,12 +564,65 @@ static int Moptop_Startup_CCD(void)
 /**
  * Shutdown the CCD connection.
  * <ul>
- * <li>
+ * <li>Use Moptop_Config_Get_Boolean to get "ccd.enable" to see whether the CCD is enabled for initialisation/finislisation.
+ * <li>If it is _not_ enabled, log and return success.
+ * <li>Call CCD_Setup_Shutdown to shutdown the connection to the CCD.
+ * <li>Call CCD_Buffer_Free to free the image buffer memory.
  * </ul>
  * @return The routine returns TRUE on success and FALSE on failure.
+ * @see moptop_config.html#Moptop_Config_Get_Boolean
+ * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Free
+ * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Shutdown
  */
 static int Moptop_Shutdown_CCD(void)
 {
+	int enabled;
+
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP","Started.");
+#endif
+	/* is the ccd active/enabled for this instance of the C layer */
+	if(!Moptop_Config_Get_Boolean("ccd.enable",&enabled))
+	{
+		Moptop_General_Error_Number = 6;
+		sprintf(Moptop_General_Error_String,"Moptop_Shutdown_CCD:Failed to get whether ccd initialisation is enabled.");
+		return FALSE;
+	}
+	/* if the rotator is _not_ active, just return OK here */
+	if(enabled == FALSE)
+	{
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
+				   "Finished (CCD NOT enabled).");
+#endif
+		return TRUE;
+	}
+	/* shutdown the connection */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
+				  "Calling CCD_Setup_Shutdown.");
+#endif
+	if(!CCD_Setup_Shutdown())
+	{
+		Moptop_General_Error_Number = 24;
+		sprintf(Moptop_General_Error_String,"Moptop_Shutdown_CCD:CCD_Setup_Shutdown failed.");
+		return FALSE;
+	}
+	/* free image buffers */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
+				  "Calling CCD_Buffer_Free.");
+#endif
+	if(!CCD_Buffer_Free())
+	{
+		Moptop_General_Error_Number = 25;
+		sprintf(Moptop_General_Error_String,"Moptop_Shutdown_CCD:CCD_Buffer_Free failed.");
+		return FALSE;
+	}
+
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP","Finished.");
+#endif
 	return TRUE;
 }
 

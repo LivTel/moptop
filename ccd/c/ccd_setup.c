@@ -432,12 +432,18 @@ int CCD_Setup_Startup(void)
 /**
  * Shutdown the connection to the CCD.
  * <ul>
+ * <li>We stop any running acquisition with CCD_Command_Acquisition_Stop.
+ * <li>We set the camera triggering mode to software using 
+ *     CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_SOFTWARE).
  * <li>We close connection to the CCD camera using CCD_Command_Close.
  * <li>We finalise the libraries used using CCD_Command_Finalise.
  * <ul>
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #Setup_Error_Number
  * @see #Setup_Error_String
+ * @see ccd_command.html#CCD_COMMAND_TRIGGER_MODE_SOFTWARE
+ * @see ccd_command.html#CCD_Command_Acquisition_Stop
+ * @see ccd_command.html#CCD_Command_Set_Trigger_Mode
  * @see ccd_command.html#CCD_Command_Finalise
  * @see ccd_command.html#CCD_Command_Close
  * @see ccd_general.html#CCD_General_Log_Format
@@ -448,7 +454,20 @@ int CCD_Setup_Shutdown(void)
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Setup_Shutdown: Started.");
 #endif /* LOGGING */
 	/* turn off image acquisition */
-
+	if(!CCD_Command_Acquisition_Stop())
+	{
+		Setup_Error_Number = 33;
+		sprintf(Setup_Error_String,"CCD_Setup_Shutdown: CCD_Command_Acquisition_Stop failed.");
+		return FALSE;
+	}
+	/* set camera triggering to software */
+	if(!CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_SOFTWARE))
+	{
+		Setup_Error_Number = 34;
+		sprintf(Setup_Error_String,
+			"CCD_Setup_Shutdown: CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_SOFTWARE) failed.");
+		return FALSE;
+	}
 	/* close the open connection to the CCD camera */
 	if(!CCD_Command_Close())
 	{
