@@ -97,9 +97,11 @@ int Moptop_Command_Abort(char *command_string,char **reply_string)
 }
 
 /**
- * Handle a command of the form: "config <filter> <bin> <trigger_mode>".
+ * Handle config commands of the forms:
  * <ul>
- * <li>
+ * <li>"config filter <filtername>"
+ * <li>"config bin <bin>"
+ * <li>"config rotorspeed <slow|fast>"
  * </ul>
  * @param command_string The command. This is not changed during this routine.
  * @param reply_string The address of a pointer to allocate and set the reply string.
@@ -108,21 +110,24 @@ int Moptop_Command_Abort(char *command_string,char **reply_string)
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_general.html#Moptop_General_Add_String
+ * @see moptop_general.html#Moptop_General_Add_Integer_To_String
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Dimensions
+ * @see ../filter_wheel/cdocs/filter_wheel_config.html#Filter_Wheel_Config_Name_To_Position
+ * @see ../filter_wheel/cdocs/filter_wheel_config.html#Filter_Wheel_Command_Move
  */
 int Moptop_Command_Config(char *command_string,char **reply_string)
 {
-	int retval,bin;
-	char filter_string[9];
-	char trigger_mode_string[9];
+	int retval,bin,parameter_index,filter_position;
+	char filter_string[32];
+	char sub_config_command_string[16];
 
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("command","moptop_command.c","Moptop_Command_Config",LOG_VERBOSITY_TERSE,
 			   "COMMAND","started.");
 #endif
 	/* parse command */
-	retval = sscanf(command_string,"config %8s %d %8s",filter_string,&bin,trigger_mode_string);
-	if(retval != 3)
+	retval = sscanf(command_string,"config %15s %n",sub_config_command_string,&parameter_index);
+	if(retval != 1)
 	{
 		Moptop_General_Error_Number = 501;
 		sprintf(Moptop_General_Error_String,"Moptop_Command_Config:"
@@ -137,11 +142,124 @@ int Moptop_Command_Config(char *command_string,char **reply_string)
 			return FALSE;
 		return TRUE;
 	}
-
-	/* diddly not implemented */
-
-	if(!Moptop_General_Add_String(reply_string,"1 Config not implemented yet."))
-		return FALSE;
+#if MOPTOP_DEBUG > 9
+	Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",LOG_VERBOSITY_VERY_VERBOSE,
+				  "COMMAND","Sub config command string: %s, parameter index %d.",
+				  sub_config_command_string,parameter_index);
+#endif
+	if(strcmp(sub_config_command_string,"filter") == 0)
+	{
+		/* copy rest of command as filter name - filter names have spaces in them! */
+		strncpy(filter_string,command_string+parameter_index,31);
+#if MOPTOP_DEBUG > 9
+		Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+					  LOG_VERBOSITY_VERY_VERBOSE,"COMMAND","Filter string: %s.",filter_string);
+#endif
+		/* string to position conversion */
+		if(!Filter_Wheel_Config_Name_To_Position(filter_string,&filter_position))
+		{
+			Moptop_General_Error_Number = 503;
+			sprintf(Moptop_General_Error_String,"Moptop_Command_Config:"
+				"Failed to convert filter name '%s' to a valid filter position.",filter_string);
+			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
+					     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+						  LOG_VERBOSITY_TERSE,"COMMAND",
+						  "Failed to convert filter name '%s' to a valid filter position.",
+						  filter_string);
+#endif
+			if(!Moptop_General_Add_String(reply_string,"1 Failed to convert filter name:"))
+				return FALSE;
+			if(!Moptop_General_Add_String(reply_string,filter_string))
+				return FALSE;
+			return TRUE;
+		}
+#if MOPTOP_DEBUG > 9
+		Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+					  LOG_VERBOSITY_VERY_VERBOSE,"COMMAND","Filter position: %d.",filter_position);
+#endif
+		/* actually move filter wheel */
+		if(!Filter_Wheel_Command_Move(filter_position))
+		{
+			Moptop_General_Error_Number = 504;
+			sprintf(Moptop_General_Error_String,"Moptop_Command_Config:"
+				"Failed to move filter wheel to filter '%s', position %d.",
+				filter_string,filter_position);
+			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
+					     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+						  LOG_VERBOSITY_TERSE,"COMMAND",
+						  "Failed to move filter wheel to filter '%s', position %d.",
+						  filter_string,filter_position);
+#endif
+			if(!Moptop_General_Add_String(reply_string,"1 Failed to move filter wheel to filter:"))
+				return FALSE;
+			if(!Moptop_General_Add_String(reply_string,filter_string))
+				return FALSE;
+			return TRUE;
+		}
+		/* success */
+		if(!Moptop_General_Add_String(reply_string,"0 Filter wheel moved to position:"))
+			return FALSE;
+		if(!Moptop_General_Add_String(reply_string,filter_string))
+			return FALSE;
+	}
+	else if(strcmp(sub_config_command_string,"bin") == 0)
+	{
+		retval = sscanf(command_string+parameter_index,"%d",&bin);
+		if(retval != 1)
+		{
+			Moptop_General_Error_Number = 506;
+			sprintf(Moptop_General_Error_String,"Moptop_Command_Config:"
+				"Failed to parse command %s (%d).",command_string,retval);
+			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
+					     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+			Moptop_General_Log("command","moptop_command.c","Moptop_Command_Config",
+					   LOG_VERBOSITY_TERSE,"COMMAND","finished (command parse failed).");
+#endif
+			if(!Moptop_General_Add_String(reply_string,"1 Failed to parse config bin command."))
+				return FALSE;
+			return TRUE;
+		}
+		/* configure CCD binning */
+		if(!CCD_Setup_Dimensions(bin))
+		{
+			Moptop_General_Error_Number = 507;
+			sprintf(Moptop_General_Error_String,"Moptop_Command_Config:Failed to set CCD binning to %d.",
+				bin);
+			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
+					     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+						  LOG_VERBOSITY_TERSE,"COMMAND","Failed to set CCD binning to %d.",
+						  bin);
+#endif
+			if(!Moptop_General_Add_String(reply_string,"1 Failed to set CCD binning to:"))
+				return FALSE;
+			if(!Moptop_General_Add_Integer_To_String(reply_string,bin))
+				return FALSE;
+			return TRUE;
+		}
+		if(!Moptop_General_Add_String(reply_string,"0 CCD Binning set to:"))
+			return FALSE;
+		if(!Moptop_General_Add_Integer_To_String(reply_string,bin))
+			return FALSE;
+	}
+	else if(strcmp(sub_config_command_string,"rotorspeed") == 0)
+	{
+		if(!Moptop_General_Add_String(reply_string,"1 Config rotorspeed not implemented yet."))
+			return FALSE;
+	}
+	else
+	{
+		if(!Moptop_General_Add_String(reply_string,"1 Unknown config sub-command:"))
+			return FALSE;
+		if(!Moptop_General_Add_String(reply_string,sub_config_command_string))
+			return FALSE;
+	}
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("command","moptop_command.c","Moptop_Command_Config",LOG_VERBOSITY_TERSE,
 			   "COMMAND","finished.");
@@ -579,6 +697,7 @@ int Moptop_Command_Multrun(char *command_string,char **reply_string)
  * Handle a status command. Possible forms: 
  * <ul>
  * <li>status temperature [get|status]
+ * <li>status filterwheel [filter|position|status]
  * <li>status exposure [status|count|length|start_time|trigger_mode|elapsed_time]
  * <li>status exposure [accumulation|series|index|multrun|run|window]
  * <li>status [name|identification|fits_instrument_code]
@@ -601,6 +720,9 @@ int Moptop_Command_Multrun(char *command_string,char **reply_string)
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Run_Get
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Window_Get
  * @see ../ccd/cdocs/ccd_general.html#CCD_General_Get_Time_String
+ * @see ../ccd/cdocs/ccd_temperature.html#CCD_Temperature_Get
+ * @see ../ccd/cdocs/ccd_temperature.html#CCD_Temperature_Get_Temperature_Status_String
+ * @see ../filter_wheel/cdocs/filter_wheel_command.html#Filter_Wheel_Command_Get_Position
  */
 int Moptop_Command_Status(char *command_string,char **reply_string)
 {
@@ -613,9 +735,11 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 	char subsystem_string[32];
 	char get_set_string[16];
 	char key_string[64];
+	char temperature_status_string[32];
+	char filter_name_string[32];
 	char instrument_code;
 	char *camera_name_string = NULL;
-	int retval,command_string_index,ivalue,camera_index,serial_number;
+	int retval,command_string_index,ivalue,filter_wheel_position;
 	double temperature;
 	
 	/* parse command */
@@ -778,6 +902,84 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 		}
 		*/
 	}
+	else if(strncmp(subsystem_string,"filterwheel",11) == 0)
+	{
+		if(!Filter_Wheel_Command_Get_Position(&filter_wheel_position))
+		{
+			Moptop_General_Error_Number = 509;
+			sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
+				"Failed to get filter wheel position.");
+			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Status",
+					     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+			Moptop_General_Log("command","moptop_command.c","Moptop_Command_Status",
+					   LOG_VERBOSITY_TERSE,"COMMAND","Failed to get filter wheel position.");
+#endif
+			if(!Moptop_General_Add_String(reply_string,"1 Failed to get filter wheel position."))
+				return FALSE;
+			return TRUE;
+		}
+		if(strncmp(command_string+command_string_index,"filter",6)==0)
+		{
+			if(filter_wheel_position == 0) /* moving */
+			{
+				strcpy(filter_name_string,"moving");
+			}
+			else
+			{
+				if(!Filter_Wheel_Config_Position_To_Name(filter_wheel_position,filter_name_string))
+				{
+					Moptop_General_Error_Number = 514;
+					sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
+						"Failed to get filter wheel filter name from position %d.",
+						filter_wheel_position);
+					Moptop_General_Error("command","moptop_command.c","Moptop_Command_Status",
+							     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+					Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Status",
+								  LOG_VERBOSITY_TERSE,"COMMAND",
+						  "Failed to get filter wheel filter name from position %d.",
+								  filter_wheel_position);
+#endif
+					if(!Moptop_General_Add_String(reply_string,
+							"1 Failed to get filter wheel filter name from position:"))
+						return FALSE;
+					if(!Moptop_General_Add_Integer_To_String(reply_string,filter_wheel_position))
+						return FALSE;
+					return TRUE;
+				}
+			}
+			strcat(return_string+strlen(return_string),filter_name_string);
+		}
+		else if(strncmp(command_string+command_string_index,"position",8)==0)
+		{
+			sprintf(return_string+strlen(return_string),"%d",filter_wheel_position);
+		}
+		else if(strncmp(command_string+command_string_index,"status",6)==0)
+		{
+			if(filter_wheel_position == 0)/* moving */
+				strcat(return_string+strlen(return_string),"moving");
+			else
+				strcat(return_string+strlen(return_string),"in_position");
+		}
+		else
+		{
+			Moptop_General_Error_Number = 525;
+			sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
+				"Failed to parse filterwheel command %s.",command_string+command_string_index);
+			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Status",
+					     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Status",
+						  LOG_VERBOSITY_TERSE,"COMMAND",
+						  "Failed to parse filterwheel command %s.",
+						  command_string+command_string_index);
+#endif
+			if(!Moptop_General_Add_String(reply_string,"1 Failed to parse filterwheel status command."))
+				return FALSE;
+			return TRUE;
+		}
+	}
 	else if(strncmp(subsystem_string,"fits_instrument_code",20) == 0)
 	{
 		sprintf(key_string,"file.fits.instrument_code");
@@ -847,8 +1049,8 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 	*/
 	else if(strncmp(subsystem_string,"temperature",11) == 0)
 	{
-		retval = sscanf(command_string,"status temperature %15s %d",get_set_string,&camera_index);
-		if(retval != 2)
+		retval = sscanf(command_string,"status temperature %15s",get_set_string);
+		if(retval != 1)
 		{
 			Moptop_General_Error_Number = 526;
 			sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
@@ -864,15 +1066,20 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 				return FALSE;
 			return TRUE;
 		}
-		/* get exposure status */
+		/* set status_time to now */
 		/*
-		exposure_status = CCD_Multi_Exposure_Status_Get();
+#ifdef _POSIX_TIMERS
+		clock_gettime(CLOCK_REALTIME,&status_time);
+#else
+		gettimeofday(&gtod_status_time,NULL);
+		status_time.tv_sec = gtod_status_time.tv_sec;
+		status_time.tv_nsec = gtod_status_time.tv_usec*MOPTOP_GLOBAL_ONE_MICROSECOND_NS;
+#endif
 		*/
-		/* if no exposure ongoing, get actual status */
-		/*
-		if(exposure_status == CCD_EXPOSURE_STATUS_NONE)
+		/* check subcommand */
+		if(strncmp(get_set_string,"get",3)==0)
 		{
-			if(!CCD_Temperature_Get(camera_index,&temperature,&temperature_status))
+			if(!CCD_Temperature_Get(&temperature))
 			{
 				Moptop_General_Error_Number = 513;
 				sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
@@ -887,50 +1094,30 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 					return FALSE;
 				return TRUE;
 			}
-		*/
-			/* set status_time to now */
-		/*
-#ifdef _POSIX_TIMERS
-			clock_gettime(CLOCK_REALTIME,&status_time);
-#else
-			gettimeofday(&gtod_status_time,NULL);
-			status_time.tv_sec = gtod_status_time.tv_sec;
-			status_time.tv_nsec = gtod_status_time.tv_usec*MOPTOP_GLOBAL_ONE_MICROSECOND_NS;
-#endif
-		}
-		*/
-		/*else*/ /* get cached temperature status */
-		/*
-		{
-			if(!CCD_Temperature_Get_Cached_Temperature(camera_index,&temperature,&temperature_status,
-								   &status_time))
-			{
-				Moptop_General_Error_Number = 514;
-				sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
-					"Failed to get cached temperature.");
-				Moptop_General_Error("command","moptop_command.c","Moptop_Command_Status",
-						     LOG_VERBOSITY_TERSE,"COMMAND");
-#if MOPTOP_DEBUG > 1
-				Moptop_General_Log("command","moptop_command.c","Moptop_Command_Status",
-						   LOG_VERBOSITY_TERSE,"COMMAND","Failed to get cached temperature.");
-#endif
-				if(!Moptop_General_Add_String(reply_string,"1 Failed to get cached temperature."))
-					return FALSE;
-				return TRUE;
-			}
-			}*//* end if exposure_status is not NONE */
-		/* check subcommand */
-		/*
-		if(strncmp(get_set_string,"get",3)==0)
-		{
-			CCD_General_Get_Time_String(status_time,time_string,31);
+			CCD_General_Get_Current_Time_String(time_string,31);
+			/*CCD_General_Get_Time_String(status_time,time_string,31);*/
 			sprintf(return_string+strlen(return_string),"%s %.2f",time_string,temperature);
 		}
 		else if(strncmp(get_set_string,"status",6)==0)
 		{
-			CCD_General_Get_Time_String(status_time,time_string,31);
-			sprintf(return_string+strlen(return_string),"%s %s",time_string,
-				CCD_Temperature_Status_To_String(temperature_status));
+			if(!CCD_Temperature_Get_Temperature_Status_String(temperature_status_string,31))
+			{
+				Moptop_General_Error_Number = 508;
+				sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
+					"Failed to get temperature status.");
+				Moptop_General_Error("command","moptop_command.c","Moptop_Command_Status",
+						     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+				Moptop_General_Log("command","moptop_command.c","Moptop_Command_Status",
+						   LOG_VERBOSITY_TERSE,"COMMAND","Failed to get temperature.");
+#endif
+				if(!Moptop_General_Add_String(reply_string,"1 Failed to get temperature status."))
+					return FALSE;
+				return TRUE;
+			}
+			CCD_General_Get_Current_Time_String(time_string,31);
+			/*CCD_General_Get_Time_String(status_time,time_string,31);*/
+			sprintf(return_string+strlen(return_string),"%s %s",time_string,temperature_status_string);
 		}
 		else
 		{
@@ -949,7 +1136,6 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 				return FALSE;
 			return TRUE;
 		}
-		*/
 	}
 	else
 	{

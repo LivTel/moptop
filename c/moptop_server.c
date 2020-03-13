@@ -346,7 +346,9 @@ static void Server_Connection_Callback(Command_Server_Handle_T connection_handle
 		}
 		Send_Reply(connection_handle, "help:\n"
 			   "\tabort\n"
-			   "\tconfig <filter> <bin> <trigger_mode>\n"
+			   "\tconfig filter <filter_name>\n"
+			   "\tconfig bin <bin>\n"
+			   "\tconfig rotorspeed <slow|fast>\n"
 			   "\tfitsheader add <keyword> <boolean|float|integer|string> <value>\n"
 			   "\tfitsheader delete <keyword>\n"
 			   "\tfitsheader clear\n"
@@ -356,6 +358,7 @@ static void Server_Connection_Callback(Command_Server_Handle_T connection_handle
 			   "\tmultrun <length> <count> <standard>\n"
 			   "\tstatus [name|identification|fits_instrument_code]\n"
 			   "\tstatus temperature [get|status]\n"
+			   "\tstatus filterwheel [filter|position|status]\n"
 			   "\tstatus exposure [status|count|length|start_time|trigger_mode]\n"
 			   "\tstatus exposure [accumulation|series|index|multrun|run|window]\n"
 			   "\tshutdown\n");

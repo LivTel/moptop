@@ -4,17 +4,22 @@ include ../../../Makefile.common
 include ../../Makefile.common
 include ../Makefile.common
 
+# estar_config
+CONFIG_CFLAGS	= -I$(eSTAR_SRC_HOME)/config/include/
+CONFIG_LDFLAGS	= -L$(eSTAR_LIB_HOME) -lestar_config
+
 INCDIR 		= $(FILTER_WHEEL_SRC_HOME)/include
 BINDIR		= $(FILTER_WHEEL_BIN_HOME)/c/$(HOSTTYPE)
 DOCSDIR 	= $(FILTER_WHEEL_DOC_HOME)/cdocs
 
 LOGGING_CFLAGS	= -DLOGGING=10
 MUTEX_CFLAGS	= -DMUTEXED
-CFLAGS 		= -g -I$(INCDIR) $(LOGGING_CFLAGS) $(MUTEX_CFLAGS) $(LOG_UDP_CFLAGS) $(SHARED_LIB_CFLAGS) 
-LDFLAGS		= 
+CFLAGS 		= -g -I$(INCDIR) $(LOGGING_CFLAGS) $(MUTEX_CFLAGS) $(LOG_UDP_CFLAGS) $(CONFIG_CFLAGS) \
+		$(SHARED_LIB_CFLAGS) 
+LDFLAGS		= $(CONFIG_LDFLAGS)
 DOCFLAGS 	= -static
 
-SRCS 		= filter_wheel_general.c filter_wheel_command.c
+SRCS 		= filter_wheel_general.c filter_wheel_command.c filter_wheel_config.c
 HEADERS		= $(SRCS:%.c=%.h)
 OBJS 		= $(SRCS:%.c=$(BINDIR)/%.o)
 DOCS 		= $(SRCS:%.c=$(DOCSDIR)/%.html)

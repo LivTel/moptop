@@ -41,19 +41,27 @@ static eSTAR_Config_Properties_t Config_Properties;
 ** 		external functions 
 ** ---------------------------------------------------------------------------- */
 /**
- * Load the configuration file. Calls eSTAR_Config_Parse_File.
+ * Load the configuration file. 
+ * <ul>
+ * <li>Calls eSTAR_Config_Parse_File with the specified filename.
+ * <li>Checks the "filter_wheel.enable" property to see if the filter wheel is enabled.
+ * <li>If the filter wheel is enabled, calls Filter_Wheel_Config_Initialise to load the filter configuration
+ *     into the filter wheel library.
+ * </ul>
  * @param filename The filename to load from.
  * @return The routine returns TRUE on sucess, FALSE on failure.
- * @see ../../estar/config/estar_config.html#eSTAR_Config_Parse_File
  * @see #Config_Properties
+ * @see #Moptop_Config_Get_Boolean
  * @see moptop_general.html#Moptop_General_Log_Format
  * @see moptop_general.html#Moptop_General_Log
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
+ * @see ../filter_wheel/cdocs/filter_wheel_config.html#Filter_Wheel_Config_Initialise
+ * @see ../../estar/config/estar_config.html#eSTAR_Config_Parse_File
  */
 int Moptop_Config_Load(char *filename)
 {
-	int retval;
+	int retval,filter_wheel_enabled;
 
 	if(filename == NULL)
 	{
@@ -61,7 +69,7 @@ int Moptop_Config_Load(char *filename)
 		sprintf(Moptop_General_Error_String,"Moptop_Config_Load failed: filename was NULL.");
 		return FALSE;
 	}
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Load",LOG_VERBOSITY_INTERMEDIATE,NULL,
 				  "started(%s).",filename);
 #endif
@@ -73,7 +81,34 @@ int Moptop_Config_Load(char *filename)
 		eSTAR_Config_Error_To_String(Moptop_General_Error_String+strlen(Moptop_General_Error_String));
 		return FALSE;
 	}
-#ifdef MOPTOP_DEBUG
+	/* is the filter wheel active/enabled for this instance of the C layer */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Load",LOG_VERBOSITY_VERBOSE,NULL,
+				  "Check is filter wheel enabled.");
+#endif
+	if(!Moptop_Config_Get_Boolean("filter_wheel.enable",&filter_wheel_enabled))
+	{
+		Moptop_General_Error_Number = 312;
+		sprintf(Moptop_General_Error_String,"Moptop_Config_Load:"
+			"Failed to get whether filter wheel is enabled.");
+		return FALSE;
+	}
+	/* load the filter wheel configuration, if the filter wheel is enabled */
+	if(filter_wheel_enabled)
+	{
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Load",LOG_VERBOSITY_VERBOSE,NULL,
+			   "Filter wheel _is_ enabled: Load filter confiuration into filter wheel library.");
+#endif
+		if(!Filter_Wheel_Config_Initialise(Config_Properties))
+		{
+			Moptop_General_Error_Number = 313;
+			sprintf(Moptop_General_Error_String,"Moptop_Config_Load:"
+				"Failed to initialise filter wheel configuration.");
+			return FALSE;
+		}
+	}
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Load",LOG_VERBOSITY_INTERMEDIATE,NULL,
 				  "(%s) returned %d.",filename,retval);
 #endif
@@ -89,12 +124,12 @@ int Moptop_Config_Shutdown(void)
 {
 	int retval;
 
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log("moptop","moptop_config.c","Moptop_Config_Shutdown",LOG_VERBOSITY_VERBOSE,NULL,
 			"started: About to call eSTAR_Config_Destroy_Properties.");
 #endif
 	eSTAR_Config_Destroy_Properties(&Config_Properties);
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log("moptop","moptop_config.c","Moptop_Config_Shutdown",LOG_VERBOSITY_VERBOSE,NULL,"finished.");
 #endif
 	return retval;
@@ -117,7 +152,7 @@ int Moptop_Config_Get_String(char *key, char **value)
 {
 	int retval;
 
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Get_String",LOG_VERBOSITY_VERBOSE,NULL,
 				  "started(%s,%p).",key,value);
 #endif
@@ -129,7 +164,7 @@ int Moptop_Config_Get_String(char *key, char **value)
 		eSTAR_Config_Error_To_String(Moptop_General_Error_String+strlen(Moptop_General_Error_String));
 		return FALSE;
 	}
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	/* we may have to re-think this if keyword value strings are too long */
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Get_String",LOG_VERBOSITY_VERBOSE,NULL,
 			       "(%s) returned %s (%d).",key,(*value),retval);
@@ -155,7 +190,7 @@ int Moptop_Config_Get_Character(char *key, char *value)
 	char *string_value = NULL;
 	int retval;
 
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Get_Character",LOG_VERBOSITY_VERBOSE,NULL,
 			       "started(%s,%p).",key,value);
 #endif
@@ -185,7 +220,7 @@ int Moptop_Config_Get_Character(char *key, char *value)
 	}
 	(*value) = string_value[0];
 	free(string_value);
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Get_Character",LOG_VERBOSITY_VERBOSE,NULL,
 			       "(%s) returned %c (%d).",key,(*value),retval);
 #endif
@@ -208,7 +243,7 @@ int Moptop_Config_Get_Integer(char *key, int *i)
 {
 	int retval;
 
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Get_Integer",LOG_VERBOSITY_VERBOSE,NULL,
 			       "started(%s,%p).",key,i);
 #endif
@@ -220,7 +255,7 @@ int Moptop_Config_Get_Integer(char *key, int *i)
 		eSTAR_Config_Error_To_String(Moptop_General_Error_String+strlen(Moptop_General_Error_String));
 		return FALSE;
 	}
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Get_Integer",LOG_VERBOSITY_VERBOSE,NULL,
 			       "(%s) returned %d.",key,*i);
 #endif
@@ -243,7 +278,7 @@ int Moptop_Config_Get_Long(char *key, long *l)
 {
 	int retval;
 
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Get_Long",LOG_VERBOSITY_VERBOSE,NULL,
 				  "started(%s,%p).",key,l);
 #endif
@@ -255,7 +290,7 @@ int Moptop_Config_Get_Long(char *key, long *l)
 		eSTAR_Config_Error_To_String(Moptop_General_Error_String+strlen(Moptop_General_Error_String));
 		return FALSE;
 	}
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Get_Long",LOG_VERBOSITY_VERBOSE,NULL,
 				  "(%s) returned %ld.",key,*l);
 #endif
@@ -278,7 +313,7 @@ int Moptop_Config_Get_Unsigned_Short(char *key,unsigned short *us)
 {
 	int retval;
 
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Get_Unsigned_Short",
 				  LOG_VERBOSITY_VERBOSE,NULL,"started(%s,%p).",key,us);
 #endif
@@ -290,7 +325,7 @@ int Moptop_Config_Get_Unsigned_Short(char *key,unsigned short *us)
 		eSTAR_Config_Error_To_String(Moptop_General_Error_String+strlen(Moptop_General_Error_String));
 		return FALSE;
 	}
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Get_Unsigned_Short",
 				  LOG_VERBOSITY_VERBOSE,NULL,"(%s) returned %hu.",key,*us);
 #endif
@@ -313,7 +348,7 @@ int Moptop_Config_Get_Double(char *key, double *d)
 {
 	int retval;
 
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Get_Double",LOG_VERBOSITY_VERBOSE,NULL,
 				  "started(%s,%p).",key,d);
 #endif
@@ -325,7 +360,7 @@ int Moptop_Config_Get_Double(char *key, double *d)
 		eSTAR_Config_Error_To_String(Moptop_General_Error_String+strlen(Moptop_General_Error_String));
 		return FALSE;
 	}
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Get_Double",LOG_VERBOSITY_VERBOSE,NULL,
 				  "(%s) returned %.2f.",key,*d);
 #endif
@@ -348,7 +383,7 @@ int Moptop_Config_Get_Float(char *key,float *f)
 {
 	int retval;
 
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Get_Float",LOG_VERBOSITY_VERBOSE,NULL,
 				  "started(%s,%p).",key,f);
 #endif
@@ -360,7 +395,7 @@ int Moptop_Config_Get_Float(char *key,float *f)
 		eSTAR_Config_Error_To_String(Moptop_General_Error_String+strlen(Moptop_General_Error_String));
 		return FALSE;
 	}
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Get_Float",LOG_VERBOSITY_VERBOSE,NULL,
 				  "(%s) returned %.2f.",key,*f);
 #endif
@@ -384,7 +419,7 @@ int Moptop_Config_Get_Boolean(char *key, int *boolean)
 {
 	int retval;
 
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Get_Boolean",LOG_VERBOSITY_VERBOSE,NULL,
 				  "started(%s,%p).",key,boolean);
 #endif
@@ -396,7 +431,7 @@ int Moptop_Config_Get_Boolean(char *key, int *boolean)
 		eSTAR_Config_Error_To_String(Moptop_General_Error_String+strlen(Moptop_General_Error_String));
 		return FALSE;
 	}
-#ifdef MOPTOP_DEBUG
+#if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Get_Boolean",LOG_VERBOSITY_VERBOSE,NULL,
 				  "(%s) returned %d.",key,*boolean);
 #endif

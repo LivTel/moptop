@@ -805,6 +805,31 @@ int Moptop_General_Add_String(char **string,char *add)
 }
 
 /**
+ * Utility function to add a string representation of an integer to an allocated string.
+ * @param string The address of a pointer to a string. If a new string, the pointer should have
+ *             been initialised to NULL.
+ * @param i The integer to convert into a string and add to the string parameter.
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see #Moptop_General_Error_Number
+ * @see #Moptop_General_Error_String
+ */
+int Moptop_General_Add_Integer_To_String(char **string,int i)
+{
+	int retval;
+	char integer_buff[32];
+
+	retval = sprintf(integer_buff,"%d",i);
+	if(retval != 1)
+	{
+		Moptop_General_Error_Number = 120;
+		sprintf(Moptop_General_Error_String,
+			"Moptop_General_Add_Integer_To_String:Failed to convert integer '%d' to string.",i);
+		return FALSE;
+	}
+	return Moptop_General_Add_String(string,integer_buff);
+}
+
+/**
  * Add an integer to a list of integers.
  * @param add The integer value to add.
  * @param list The address of a list of integers.

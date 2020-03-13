@@ -31,6 +31,7 @@ end
 if ( -x /icc/bin/commandserver/test/x86_64-linux/send_command  ) then
     echo "Sending shutdown to moptop C layer."
     /icc/bin/commandserver/test/x86_64-linux/send_command -h moptop1 -p 1111 -c "shutdown"
+    /icc/bin/commandserver/test/x86_64-linux/send_command -h moptop2 -p 1111 -c "shutdown"
     echo "Waiting to see if that worked..."
     /bin/sleep 5
 else

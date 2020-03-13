@@ -1,10 +1,8 @@
-/* moptop_main.c
-*/
+/* moptop_main.c */
 /**
  * Moptop C server main program. This controls the CCD cameras. On one
  * of the two control computers, an instance of this server will also control the filter_wheel and rotator.
  * @author $Author$
- * @version $Revision$
  */
 #include <signal.h> /* signal handling */
 #include <stdio.h>

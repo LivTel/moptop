@@ -116,6 +116,7 @@ extern int Moptop_General_Log_Filter_Level_Bitwise(char *sub_system,char *source
 
 /* utility routines */
 extern int Moptop_General_Add_String(char **string,char *add);
+extern int Moptop_General_Add_Integer_To_String(char **string,int i);
 extern int Moptop_General_Int_List_Add(int add,int **list,int *count);
 extern int Moptop_General_Int_List_Sort(const void *f,const void *s);
 extern int Moptop_General_Mutex_Lock(pthread_mutex_t *mutex);

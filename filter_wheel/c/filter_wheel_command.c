@@ -1,6 +1,5 @@
 /* filter_wheel_command.c
 ** Starlight Express filter wheel command routines
-** $Header$
 */
 /**
  * Starlight Express filter wheel command routines. Based on Zej's code and the Starlight Express The 
@@ -40,10 +39,6 @@
  * The default filter wheel move timeout in milliseconds.
  */
 #define DEFAULT_MOVE_TIMEOUT_MS      (10000)
-/**
- * The number of filters in the wheel.
- */
-#define FILTER_WHEEL_FILTER_COUNT    (5)
 
 /* data types/structures */
 /**
@@ -76,15 +71,15 @@ static char rcsid[] = "$Id$";
  * <dt>Fd</dt> <dd>-1</dd>
  * <dt>Move_Timeout_Ms</dt> <dd>DEFAULT_MOVE_TIMEOUT_MS</dd>
  * <dt>Raw_Name</dt> <dd>""</dd>
- * <dt>Filter_Count</dt> <dd>FILTER_WHEEL_FILTER_COUNT</dd>
+ * <dt>Filter_Count</dt> <dd>FILTER_WHEEL_COMMAND_FILTER_COUNT</dd>
  * </dl>
  * @see #DEFAULT_MOVE_TIMEOUT_MS
- * @see #FILTER_WHEEL_FILTER_COUNT
+ * @see #FILTER_WHEEL_COMMAND_FILTER_COUNT
  * @see #Command_Struct
  */
 static struct Command_Struct Command_Data = 
 {
-	-1,DEFAULT_MOVE_TIMEOUT_MS,"",FILTER_WHEEL_FILTER_COUNT
+	-1,DEFAULT_MOVE_TIMEOUT_MS,"",FILTER_WHEEL_COMMAND_FILTER_COUNT
 };
 
 /**
