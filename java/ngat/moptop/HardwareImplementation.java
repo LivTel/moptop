@@ -112,10 +112,11 @@ public class HardwareImplementation extends CommandImplementation implements JMS
 
 	/**
 	 * This routine gets a set of FITS header from a config file. The retrieved FITS headers are added to the 
-	 * C layer. The "moptop.fits.keyword.<n>" properties is queried in ascending order of <n> to find keywords.
-	 * The "moptop.fits.value.<keyword>.<cMachineIndex>.<cameraIndex>" property contains the value of the keyword,
-	 * which can be different for each camera head.
-	 * The value's type is retrieved from the property "moptop.fits.value.type.<keyword>", 
+	 * C layer. The "moptop.fits.keyword.&lt;n&gt;" properties is queried in ascending order
+	 * of &lt;n&gt; to find keywords.
+	 * The "moptop.fits.value.&lt;keyword&gt;.&lt;cMachineIndex&gt;.&lt;cameraIndex&gt;" property contains 
+	 * the value of the keyword, which can be different for each camera head.
+	 * The value's type is retrieved from the property "moptop.fits.value.type.&lt;keyword&gt;", 
 	 * which should comtain one of the
 	 * following values: boolean|float|integer|string.
 	 * The addFitsHeader method is then called to actually add the FITS header to the C layer.
