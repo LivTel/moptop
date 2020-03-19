@@ -62,8 +62,24 @@ set deployment_tar 	= "moptop_deployment_${machine_name}.tar"
 # name of install script
 set install_script      = moptop_tar_install
 setenv GREP "/bin/grep"
+# bin_file_type is a string included in the output from 'file -L' used to determine
+# which files in a directory are binaries.
+# 'file -L' gives different results on ltdevx64 (Centos 7) and zen (Ubuntu 18.04 LTS)
+# Hence this madness to determine which build environment we are working in
 #set bin_file_type = "ELF 32-bit LSB executable"
+if ( -r /etc/redhat-release ) then
+# Centos 7
 set bin_file_type = "ELF 64-bit LSB executable"
+else if ( -r /etc/lsb-release )  then
+# Ubuntu 18.04
+    set bin_file_type = "ELF 64-bit LSB shared object"
+else
+    echo "Unknown release system."
+    exit 1
+endif    
+# Compatible with both Centos7 and Ubuntu 18.04?
+# Nope as object files are "ELF 64-bit LSB relocatable"
+#set bin_file_type = "ELF 64-bit LSB"
 set init_d_dir = "/etc/init.d"
 #
 # Clear old deployment.

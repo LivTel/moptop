@@ -9,6 +9,7 @@ BINDIR 		= $(FILTER_WHEEL_BIN_HOME)/$(TESTDIR)/$(HOSTTYPE)
 DOCSDIR 	= $(FILTER_WHEEL_DOC_HOME)/$(TESTDIR)
 
 CFLAGS 		= -g -I$(INCDIR) $(LOG_UDP_CFLAGS)
+CONFIG_LDFLAGS	= -L$(eSTAR_LIB_HOME) -lestar_config
 
 DOCFLAGS 	= -static
 
@@ -23,7 +24,7 @@ SCRIPT_BINS	= $(SCRIPT_SRCS:%=$(BINDIR)/%)
 top: $(PROGS) scripts docs
 
 $(BINDIR)/%: $(BINDIR)/%.o
-	$(CC) -o $@ $< -L$(LT_LIB_HOME) $(TIMELIB) $(SOCKETLIB) -lm -lc -l$(FILTER_WHEEL_LIBNAME)
+	$(CC) -o $@ $< -L$(LT_LIB_HOME) $(TIMELIB) $(SOCKETLIB) -lm -lc -l$(FILTER_WHEEL_LIBNAME) $(CONFIG_LDFLAGS)
 
 $(BINDIR)/%.o: %.c
 	$(CC) -c $(CFLAGS) $< -o $@  

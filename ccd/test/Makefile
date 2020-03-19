@@ -12,7 +12,7 @@ LOGGING_CFLAGS	= -DLOGGING=10
 #MUTEX_CFLAGS	= -DMBSTOWCS_MUTEXED
 # -I$(ANDOR_INCDIR) $(MUTEX_CFLAGS) 
 CFLAGS 		= -g -I$(INCDIR) $(LOGGING_CFLAGS) $(LOG_UDP_CFLAGS) $(SHARED_LIB_CFLAGS) 
-LDFLAGS		= -L$(ANDOR_LIBDIR) $(ANDOR_LIBS)
+LDFLAGS		= -L$(ANDOR_LIBDIR) $(ANDOR_LIBS) -lcfitsio
 DOCFLAGS 	= -static
 
 SRCS 		= test_setup_startup.c test_temperature_control.c test_mbsrtowcs.c test_mbstowcs.c
@@ -26,7 +26,7 @@ top: $(PROGS) scripts docs
 
 
 $(BINDIR)/%: $(BINDIR)/%.o
-	$(CC) -o $@ $< -L$(LT_LIB_HOME) $(TIMELIB) $(SOCKETLIB) -lm -lc -l$(CCD_LIBNAME) $(LD_FLAGS)
+	$(CC) -o $@ $< -L$(LT_LIB_HOME) $(TIMELIB) $(SOCKETLIB) -lm -lc -l$(CCD_LIBNAME) $(LDFLAGS)
 
 $(BINDIR)/%.o: %.c
 	$(CC) -c $(CFLAGS) $< -o $@  
