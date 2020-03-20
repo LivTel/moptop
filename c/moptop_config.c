@@ -25,6 +25,8 @@
 #include "moptop_general.h"
 #include "moptop_config.h"
 
+#include "filter_wheel_config.h"
+
 /* data types */
 /* internal data */
 /**

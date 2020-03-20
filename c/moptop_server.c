@@ -26,6 +26,7 @@
 
 #include "command_server.h"
 
+#include "moptop_config.h"
 #include "moptop_general.h"
 #include "moptop_command.h"
 #include "moptop_server.h"

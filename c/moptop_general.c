@@ -35,6 +35,11 @@
 
 #include "ccd_general.h"
 
+#include "filter_wheel_general.h"
+
+#include "pirot_general.h"
+
+#include "moptop_config.h"
 #include "moptop_general.h"
 
 /* typedefs */
@@ -306,7 +311,7 @@ void Moptop_General_Get_Current_Time_String(char *time_string,int string_length)
 	clock_gettime(CLOCK_REALTIME,&current_time);
 	gmtime_r(&(current_time.tv_sec),&utc_time);
 	strftime(time_string,string_length,"%Y-%m-%dT%H:%M:%S",&utc_time);
-	sprintf(millsecond_string,"%03d",(current_time.tv_nsec/MOPTOP_GENERAL_ONE_MILLISECOND_NS));
+	sprintf(millsecond_string,"%03ld",(current_time.tv_nsec/MOPTOP_GENERAL_ONE_MILLISECOND_NS));
 	strftime(timezone_string,16,"%z",&utc_time);
 	if((strlen(time_string)+strlen(millsecond_string)+strlen(timezone_string)+3) < string_length)
 	{
@@ -508,7 +513,7 @@ int Moptop_General_Log_Set_Directory(char *directory)
 	{
 		Moptop_General_Error_Number = 104;
 		sprintf(Moptop_General_Error_String,"Moptop_General_Log_Set_Directory:"
-			"directory was too long (%d vs %d).",strlen(directory),MOPTOP_GENERAL_FILENAME_LENGTH);
+			"directory was too long (%lu vs %d).",strlen(directory),MOPTOP_GENERAL_FILENAME_LENGTH);
 		return FALSE;
 	}
 	strcpy(General_Data.Log_Directory,directory);
@@ -533,7 +538,7 @@ int Moptop_General_Log_Set_Root(char *filename_root)
 	{
 		Moptop_General_Error_Number = 117;
 		sprintf(Moptop_General_Error_String,"Moptop_General_Log_Set_Root:"
-			"filename root was too long (%d vs %d).",strlen(filename_root),MOPTOP_GENERAL_FILENAME_LENGTH);
+			"filename root was too long (%lu vs %d).",strlen(filename_root),MOPTOP_GENERAL_FILENAME_LENGTH);
 		return FALSE;
 	}
 	strcpy(General_Data.Log_Filename_Root,filename_root);
@@ -558,7 +563,7 @@ int Moptop_General_Log_Set_Error_Root(char *filename_root)
 	{
 		Moptop_General_Error_Number = 119;
 		sprintf(Moptop_General_Error_String,"Moptop_General_Log_Set_Error_Root:"
-			"filename root was too long (%d vs %d).",strlen(filename_root),MOPTOP_GENERAL_FILENAME_LENGTH);
+			"filename root was too long (%lu vs %d).",strlen(filename_root),MOPTOP_GENERAL_FILENAME_LENGTH);
 		return FALSE;
 	}
 	strcpy(General_Data.Error_Filename_Root,filename_root);
@@ -587,7 +592,7 @@ int Moptop_General_Log_Set_UDP(int active,char *hostname,int port_number)
 	{
 		Moptop_General_Error_Number = 112;
 		sprintf(Moptop_General_Error_String,"Moptop_General_Log_Set_UDP:"
-			"hostname was too long (%d vs %d).",strlen(hostname),MOPTOP_GENERAL_FILENAME_LENGTH);
+			"hostname was too long (%lu vs %d).",strlen(hostname),MOPTOP_GENERAL_FILENAME_LENGTH);
 		return FALSE;
 	}
 	strcpy(General_Data.Log_UDP_Hostname,hostname);

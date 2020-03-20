@@ -106,7 +106,7 @@ int Filter_Wheel_Config_Initialise(eSTAR_Config_Properties_t Config_Properties)
 		{
 			Config_Error_Number = 2;
 			sprintf(Config_Error_String,
-				"Filter_Wheel_Config_Initialise: keyword '%s' value '%s' is too long (%d vs %d).",
+				"Filter_Wheel_Config_Initialise: keyword '%s' value '%s' is too long (%lu vs %d).",
 				keyword,value,(strlen(value)+1),CONFIG_NAME_STRING_LENGTH);
 			return FALSE;
 		}

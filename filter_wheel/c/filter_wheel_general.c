@@ -209,7 +209,7 @@ void Filter_Wheel_General_Get_Current_Time_String(char *time_string,int string_l
 	clock_gettime(CLOCK_REALTIME,&current_time);
 	utc_time = gmtime(&(current_time.tv_sec));
 	strftime(time_string,string_length,"%d-%m-%YT%H:%M:%S",utc_time);
-	sprintf(millsecond_string,"%03d",(current_time.tv_nsec/FILTER_WHEEL_GENERAL_ONE_MILLISECOND_NS));
+	sprintf(millsecond_string,"%03ld",(current_time.tv_nsec/FILTER_WHEEL_GENERAL_ONE_MILLISECOND_NS));
 	strftime(timezone_string,16,"%z",utc_time);
 	if((strlen(time_string)+strlen(millsecond_string)+strlen(timezone_string)+3) < string_length)
 	{

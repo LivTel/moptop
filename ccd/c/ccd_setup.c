@@ -597,7 +597,7 @@ int CCD_Setup_Get_Serial_Number(char *serial_number_string,int string_length)
 	{
 		Setup_Error_Number = 31;
 		sprintf(Setup_Error_String,
-			"CCD_Setup_Get_Serial_Number: serial_number_string length too short (%d vs %d).",
+			"CCD_Setup_Get_Serial_Number: serial_number_string length too short (%lu vs %d).",
 			strlen(Setup_Data.Serial_Number),string_length);
 		return FALSE;
 	}
@@ -623,7 +623,7 @@ int CCD_Setup_Get_Firmware_Version(char *firmware_version_string,int string_leng
 	{
 		Setup_Error_Number = 32;
 		sprintf(Setup_Error_String,
-			"CCD_Setup_Get_Serial_Number: firmware_version_string length too short (%d vs %d).",
+			"CCD_Setup_Get_Serial_Number: firmware_version_string length too short (%lu vs %d).",
 			strlen(Setup_Data.Firmware_Version),string_length);
 		return FALSE;
 	}

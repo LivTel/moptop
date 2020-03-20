@@ -9,10 +9,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 #include "log_udp.h"
 #include "ccd_command.h"
 #include "ccd_general.h"
 #include "ccd_setup.h"
+#include "ccd_temperature.h"
 
 /**
  * Length of some of the strings used in this program.

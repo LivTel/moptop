@@ -28,6 +28,7 @@
 #include "log_udp.h"
 #include "ccd_general.h"
 #include "ccd_command.h"
+#include "ccd_setup.h"
 #include "ccd_buffer.h"
 
 /* hash defines */

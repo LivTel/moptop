@@ -14,6 +14,7 @@
 
 #include "command_server.h"
 
+#include "ccd_buffer.h"
 #include "ccd_fits_filename.h"
 #include "ccd_general.h"
 #include "ccd_setup.h"
@@ -26,6 +27,7 @@
 #include "pirot_setup.h"
 #include "pirot_usb.h"
 
+#include "moptop_config.h"
 #include "moptop_general.h"
 #include "moptop_fits_header.h"
 #include "moptop_server.h"

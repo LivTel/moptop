@@ -109,7 +109,7 @@ int CCD_Exposure_Set_Trigger_Mode(char *trigger_mode)
 	if(strlen(trigger_mode) >= EXPOSURE_ENUM_VALUE_STRING_LENGTH)
 	{
 		Exposure_Error_Number = 2;
-		sprintf(Exposure_Error_String,"CCD_Exposure_Set_Trigger_Mode: trigger_mode was too long (%d vs %d).",
+		sprintf(Exposure_Error_String,"CCD_Exposure_Set_Trigger_Mode: trigger_mode was too long (%lu vs %d).",
 			strlen(trigger_mode),EXPOSURE_ENUM_VALUE_STRING_LENGTH);
 		return FALSE;
 	}

@@ -285,7 +285,7 @@ int CCD_Fits_Header_Add_String(char *keyword,char *value,char *comment)
 	{
 		Fits_Header_Error_Number = 7;
 		sprintf(Fits_Header_Error_String,"CCD_Fits_Header_Add_String:"
-			"Keyword %s (%d) was too long.",keyword,strlen(keyword));
+			"Keyword %s (%lu) was too long.",keyword,strlen(keyword));
 		return FALSE;
 	}
 	if(value == NULL)
@@ -359,7 +359,7 @@ int CCD_Fits_Header_Add_Int(char *keyword,int value,char *comment)
 	{
 		Fits_Header_Error_Number = 10;
 		sprintf(Fits_Header_Error_String,"CCD_Fits_Header_Add_Int:"
-			"Keyword %s (%d) was too long.",keyword,strlen(keyword));
+			"Keyword %s (%lu) was too long.",keyword,strlen(keyword));
 		return FALSE;
 	}
 	strcpy(card.Keyword,keyword);
@@ -419,7 +419,7 @@ int CCD_Fits_Header_Add_Float(char *keyword,double value,char *comment)
 	{
 		Fits_Header_Error_Number = 12;
 		sprintf(Fits_Header_Error_String,"CCD_Fits_Header_Add_Float:"
-			"Keyword %s (%d) was too long.",keyword,strlen(keyword));
+			"Keyword %s (%lu) was too long.",keyword,strlen(keyword));
 		return FALSE;
 	}
 	strcpy(card.Keyword,keyword);
@@ -482,7 +482,7 @@ int CCD_Fits_Header_Add_Logical(char *keyword,int value,char *comment)
 	{
 		Fits_Header_Error_Number = 14;
 		sprintf(Fits_Header_Error_String,"CCD_Fits_Header_Add_Logical:"
-			"Keyword %s (%d) was too long.",keyword,strlen(keyword));
+			"Keyword %s (%lu) was too long.",keyword,strlen(keyword));
 		return FALSE;
 	}
 	if(!CCD_GENERAL_IS_BOOLEAN(value))

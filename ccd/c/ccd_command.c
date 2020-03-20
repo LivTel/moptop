@@ -1813,7 +1813,7 @@ int CCD_Command_Wait_Buffer(unsigned char** buffer_ptr,int *buffer_length,unsign
 		Command_Error_Number = 56;
 		sprintf(Command_Error_String,"CCD_Command_Wait_Buffer: AT_WaitBuffer(camera handle = %d,"
 			"buffer ptr = %p, buffer length = %d) failed (%d) : %s.",
-			Command_Data.Handle,buffer_ptr,buffer_length,retval,Command_Get_Andor_Error_String(retval));
+			Command_Data.Handle,buffer_ptr,(*buffer_length),retval,Command_Get_Andor_Error_String(retval));
 		return FALSE;
 	}
 #if LOGGING > 0
@@ -2045,7 +2045,7 @@ static int Command_MBS_To_WCS_String(char *mbs_string,AT_WC *wide_string,int wid
 	if(strlen(mbs_string) >= wide_string_length)
 	{
 		Command_Error_Number = 10;
-		sprintf(Command_Error_String,"Command_MBS_To_WCS_String: string '%s' is too long (%d vs %d).",
+		sprintf(Command_Error_String,"Command_MBS_To_WCS_String: string '%s' is too long (%lu vs %d).",
 			mbs_string,strlen(mbs_string),wide_string_length);
 		return FALSE;
 	}
@@ -2063,7 +2063,7 @@ static int Command_MBS_To_WCS_String(char *mbs_string,AT_WC *wide_string,int wid
 		Command_MBS_To_WCS_Mutex_Unlock();
 #endif
 		Command_Error_Number = 11;
-		sprintf(Command_Error_String,"Command_MBS_To_WCS_String: Converting string '%s' failed (%d).",
+		sprintf(Command_Error_String,"Command_MBS_To_WCS_String: Converting string '%s' failed (%lu).",
 			mbs_string,n_bytes);
 		return FALSE;
 	}
@@ -2104,7 +2104,7 @@ static int Command_WCS_To_MBS_String(AT_WC *wide_string,char *mbs_string,int mbs
 		Command_MBS_To_WCS_Mutex_Unlock();
 #endif
 		Command_Error_Number = 32;
-		sprintf(Command_Error_String,"Command_WCS_To_MBS_String: Converting string '%ls' failed (%d).",
+		sprintf(Command_Error_String,"Command_WCS_To_MBS_String: Converting string '%ls' failed (%lu).",
 			wide_string,n_bytes);
 		return FALSE;
 	}

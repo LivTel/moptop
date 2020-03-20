@@ -136,7 +136,7 @@ int CCD_Fits_Filename_Initialise(char instrument_code,char *data_dir)
 	if(strlen(data_dir) > (CCD_GENERAL_ERROR_STRING_LENGTH-1))
 	{
 		Fits_Filename_Error_Number = 2;
-		sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Initialise:data_dir was too long(%d).",
+		sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Initialise:data_dir was too long(%lu).",
 			strlen(data_dir));
 		return FALSE;
 
@@ -372,7 +372,7 @@ int CCD_Fits_Filename_Get_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure
 	if(strlen(Fits_Filename_Data.Data_Dir) > (256-37))
 	{
 		Fits_Filename_Error_Number = 8;
-		sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Get_Filename:Data Dir too long (%d).",
+		sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Get_Filename:Data Dir too long (%lu).",
 			strlen(Fits_Filename_Data.Data_Dir));
 		return FALSE;
 	}
@@ -386,7 +386,7 @@ int CCD_Fits_Filename_Get_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure
 	{
 		Fits_Filename_Error_Number = 4;
 		sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Get_Filename:"
-			"Generated filename was too long(%d).",strlen(tmp_buff));
+			"Generated filename was too long(%lu).",strlen(tmp_buff));
 		return FALSE;
 	}
 	strcpy(filename,tmp_buff);
@@ -546,7 +546,7 @@ int CCD_Fits_Filename_Lock(char *filename)
 	if(strlen(filename) >= CCD_GENERAL_ERROR_STRING_LENGTH)
 	{
 		Fits_Filename_Error_Number = 17;
-		sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Lock:FITS filename was too long(%d).",
+		sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Lock:FITS filename was too long(%lu).",
 			strlen(filename));
 		return FALSE;
 	}
@@ -607,7 +607,7 @@ int CCD_Fits_Filename_UnLock(char *filename)
 	if(strlen(filename) >= CCD_GENERAL_ERROR_STRING_LENGTH)
 	{
 		Fits_Filename_Error_Number = 20;
-		sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_UnLock:FITS filename was too long(%d).",
+		sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_UnLock:FITS filename was too long(%lu).",
 			strlen(filename));
 		return FALSE;
 	}
@@ -777,7 +777,7 @@ static int Fits_Filename_Lock_Filename_Get(char *filename,char *lock_filename)
 	if(strlen(filename) >= CCD_GENERAL_ERROR_STRING_LENGTH)
 	{
 		Fits_Filename_Error_Number = 23;
-		sprintf(Fits_Filename_Error_String,"Fits_Filename_Lock_Filename_Get:FITS filename was too long(%d).",
+		sprintf(Fits_Filename_Error_String,"Fits_Filename_Lock_Filename_Get:FITS filename was too long(%lu).",
 			strlen(filename));
 		return FALSE;
 	}

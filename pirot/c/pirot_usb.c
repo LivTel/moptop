@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "PI_GCS2_DLL.h"
 #include "log_udp.h"
 #include "pirot_general.h"

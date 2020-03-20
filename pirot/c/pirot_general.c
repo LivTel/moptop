@@ -261,7 +261,7 @@ void PIROT_General_Get_Current_Time_String(char *time_string,int string_length)
 	clock_gettime(CLOCK_REALTIME,&current_time);
 	utc_time = gmtime(&(current_time.tv_sec));
 	strftime(time_string,string_length,"%d-%m-%YT%H:%M:%S",utc_time);
-	sprintf(millsecond_string,"%03d",(current_time.tv_nsec/PIROT_GENERAL_ONE_MILLISECOND_NS));
+	sprintf(millsecond_string,"%03ld",(current_time.tv_nsec/PIROT_GENERAL_ONE_MILLISECOND_NS));
 	strftime(timezone_string,16,"%z",utc_time);
 	if((strlen(time_string)+strlen(millsecond_string)+strlen(timezone_string)+3) < string_length)
 	{
@@ -479,7 +479,7 @@ char *PIROT_Replace_String(char *string,char *find_string,char *replace_string)
 	if(strlen(string) >= LOG_BUFF_LENGTH)
 	{
 		General_Error_Number = 6;
-		sprintf(General_Error_String,"PIROT_Replace_String:string was too long (%d,%d).",
+		sprintf(General_Error_String,"PIROT_Replace_String:string was too long (%lu,%d).",
 			strlen(string),LOG_BUFF_LENGTH);
 		return NULL;
 	}
@@ -499,7 +499,7 @@ char *PIROT_Replace_String(char *string,char *find_string,char *replace_string)
 				{
 					General_Error_Number = 7;
 					sprintf(General_Error_String,
-						"PIROT_Replace_String:string is too short ((%d + %d) > %d).",
+						"PIROT_Replace_String:string is too short ((%lu + %d) > %d).",
 						strlen(return_string),move_count,LOG_BUFF_LENGTH);
 					return NULL;
 				}
