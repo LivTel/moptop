@@ -37,9 +37,17 @@
 
 #include "command_server.h"
 
+#include "filter_wheel_command.h"
+#include "filter_wheel_config.h"
+#include "filter_wheel_general.h"
+
+#include "moptop_config.h"
 #include "moptop_fits_header.h"
 #include "moptop_general.h"
 #include "moptop_server.h"
+
+#include "pirot_general.h"
+#include "pirot_setup.h"
 
 /* hash defines */
 /**
@@ -118,7 +126,9 @@ int Moptop_Command_Abort(char *command_string,char **reply_string)
 int Moptop_Command_Config(char *command_string,char **reply_string)
 {
 	int retval,bin,parameter_index,filter_position;
+	double rotator_run_velocity,rotator_step_angle,camera_exposure_length;
 	char filter_string[32];
+	char rotor_speed_string[32];
 	char sub_config_command_string[16];
 
 #if MOPTOP_DEBUG > 1
@@ -250,7 +260,126 @@ int Moptop_Command_Config(char *command_string,char **reply_string)
 	}
 	else if(strcmp(sub_config_command_string,"rotorspeed") == 0)
 	{
-		if(!Moptop_General_Add_String(reply_string,"1 Config rotorspeed not implemented yet."))
+		retval = sscanf(command_string+parameter_index,"%31s",rotor_speed_string);
+		if(retval != 1)
+		{
+			Moptop_General_Error_Number = 533;
+			sprintf(Moptop_General_Error_String,"Moptop_Command_Config:"
+				"Failed to parse command %s (%d).",command_string,retval);
+			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
+					     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+			Moptop_General_Log("command","moptop_command.c","Moptop_Command_Config",
+					   LOG_VERBOSITY_TERSE,"COMMAND","finished (command parse failed).");
+#endif
+			if(!Moptop_General_Add_String(reply_string,"1 Failed to parse config bin command."))
+				return FALSE;
+			return TRUE;
+		}
+		if(strcmp(rotor_speed_string,"slow") == 0)
+		{
+			/* slow speed rotor: 45 deg/s (7.5 rpm) , 16 triggers per rotation, exposure length 0.4s 
+			** 0.4 s /((60 s /7.5 rpm )/16 triggers) * 22.5 deg = 18 deg i.e. exposing for 18deg out of 22.5deg */
+			rotator_run_velocity = 45.0;
+			rotator_step_angle = PIROT_SETUP_TRIGGER_STEP_ANGLE_16;
+			camera_exposure_length = 0.4;
+		}
+		else if(strcmp(rotor_speed_string,"slow") == 0)
+		{
+			/* slow speed rotor: 4.5 deg/s (0.75 rpm), 16 triggers per rotation, exposure length 4.0s 
+			** 4.0 s /((60 s /0.75 rpm )/16 triggers) * 22.5 deg = 18 deg i.e. exposing for 18deg out of 22.5deg */
+			rotator_run_velocity = 4.5;
+			rotator_step_angle = PIROT_SETUP_TRIGGER_STEP_ANGLE_16;
+			camera_exposure_length = 4.0;
+		}
+		else
+		{
+			Moptop_General_Error_Number = 534;
+			sprintf(Moptop_General_Error_String,"Moptop_Command_Config:Unknown rotor speed %s.",
+				rotor_speed_string);
+			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
+					     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+						  LOG_VERBOSITY_TERSE,"COMMAND","finished (Unknown rotor speed %s).",
+						  rotor_speed_string);
+#endif
+			if(!Moptop_General_Add_String(reply_string,"1 Failed to parse config rotorspeed command:"))
+				return FALSE;
+			if(!Moptop_General_Add_String(reply_string,command_string))
+				return FALSE;
+			return TRUE;
+		}
+		/* configure rotator */
+		if(!PIROT_Setup_Rotator_Run_Velocity(rotator_run_velocity))
+		{
+			Moptop_General_Error_Number = 535;
+			sprintf(Moptop_General_Error_String,
+				"Moptop_Command_Config:Failed to set rotator velocity to %.2f deg/s.",
+				rotator_run_velocity);
+			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
+					     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+						  LOG_VERBOSITY_TERSE,"COMMAND",
+						  "finished (Failed to set rotator velocity to %.2f deg/s).",
+						  rotator_run_velocity);
+#endif
+			if(!Moptop_General_Add_String(reply_string,"1 Failed to set rotator velocity."))
+				return FALSE;
+			return TRUE;
+		}
+		if(!PIROT_Setup_Trigger_Step_Angle(rotator_step_angle))
+		{
+			Moptop_General_Error_Number = 536;
+			sprintf(Moptop_General_Error_String,
+				"Moptop_Command_Config:Failed to set rotator trigger step angle to %.2f deg.",
+				rotator_step_angle);
+			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
+					     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+						  LOG_VERBOSITY_TERSE,"COMMAND",
+						  "finished (Failed to set rotator trigger step angle %.2f deg).",
+						  rotator_step_angle);
+#endif
+			if(!Moptop_General_Add_String(reply_string,"1 Failed to set rotator trigger step angle."))
+				return FALSE;
+			return TRUE;
+		}
+		if(!PIROT_Setup_Rotator())
+		{
+			Moptop_General_Error_Number = 537;
+			sprintf(Moptop_General_Error_String,"Moptop_Command_Config:Failed to setup rotator.");
+			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",LOG_VERBOSITY_TERSE,
+					     "COMMAND");
+#if MOPTOP_DEBUG > 1
+			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+						  LOG_VERBOSITY_TERSE,"COMMAND","finished (Failed to setup rotator).");
+#endif
+			if(!Moptop_General_Add_String(reply_string,"1 Failed to setup rotator."))
+				return FALSE;
+			return TRUE;
+		}
+		/* set CCD exposure length to match */
+		if(!CCD_Exposure_Length_Set(camera_exposure_length))
+		{
+			Moptop_General_Error_Number = 538;
+			sprintf(Moptop_General_Error_String,"Moptop_Command_Config:Failed to set exposure length to %.2f s.",
+				camera_exposure_length);
+			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",LOG_VERBOSITY_TERSE,
+					     "COMMAND");
+#if MOPTOP_DEBUG > 1
+			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+						  LOG_VERBOSITY_TERSE,"COMMAND",
+						  "finished (Failed to set exposure length to %.2f s).",
+						  camera_exposure_length);
+#endif
+			if(!Moptop_General_Add_String(reply_string,"1 Failed to set exposure length."))
+				return FALSE;
+			return TRUE;
+		}
+		if(!Moptop_General_Add_String(reply_string,"0 Config rotorspeed completed."))
 			return FALSE;
 	}
 	else
@@ -1237,7 +1366,7 @@ static int Command_Parse_Date(char *time_string,int *time_secs)
 	if(time_in_secs < 0)
 	{
 		Moptop_General_Error_Number = 532;
-		sprintf(Moptop_General_Error_String,"Command_Parse_Date:mktime failed.",timezone_string);
+		sprintf(Moptop_General_Error_String,"Command_Parse_Date:mktime failed.");
 		return FALSE;
 	}
 	(*time_secs) = (int)time_in_secs;
