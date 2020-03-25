@@ -162,6 +162,13 @@ cat ~eng/.cshrc | awk -f ${current_dir}/icc_cshrc_edit.awk > ~eng/.cshrc.tmp
 cat ~eng/.cshrc.tmp ${current_dir}/icc_cshrc > ~eng/.cshrc
 rm -f ~eng/.cshrc.tmp
 #
+# Bodge fix for zen installs. 
+#
+if( ! -r /icc/bin/lib/x86_64-linux/libcfitsio.so.8 ) then
+    cd /icc/bin/lib/x86_64-linux
+    ln -s libcfitsio.so  libcfitsio.so.8
+endif
+#
 # Finished
 #
 echo "Installation completed, please 'reboot'."
