@@ -46,6 +46,7 @@
 #include "moptop_general.h"
 #include "moptop_server.h"
 
+#include "pirot_command.h"
 #include "pirot_general.h"
 #include "pirot_setup.h"
 
@@ -827,6 +828,7 @@ int Moptop_Command_Multrun(char *command_string,char **reply_string)
  * <ul>
  * <li>status temperature [get|status]
  * <li>status filterwheel [filter|position|status]
+ * <li>status rotator [position|status]
  * <li>status exposure [status|count|length|start_time|trigger_mode|elapsed_time]
  * <li>status exposure [accumulation|series|index|multrun|run|window]
  * <li>status [name|identification|fits_instrument_code]
@@ -852,6 +854,7 @@ int Moptop_Command_Multrun(char *command_string,char **reply_string)
  * @see ../ccd/cdocs/ccd_temperature.html#CCD_Temperature_Get
  * @see ../ccd/cdocs/ccd_temperature.html#CCD_Temperature_Get_Temperature_Status_String
  * @see ../filter_wheel/cdocs/filter_wheel_command.html#Filter_Wheel_Command_Get_Position
+ * @see ../pirot/cdocs/pirot_command.html#PIROT_Command_Query_POS
  */
 int Moptop_Command_Status(char *command_string,char **reply_string)
 {
@@ -868,8 +871,8 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 	char filter_name_string[32];
 	char instrument_code;
 	char *camera_name_string = NULL;
-	int retval,command_string_index,ivalue,filter_wheel_position;
-	double temperature;
+	int retval,command_string_index,ivalue,filter_wheel_position,rotator_on_target;
+	double temperature,rotator_position;
 	
 	/* parse command */
 	retval = sscanf(command_string,"status %31s %n",subsystem_string,&command_string_index);
@@ -1078,7 +1081,7 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 					return TRUE;
 				}
 			}
-			strcat(return_string+strlen(return_string),filter_name_string);
+			strcat(return_string,filter_name_string);
 		}
 		else if(strncmp(command_string+command_string_index,"position",8)==0)
 		{
@@ -1087,9 +1090,9 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 		else if(strncmp(command_string+command_string_index,"status",6)==0)
 		{
 			if(filter_wheel_position == 0)/* moving */
-				strcat(return_string+strlen(return_string),"moving");
+				strcat(return_string,"moving");
 			else
-				strcat(return_string+strlen(return_string),"in_position");
+				strcat(return_string,"in_position");
 		}
 		else
 		{
@@ -1176,6 +1179,69 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 			free(camera_name_string);
 	}
 	*/
+	else if(strncmp(subsystem_string,"rotator",7) == 0)
+	{
+		if(strncmp(command_string+command_string_index,"position",8)==0)
+		{
+			if(!PIROT_Command_Query_POS(&rotator_position))
+			{
+				Moptop_General_Error_Number = 541;
+				sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
+					"Failed to query rotator position.");
+				Moptop_General_Error("command","moptop_command.c","Moptop_Command_Status",
+						     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+				Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Status",
+							  LOG_VERBOSITY_TERSE,"COMMAND",
+							  "Failed to query rotator position.");
+#endif
+				if(!Moptop_General_Add_String(reply_string,"1 Failed to query rotator position."))
+					return FALSE;
+				return TRUE;
+			}
+			sprintf(return_string+strlen(return_string),"%.2f",rotator_position);			
+		}
+		else if(strncmp(command_string+command_string_index,"status",6)==0)
+		{
+			if(!PIROT_Command_Query_ONT(&rotator_on_target))
+			{
+				Moptop_General_Error_Number = 542;
+				sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
+					"Failed to query rotator on target.");
+				Moptop_General_Error("command","moptop_command.c","Moptop_Command_Status",
+						     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+				Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Status",
+							  LOG_VERBOSITY_TERSE,"COMMAND",
+							  "Failed to query rotator on target.");
+#endif
+				if(!Moptop_General_Add_String(reply_string,"1 Failed to query rotator on target."))
+					return FALSE;
+				return TRUE;
+			}
+			if(rotator_on_target)
+				strcat(return_string,"stopped");
+			else
+				strcat(return_string,"moving");
+		}
+		else
+		{
+			Moptop_General_Error_Number = 543;
+			sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
+				"Failed to parse rotator command %s.",command_string+command_string_index);
+			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Status",
+					     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Status",
+						  LOG_VERBOSITY_TERSE,"COMMAND",
+						  "Failed to parse rotator command %s.",
+						  command_string+command_string_index);
+#endif
+			if(!Moptop_General_Add_String(reply_string,"1 Failed to parse status rotator command."))
+				return FALSE;
+			return TRUE;
+		}
+	}
 	else if(strncmp(subsystem_string,"temperature",11) == 0)
 	{
 		retval = sscanf(command_string,"status temperature %15s",get_set_string);

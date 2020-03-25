@@ -360,6 +360,7 @@ static void Server_Connection_Callback(Command_Server_Handle_T connection_handle
 			   "\tstatus [name|identification|fits_instrument_code]\n"
 			   "\tstatus temperature [get|status]\n"
 			   "\tstatus filterwheel [filter|position|status]\n"
+			   "\tstatus rotator [position|status]\n"
 			   "\tstatus exposure [status|count|length|start_time|trigger_mode]\n"
 			   "\tstatus exposure [accumulation|series|index|multrun|run|window]\n"
 			   "\tshutdown\n");
