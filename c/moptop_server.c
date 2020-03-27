@@ -356,6 +356,7 @@ static void Server_Connection_Callback(Command_Server_Handle_T connection_handle
 			   "\thelp\n"
 /*			   "\tlog_level <moptop|ccd|command_server|object|ngatcil> <n>\n"*/
 /*			   "\tmultdark <length> <count>\n"*/
+			   "\tmultrun_setup\n"
 			   "\tmultrun <length> <count> <standard>\n"
 			   "\tstatus [name|identification|fits_instrument_code]\n"
 			   "\tstatus temperature [get|status]\n"
@@ -405,7 +406,7 @@ static void Server_Connection_Callback(Command_Server_Handle_T connection_handle
 		}
 	}
 */
-	else if(strncmp(client_message,"multrun",6) == 0)
+	else if(strncmp(client_message,"multrun",7) == 0)
 	{
 #if MOPTOP_DEBUG > 1
 		Moptop_General_Log("server","moptop_server.c","Moptop_Server_Connection_Callback",
@@ -437,6 +438,46 @@ static void Server_Connection_Callback(Command_Server_Handle_T connection_handle
 						 "Moptop_Server_Connection_Callback",
 						 LOG_VERBOSITY_VERY_TERSE,"SERVER");
 			retval = Send_Reply(connection_handle, "1 Moptop_Command_Multrun failed.");
+			if(retval == FALSE)
+			{
+				Moptop_General_Error("server","moptop_server.c",
+							 "Moptop_Server_Connection_Callback",
+							 LOG_VERBOSITY_VERY_TERSE,"SERVER");
+			}
+		}
+	}
+	else if(strncmp(client_message,"multrun_setup",13) == 0)
+	{
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("server","moptop_server.c","Moptop_Server_Connection_Callback",
+				       LOG_VERBOSITY_VERY_TERSE,"SERVER","multrun_setup detected.");
+#endif
+		/* exposure thread priority */
+		if(!Moptop_General_Thread_Priority_Set_Exposure())
+		{
+			Moptop_General_Error("server","moptop_server.c",
+						 "Moptop_Server_Connection_Callback",
+						 LOG_VERBOSITY_VERY_TERSE,"SERVER");
+		}
+		retval = Moptop_Command_Multrun_Setup(client_message,&reply_string);
+		if(retval == TRUE)
+		{
+			retval = Send_Reply(connection_handle,reply_string);
+			if(reply_string != NULL)
+				free(reply_string);
+			if(retval == FALSE)
+			{
+				Moptop_General_Error("server","moptop_server.c",
+							 "Moptop_Server_Connection_Callback",
+							 LOG_VERBOSITY_VERY_TERSE,"SERVER");
+			}
+		}
+		else
+		{
+			Moptop_General_Error("server","moptop_server.c",
+						 "Moptop_Server_Connection_Callback",
+						 LOG_VERBOSITY_VERY_TERSE,"SERVER");
+			retval = Send_Reply(connection_handle, "1 Moptop_Command_Multrun_Setup failed.");
 			if(retval == FALSE)
 			{
 				Moptop_General_Error("server","moptop_server.c",

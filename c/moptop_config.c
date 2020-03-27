@@ -440,3 +440,44 @@ int Moptop_Config_Get_Boolean(char *key, int *boolean)
 	return retval;
 }
 
+/**
+ * Wrapper routine to make testing whether the rotator is enabled easier.
+ * @return The routine returns TRUE if the rotator is enabled (rotator.enable=true) and FALSE if it is not enabled,
+ *         or an error occurs.
+ * @see #Moptop_Config_Get_Boolean
+ * @see moptop_general.html#Moptop_General_Error
+ */
+int Moptop_Config_Rotator_Is_Enabled(void)
+{
+	int enabled;
+	
+	if(!Moptop_Config_Get_Boolean("rotator.enable",&enabled))
+	{
+		/* log the failure */
+		Moptop_General_Error("config","moptop_config.c","Moptop_Config_Rotator_Is_Enabled",
+				     LOG_VERBOSITY_TERSE,"CONFIG");
+		return FALSE;
+	}
+	return enabled;
+}
+
+/**
+ * Wrapper routine to make testing whether the filter wheel is enabled easier.
+ * @return The routine returns TRUE if the rotator is enabled (filter_wheel.enable=true) and FALSE if it is not enabled,
+ *         or an error occurs.
+ * @see #Moptop_Config_Get_Boolean
+ * @see moptop_general.html#Moptop_General_Error
+ */
+int Moptop_Config_Filter_Wheel_Is_Enabled(void)
+{
+	int enabled;
+	
+	if(!Moptop_Config_Get_Boolean("filter_wheel.enable",&enabled))
+	{
+		/* log the failure */
+		Moptop_General_Error("config","moptop_config.c","Moptop_Config_Filter_Wheel_Is_Enabled",
+				     LOG_VERBOSITY_TERSE,"CONFIG");
+		return FALSE;
+	}
+	return enabled;
+}

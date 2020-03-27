@@ -13,4 +13,7 @@ extern int Moptop_Config_Get_Unsigned_Short(char *key,unsigned short *us);
 extern int Moptop_Config_Get_Double(char *key, double *d);
 extern int Moptop_Config_Get_Float(char *key, float *f);
 extern int Moptop_Config_Get_Boolean(char *key, int *boolean);
+extern int Moptop_Config_Rotator_Is_Enabled(void);
+extern int Moptop_Config_Filter_Wheel_Is_Enabled(void);
+
 #endif

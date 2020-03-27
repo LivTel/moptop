@@ -390,6 +390,26 @@ int PIROT_Setup_Rotator(void)
 }
 
 /**
+ * Return the last configured rotator run velocity.
+ * @return The last configured rotator run velocity in degrees/s, stored in Setup_Data.Run_Velocity.
+ * @see #Setup_Data
+ */
+double PIROT_Setup_Rotator_Run_Velocity_Get(void)
+{
+	return Setup_Data.Run_Velocity;
+}
+
+/**
+ * Return the last configured trigger step angle.
+ * @return The last configured trigger step angle in degrees, stored in Setup_Data.Trigger_Step_Angle.
+ * @see #Setup_Data
+ */
+double PIROT_Setup_Trigger_Step_Angle_Get(void)
+{
+	return Setup_Data.Trigger_Step_Angle;
+}
+
+/**
  * Get the current value of the error number.
  * @return The current value of the error number.
  * @see #Setup_Error_Number

@@ -43,6 +43,7 @@
 
 #include "moptop_config.h"
 #include "moptop_fits_header.h"
+#include "moptop_multrun.h"
 #include "moptop_general.h"
 #include "moptop_server.h"
 
@@ -93,8 +94,11 @@ int Moptop_Command_Abort(char *command_string,char **reply_string)
 	Moptop_General_Log("command","moptop_command.c","Moptop_Command_Abort",LOG_VERBOSITY_TERSE,
 			   "COMMAND","started.");
 #endif
+	/* check filter wheel moving and abort ? */
+	/* check rotator is moving and abort? */
+	/* abort multrun */
+	
 
-	/* diddly not implemented */
 
 	if(!Moptop_General_Add_String(reply_string,"1 Abort not implemented yet."))
 		return FALSE;
@@ -115,11 +119,16 @@ int Moptop_Command_Abort(char *command_string,char **reply_string)
  * @param command_string The command. This is not changed during this routine.
  * @param reply_string The address of a pointer to allocate and set the reply string.
  * @return The routine returns TRUE on success and FALSE on failure.
+ * @see moptop_config.html#Moptop_Config_Rotator_Is_Enabled
  * @see moptop_general.html#Moptop_General_Log
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_general.html#Moptop_General_Add_String
  * @see moptop_general.html#Moptop_General_Add_Integer_To_String
+ * @see moptop_multrun.html#Moptop_Multrun_Rotator_Run_Velocity_Set
+ * @see moptop_multrun.html#Moptop_Multrun_Rotator_Step_Angle_Set
+ * @see moptop_multrun.html#Moptop_Multrun_Rotator_Run_Velocity_Get
+ * @see moptop_multrun.html#Moptop_Multrun_Rotator_Step_Angle_Get
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Dimensions
  * @see ../filter_wheel/cdocs/filter_wheel_config.html#Filter_Wheel_Config_Name_To_Position
  * @see ../filter_wheel/cdocs/filter_wheel_config.html#Filter_Wheel_Command_Move
@@ -127,7 +136,7 @@ int Moptop_Command_Abort(char *command_string,char **reply_string)
 int Moptop_Command_Config(char *command_string,char **reply_string)
 {
 	int retval,bin,parameter_index,filter_position;
-	double rotator_run_velocity,rotator_step_angle,camera_exposure_length;
+	double camera_exposure_length;
 	char filter_string[32];
 	char rotor_speed_string[32];
 	char sub_config_command_string[16];
@@ -277,20 +286,22 @@ int Moptop_Command_Config(char *command_string,char **reply_string)
 				return FALSE;
 			return TRUE;
 		}
-		if(strcmp(rotor_speed_string,"slow") == 0)
+		if(strcmp(rotor_speed_string,"fast") == 0)
 		{
-			/* slow speed rotor: 45 deg/s (7.5 rpm) , 16 triggers per rotation, exposure length 0.4s 
-			** 0.4 s /((60 s /7.5 rpm )/16 triggers) * 22.5 deg = 18 deg i.e. exposing for 18deg out of 22.5deg */
-			rotator_run_velocity = 45.0;
-			rotator_step_angle = PIROT_SETUP_TRIGGER_STEP_ANGLE_16;
+			/* fast speed rotor: 45 deg/s (7.5 rpm) , 16 triggers per rotation, exposure length 0.4s 
+			** 0.4 s /((60 s /7.5 rpm )/16 triggers) * 22.5 deg = 18 deg 
+			** i.e. exposing for 18deg out of 22.5deg */
+			Moptop_Multrun_Rotator_Run_Velocity_Set(45.0);
+			Moptop_Multrun_Rotator_Step_Angle_Set(PIROT_SETUP_TRIGGER_STEP_ANGLE_16);
 			camera_exposure_length = 0.4;
 		}
 		else if(strcmp(rotor_speed_string,"slow") == 0)
 		{
 			/* slow speed rotor: 4.5 deg/s (0.75 rpm), 16 triggers per rotation, exposure length 4.0s 
-			** 4.0 s /((60 s /0.75 rpm )/16 triggers) * 22.5 deg = 18 deg i.e. exposing for 18deg out of 22.5deg */
-			rotator_run_velocity = 4.5;
-			rotator_step_angle = PIROT_SETUP_TRIGGER_STEP_ANGLE_16;
+			** 4.0 s /((60 s /0.75 rpm )/16 triggers) * 22.5 deg = 18 deg 
+			** i.e. exposing for 18deg out of 22.5deg */
+			Moptop_Multrun_Rotator_Run_Velocity_Set(4.5);
+			Moptop_Multrun_Rotator_Step_Angle_Set(PIROT_SETUP_TRIGGER_STEP_ANGLE_16);
 			camera_exposure_length = 4.0;
 		}
 		else
@@ -311,62 +322,67 @@ int Moptop_Command_Config(char *command_string,char **reply_string)
 				return FALSE;
 			return TRUE;
 		}
-		/* configure rotator */
-		if(!PIROT_Setup_Rotator_Run_Velocity(rotator_run_velocity))
+		/* configure rotator if enabled */
+		if(Moptop_Config_Rotator_Is_Enabled())
 		{
-			Moptop_General_Error_Number = 535;
-			sprintf(Moptop_General_Error_String,
-				"Moptop_Command_Config:Failed to set rotator velocity to %.2f deg/s.",
-				rotator_run_velocity);
-			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
-					     LOG_VERBOSITY_TERSE,"COMMAND");
+			if(!PIROT_Setup_Rotator_Run_Velocity(Moptop_Multrun_Rotator_Run_Velocity_Get()))
+			{
+				Moptop_General_Error_Number = 535;
+				sprintf(Moptop_General_Error_String,
+					"Moptop_Command_Config:Failed to set rotator velocity to %.2f deg/s.",
+					Moptop_Multrun_Rotator_Run_Velocity_Get());
+				Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
+						     LOG_VERBOSITY_TERSE,"COMMAND");
 #if MOPTOP_DEBUG > 1
-			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
-						  LOG_VERBOSITY_TERSE,"COMMAND",
-						  "finished (Failed to set rotator velocity to %.2f deg/s).",
-						  rotator_run_velocity);
+				Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+							  LOG_VERBOSITY_TERSE,"COMMAND",
+							  "finished (Failed to set rotator velocity to %.2f deg/s).",
+							  Moptop_Multrun_Rotator_Run_Velocity_Get());
 #endif
-			if(!Moptop_General_Add_String(reply_string,"1 Failed to set rotator velocity."))
-				return FALSE;
-			return TRUE;
-		}
-		if(!PIROT_Setup_Trigger_Step_Angle(rotator_step_angle))
-		{
-			Moptop_General_Error_Number = 536;
-			sprintf(Moptop_General_Error_String,
-				"Moptop_Command_Config:Failed to set rotator trigger step angle to %.2f deg.",
-				rotator_step_angle);
-			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
-					     LOG_VERBOSITY_TERSE,"COMMAND");
+				if(!Moptop_General_Add_String(reply_string,"1 Failed to set rotator velocity."))
+					return FALSE;
+				return TRUE;
+			}
+			if(!PIROT_Setup_Trigger_Step_Angle(Moptop_Multrun_Rotator_Step_Angle_Get()))
+			{
+				Moptop_General_Error_Number = 536;
+				sprintf(Moptop_General_Error_String,
+					"Moptop_Command_Config:Failed to set rotator trigger step angle to %.2f deg.",
+					Moptop_Multrun_Rotator_Step_Angle_Get());
+				Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
+						     LOG_VERBOSITY_TERSE,"COMMAND");
 #if MOPTOP_DEBUG > 1
-			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
-						  LOG_VERBOSITY_TERSE,"COMMAND",
-						  "finished (Failed to set rotator trigger step angle %.2f deg).",
-						  rotator_step_angle);
+				Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+							  LOG_VERBOSITY_TERSE,"COMMAND",
+						      "finished (Failed to set rotator trigger step angle %.2f deg).",
+							  Moptop_Multrun_Rotator_Step_Angle_Get());
 #endif
-			if(!Moptop_General_Add_String(reply_string,"1 Failed to set rotator trigger step angle."))
-				return FALSE;
-			return TRUE;
-		}
-		if(!PIROT_Setup_Rotator())
-		{
-			Moptop_General_Error_Number = 537;
-			sprintf(Moptop_General_Error_String,"Moptop_Command_Config:Failed to setup rotator.");
-			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",LOG_VERBOSITY_TERSE,
-					     "COMMAND");
+				if(!Moptop_General_Add_String(reply_string,"1 Failed to set rotator trigger step angle."))
+					return FALSE;
+				return TRUE;
+			}
+			if(!PIROT_Setup_Rotator())
+			{
+				Moptop_General_Error_Number = 537;
+				sprintf(Moptop_General_Error_String,"Moptop_Command_Config:Failed to setup rotator.");
+				Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
+						     LOG_VERBOSITY_TERSE,"COMMAND");
 #if MOPTOP_DEBUG > 1
-			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
-						  LOG_VERBOSITY_TERSE,"COMMAND","finished (Failed to setup rotator).");
+				Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+							  LOG_VERBOSITY_TERSE,"COMMAND",
+							  "finished (Failed to setup rotator).");
 #endif
-			if(!Moptop_General_Add_String(reply_string,"1 Failed to setup rotator."))
-				return FALSE;
-			return TRUE;
-		}
+				if(!Moptop_General_Add_String(reply_string,"1 Failed to setup rotator."))
+					return FALSE;
+				return TRUE;
+			}
+		} /* end if Moptop_Config_Rotator_Is_Enabled */
 		/* set CCD exposure length to match */
 		if(!CCD_Exposure_Length_Set(camera_exposure_length))
 		{
 			Moptop_General_Error_Number = 538;
-			sprintf(Moptop_General_Error_String,"Moptop_Command_Config:Failed to set exposure length to %.2f s.",
+			sprintf(Moptop_General_Error_String,
+				"Moptop_Command_Config:Failed to set exposure length to %.2f s.",
 				camera_exposure_length);
 			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",LOG_VERBOSITY_TERSE,
 					     "COMMAND");
@@ -756,7 +772,8 @@ int Moptop_Command_Multrun(char *command_string,char **reply_string)
 		return TRUE;
 	}
 	/* do multrun */
-
+	retval = Moptop_Multrun(exposure_length,(exposure_length > 0),exposure_count,(exposure_count > 0),
+				&filename_list,&filename_count);
 	/* diddly not implemented yet */
 
 	/* success */
@@ -821,6 +838,31 @@ int Moptop_Command_Multrun(char *command_string,char **reply_string)
 			   "COMMAND","finished.");
 #endif
 	return TRUE;
+}
+
+/**
+ * Routine to implement the "multrun_setup" command. This is used to set everything up
+ * the rotator is started.
+ * @param command_string The command. This is not changed during this routine.
+ * @param reply_string The address of a pointer to allocate and set the reply string.
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see moptop_general.html#Moptop_General_Log
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
+ * @see moptop_general.html#Moptop_General_Add_String
+ */
+int Moptop_Command_Multrun_Setup(char *command_string,char **reply_string)
+{
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("command","moptop_command.c","Moptop_Command_Multrun_Setup",LOG_VERBOSITY_TERSE,
+			   "COMMAND","started.");
+#endif
+	
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("command","moptop_command.c","Moptop_Command_Multrun_Setup",LOG_VERBOSITY_TERSE,
+			   "COMMAND","finished.");
+#endif
+	return TRUE;	
 }
 
 /**

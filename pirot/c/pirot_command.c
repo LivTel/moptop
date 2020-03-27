@@ -31,10 +31,6 @@
  */
 #define STRING_LENGTH                (256)
 /**
- * Default rotator tolerance in degrees.
- */
-#define DEFAULT_ROTATOR_TOLERANCE    (0.004)
-/**
  * The default name of the rotator axis. Used by the PI rotator library to query and move the rotator.
  */
 #define COMMAND_ROTATOR_AXIS         ("1")
