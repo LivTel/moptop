@@ -33,6 +33,7 @@ extern int PIROT_Setup_Trigger_Step_Angle(double trigger_step_angle);
 extern int PIROT_Setup_Rotator(void);
 extern double PIROT_Setup_Rotator_Run_Velocity_Get(void);
 extern double PIROT_Setup_Trigger_Step_Angle_Get(void);
+extern int PIROT_Setup_Is_Rotator_At_Start_Position(void);
 extern int PIROT_Setup_Get_Error_Number(void);
 extern void PIROT_Setup_Error(void);
 extern void PIROT_Setup_Error_String(char *error_string);

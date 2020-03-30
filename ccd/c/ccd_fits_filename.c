@@ -215,7 +215,7 @@ int CCD_Fits_Filename_Initialise(char instrument_code,char *data_dir)
 					       "CCD_Fits_Filename_Initialise:Filename %s parsed OK.",
 					       name_list[i]->d_name);
 #endif
-			/* check filename is for the right instrument (camera_index) */
+			/* check filename is for the right instrument */
 			if(inst_code[0] == Fits_Filename_Data.Instrument_Code)
 			{
 				retval = sscanf(date_string,"%d",&date_number);
@@ -485,7 +485,7 @@ int CCD_Fits_Filename_List_Free(char ***filename_list,int *filename_count)
 
 /**
  * Get the current multrun number.
- * @return The current multrun number. -1 is returned if the camera_index is out of range.
+ * @return The current multrun number.
  * @see #Fits_Filename_Data
  * @see #Fits_Filename_Error_Number
  * @see #Fits_Filename_Error_String
@@ -497,7 +497,7 @@ int CCD_Fits_Filename_Multrun_Get(void)
 
 /**
  * Get the current run number.
- * @return The current run number. -1 is returned if the camera_index is out of range.
+ * @return The current run number.
  * @see #Fits_Filename_Data
  * @see #Fits_Filename_Error_Number
  * @see #Fits_Filename_Error_String

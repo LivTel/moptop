@@ -24,6 +24,9 @@
 
 #include "log_udp.h"
 
+#include "ccd_fits_filename.h"
+
+#include "pirot_command.h"
 #include "pirot_setup.h"
 
 #include "moptop_config.h"
@@ -58,6 +61,47 @@ static double Rotator_Step_Angle;
 ** 		external functions 
 ** ---------------------------------------------------------------------------- */
 /**
+ * Routine to setup the Multrun.
+ * <ul>
+ * <li>Check the rotator is in the correct start position using PIROT_Setup_Is_Rotator_At_Start_Position, 
+ *     if the rotator is enabled.
+ * <li>Increment the FITS filename multrun number and return it.
+ * <li>
+ * </ul>
+ * @see moptop_general.html#Moptop_General_Log
+ * @see moptop_general.html#Moptop_General_Log_Format
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
+ * @see moptop_config.html#Moptop_Config_Rotator_Is_Enabled
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Next_Multrun
+C * @see ../ccd/cdocs/ccd_fits_filename.html#CD_Fits_Filename_Multrun_Get
+ * @see ../pirot/cdocs/pirot_setup.html#PIROT_Setup_Is_Rotator_At_Start_Position
+ */
+int Moptop_Multrun_Setup(int *multrun_number)
+{
+	if(multrun_number == NULL)
+	{
+		Moptop_General_Error_Number = 604;
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun_Setup: multrun_number was NULL.");
+		return FALSE;
+	}
+	/* if the rotator is enabled, check it is in the right start position */
+	if(Moptop_Config_Rotator_Is_Enabled())
+	{
+		if(!PIROT_Setup_Is_Rotator_At_Start_Position())
+		{
+			Moptop_General_Error_Number = 605;
+			sprintf(Moptop_General_Error_String,"Moptop_Multrun_Setup: Rotator not at start position.");
+			return FALSE;
+		}
+	}
+	/* increment the multrun number */
+	CCD_Fits_Filename_Next_Multrun();
+	(*multrun_number) = CCD_Fits_Filename_Multrun_Get();
+	return TRUE;
+}
+
+/**
  * Routine to actually do a multrun for one machine.
  * <ul>
  * <li>We initialise Moptop_Abort to FALSE, and Moptop_In_Progress to TRUE.
@@ -76,14 +120,15 @@ static double Rotator_Step_Angle;
  * @see moptop_general.html#Moptop_General_Log_Format
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
+ * @see moptop_multrun.html#Moptop_Multrun_Rotator_Run_Velocity_Get
+ * @see moptop_multrun.htmlMoptop_Multrun_Rotator_Step_Angle_Get
+ * @see ../pirot/cdocs/pirot_command.html#PIROT_Command_TRO
  * @see ../pirot/cdocs/pirot_setup.html#PIROT_SETUP_ROTATOR_TOLERANCE
- * @see ../pirot/cdocs/pirot_setup.html#PIROT_Setup_Rotator_Run_Velocity_Get
- * @see ../pirot/cdocs/pirot_setup.html#PIROT_Setup_Trigger_Step_Angle_Get
  */
 int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_count,int use_exposure_count,
 		   char ***filename_list,int *filename_count)
 {
-	double rotator_run_velocity,trigger_step_angle,rotator_end_point;
+	double rotator_run_velocity,trigger_step_angle,rotator_end_position;
 	int rotation_count,frame_count;
 	
 #if MOPTOP_DEBUG > 1
@@ -123,7 +168,6 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 	/* if using exposure lengths, convert this into a number of rotations (exposure_count) */
 	if(use_exposure_length)
 	{
-		/* diddly this won't work on moptop2 */
 		rotator_run_velocity = Moptop_Multrun_Rotator_Run_Velocity_Get();
 		rotation_count = exposure_length_ms/(360.0/rotator_run_velocity);
 #if MOPTOP_DEBUG > 5
@@ -133,6 +177,7 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 #endif
 		if(rotation_count < 1)
 		{
+			Multrun_In_Progress = FALSE;
 			Moptop_General_Error_Number = 603;
 			sprintf(Moptop_General_Error_String,
 				"Moptop_Multrun:Exposure length %d ms, rotator run velocity %.2f deg/s, "
@@ -143,21 +188,55 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 	/* if using exposure counts, number of rotations is the exposure count */
 	if(use_exposure_count)
 		rotation_count = exposure_count;
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("multrun","moptop_multrun.c","Moptop_Multrun",LOG_VERBOSITY_VERBOSE,"MULTRUN",
+				  "Using rotation count %d.",rotation_count);
+#endif
 	/* how many exposures are we expecting */
-	/* diddly this won't work on moptop2 */
-	trigger_step_angle = PIROT_Setup_Trigger_Step_Angle_Get();
+	trigger_step_angle = Moptop_Multrun_Rotator_Step_Angle_Get();
 	frame_count = rotation_count*(360.0/trigger_step_angle);
-	/* what is the rotator end point? */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("multrun","moptop_multrun.c","Moptop_Multrun",LOG_VERBOSITY_VERBOSE,"MULTRUN",
+				  "We are expecting %d frames.",frame_count);
+#endif
+	/* what is the rotator end position? */
 	/* stop short on last exposure to avaoid an extra trigger/frame */
-	rotator_end_point = (360.0 * rotation_count)-PIROT_SETUP_ROTATOR_TOLERANCE;
-	/* enable camera hardware trigger */
-	
+	rotator_end_position = (360.0 * rotation_count)-PIROT_SETUP_ROTATOR_TOLERANCE;
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("multrun","moptop_multrun.c","Moptop_Multrun",LOG_VERBOSITY_VERBOSE,"MULTRUN",
+				  "Rotator end position %.3f.",rotator_end_position);
+#endif
+	/* enable rotator hardware trigger */
+	if(!PIROT_Command_TRO(TRUE))
+	{
+		Multrun_In_Progress = FALSE;
+		Moptop_General_Error_Number = 606;
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to enable rotator triggering.");
+		return FALSE;
+	}
 	/* move rotator to it's final position */
-	
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("multrun","moptop_multrun.c","Moptop_Multrun",LOG_VERBOSITY_VERBOSE,"MULTRUN",
+				  "Moving Rotator to end position %.3f.",rotator_end_position);
+#endif
+	if(!PIROT_Command_MOV(rotator_end_position))
+	{
+		Multrun_In_Progress = FALSE;
+		Moptop_General_Error_Number = 607;
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to move rotator to end position %.2f.",
+			rotator_end_position);
+		return FALSE;
+	}		
 	/* acquire camera images */
 	
-	/* disable camera hardware trigger */
-	
+	/* disable rotator hardware trigger */
+	if(!PIROT_Command_TRO(FALSE))
+	{
+		Multrun_In_Progress = FALSE;
+		Moptop_General_Error_Number = 608;
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to disable rotator triggering.");
+		return FALSE;
+	}
 	Multrun_In_Progress = FALSE;
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("multrun","moptop_multrun.c","Moptop_Multrun",LOG_VERBOSITY_TERSE,"MULTRUN","finished.");

@@ -16,6 +16,7 @@
  */
 #define _POSIX_C_SOURCE 199309L
 #include <errno.h>   /* Error number definitions */
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -407,6 +408,54 @@ double PIROT_Setup_Rotator_Run_Velocity_Get(void)
 double PIROT_Setup_Trigger_Step_Angle_Get(void)
 {
 	return Setup_Data.Trigger_Step_Angle;
+}
+
+/**
+ * Check that the rotator is 'in position' (i.e. on target) at the right start position.
+ * @return The routine returns true if the rotator is 'on target' and at or very near the rotator's start angle
+ *         (SETUP_ROTATOR_INITIAL_ANGLE). The routine returns FALSE if this is not the case, or there is a fault
+ *         communicating with the rotator.
+ * @see #PIROT_SETUP_ROTATOR_TOLERANCE
+ * @see #SETUP_ROTATOR_INITIAL_ANGLE
+ * @see pirot_command.html#PIROT_Command_Query_ONT
+ * @see pirot_command.html#PIROT_Command_Query_POS
+ */
+int PIROT_Setup_Is_Rotator_At_Start_Position(void)
+{
+	double current_position;
+	int on_target;
+	
+	/* check we are on target i.e. not moving */
+	if(!PIROT_Command_Query_ONT(&on_target))
+	{
+		Setup_Error_Number = 18;
+		sprintf(Setup_Error_String,"PIROT_Setup_Is_Rotator_At_Start_Position: PIROT_Command_Query_ONT failed.");
+		return FALSE;
+	}
+	/* if we are moving and not on target return false */
+	if(on_target == FALSE)
+	{
+		Setup_Error_Number = 19;
+		sprintf(Setup_Error_String,"PIROT_Setup_Is_Rotator_At_Start_Position: We are not on target.");
+		return FALSE;		
+	}
+	/* query position */
+	if(!PIROT_Command_Query_POS(&current_position))
+	{
+		Setup_Error_Number = 20;
+		sprintf(Setup_Error_String,"PIROT_Setup_Is_Rotator_At_Start_Position: PIROT_Command_Query_POS failed.");
+		return FALSE;
+	}
+	/* are we very close to the correct initial angle */
+	if(fabs(current_position-SETUP_ROTATOR_INITIAL_ANGLE) > PIROT_SETUP_ROTATOR_TOLERANCE)
+	{
+		Setup_Error_Number = 21;
+		sprintf(Setup_Error_String,"PIROT_Setup_Is_Rotator_At_Start_Position: "
+			"We are in the wrong start position (%.2f degs vs %.2f degs).",
+			current_position,SETUP_ROTATOR_INITIAL_ANGLE);
+		return FALSE;
+	}
+	return TRUE;
 }
 
 /**

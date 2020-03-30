@@ -711,6 +711,7 @@ int Moptop_Command_Fits_Header(char *command_string,char **reply_string)
  * @see moptop_general.html#Moptop_General_Add_String
  * @see moptop_fits_header.html#Moptop_Fits_Header_String_Add
  * @see moptop_fits_filename.html#CCD_Fits_Filename_Multrun_Get
+ * @see moptop_multrun.html#Moptop_Multrun
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_List_Free
  */
 int Moptop_Command_Multrun(char *command_string,char **reply_string)
@@ -767,6 +768,10 @@ int Moptop_Command_Multrun(char *command_string,char **reply_string)
 	{
 		Moptop_General_Error("command","moptop_command.c","Moptop_Command_Multrun",
 				     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("command","moptop_command.c","Moptop_Command_Multrun",
+				   LOG_VERBOSITY_TERSE,"COMMAND","Multrun failed:Failed to set OBSTYPE.");
+#endif
 		if(!Moptop_General_Add_String(reply_string,"1 Multrun failed:Failed to set OBSTYPE."))
 			return FALSE;
 		return TRUE;
@@ -774,8 +779,18 @@ int Moptop_Command_Multrun(char *command_string,char **reply_string)
 	/* do multrun */
 	retval = Moptop_Multrun(exposure_length,(exposure_length > 0),exposure_count,(exposure_count > 0),
 				&filename_list,&filename_count);
-	/* diddly not implemented yet */
-
+	if(retval == FALSE)
+	{
+		Moptop_General_Error("command","moptop_command.c","Moptop_Command_Multrun",
+				     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("command","moptop_command.c","Moptop_Command_Multrun",
+				   LOG_VERBOSITY_TERSE,"COMMAND","Multrun failed.");
+#endif
+		if(!Moptop_General_Add_String(reply_string,"1 Multrun failed."))
+			return FALSE;
+		return TRUE;
+	}
 	/* success */
 	if(!Moptop_General_Add_String(reply_string,"0 "))
 	{
@@ -850,14 +865,35 @@ int Moptop_Command_Multrun(char *command_string,char **reply_string)
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_general.html#Moptop_General_Add_String
+ * @see moptop_general.html#Moptop_General_Add_Integer_To_String
+ * @see moptop_multrun.html#Moptop_Multrun_Setup
  */
 int Moptop_Command_Multrun_Setup(char *command_string,char **reply_string)
 {
+	int retval,multrun_number;
+	
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("command","moptop_command.c","Moptop_Command_Multrun_Setup",LOG_VERBOSITY_TERSE,
 			   "COMMAND","started.");
 #endif
-	
+	retval = Moptop_Multrun_Setup(&multrun_number);
+	if(retval == FALSE)
+	{
+		Moptop_General_Error("command","moptop_command.c","Moptop_Command_Multrun_Setup",
+				     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("command","moptop_command.c","Moptop_Command_Multrun_Setup",
+				   LOG_VERBOSITY_TERSE,"COMMAND","Multrun setup failed.");
+#endif
+		if(!Moptop_General_Add_String(reply_string,"1 Multrun setup failed."))
+			return FALSE;
+		return TRUE;
+	}
+	/* success */
+	if(!Moptop_General_Add_String(reply_string,"0 "))
+		return FALSE;
+	if(!Moptop_General_Add_Integer_To_String(reply_string,multrun_number))
+		return FALSE;
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("command","moptop_command.c","Moptop_Command_Multrun_Setup",LOG_VERBOSITY_TERSE,
 			   "COMMAND","finished.");
