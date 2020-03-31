@@ -1789,7 +1789,8 @@ int CCD_Command_Queue_Buffer(unsigned char* buffer_ptr,int buffer_length)
  * Wait for a read-out buffer to become available.
  * @param buffer_ptr The address of a pointer to store a pointer to the newly acquired data into.
  * @param buffer_length The address of an integer to store the returned buffer length.
- * @param timeout How long to wait for new data to appear before returning an error. Use AT_INFINITE to wait forever. 
+ * @param timeout How long to wait for new data to appear before returning an error, in milliseconds. 
+ *        Use AT_INFINITE to wait forever. 
  * @return The routine returns TRUE on success and FALSE if an error occurs.
  * @see #Command_Error_Number
  * @see #Command_Error_String
