@@ -94,13 +94,21 @@ int Moptop_Command_Abort(char *command_string,char **reply_string)
 	Moptop_General_Log("command","moptop_command.c","Moptop_Command_Abort",LOG_VERBOSITY_TERSE,
 			   "COMMAND","started.");
 #endif
-	/* check filter wheel moving and abort ? */
-	/* check rotator is moving and abort? */
+	/* diddly check filter wheel moving and abort ? */
+	/* diddly check rotator is moving and abort? */
 	/* abort multrun */
-	
-
-
-	if(!Moptop_General_Add_String(reply_string,"1 Abort not implemented yet."))
+	if(!Moptop_Multrun_Abort())
+	{
+		Moptop_General_Error("command","moptop_command.c","Moptop_Command_Abort",
+				     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("command","moptop_command.c","Moptop_Command_Abort",
+				       LOG_VERBOSITY_TERSE,"COMMAND","Failed to abort multrun command.");
+#endif
+		if(!Moptop_General_Add_String(reply_string,"1 Failed to abort multrun command."))
+			return FALSE;
+	}
+	if(!Moptop_General_Add_String(reply_string,"0 Multrun aborted."))
 		return FALSE;
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("command","moptop_command.c","Moptop_Command_Abort",LOG_VERBOSITY_TERSE,
