@@ -35,7 +35,7 @@ CFITSIO_CFLAGS		= -I$(CFITSIOINCDIR)
 CFITSIO_LDFLAGS		= -lcfitsio
 
 # NGAT Astro MJD link informatiom
-MJD_CFLAGS 		= -DNGATASTRO=1 -I${LT_SRC_HOME}/ngatastro/include
+MJD_CFLAGS 		= -I${LT_SRC_HOME}/ngatastro/include
 MJD_LDFLAGS		= -lngatastro
 
 # estar_config

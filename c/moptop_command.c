@@ -706,7 +706,6 @@ int Moptop_Command_Fits_Header(char *command_string,char **reply_string)
  * Handle a command of the form: "multrun <length> <count> <standard>".
  * <ul>
  * <li>The multrun command is parsed to get the exposure length, count and standard (true|false) values.
- * <li>The OBSTYPE FITS header is set using Moptop_Fits_Header_String_Add.
  * <li>
  * <li>The reply string is constructed of the form "0 <filename count> <multrun number> <last FITS filename>".
  * </ul>
@@ -717,7 +716,6 @@ int Moptop_Command_Fits_Header(char *command_string,char **reply_string)
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_general.html#Moptop_General_Add_String
- * @see moptop_fits_header.html#Moptop_Fits_Header_String_Add
  * @see moptop_fits_filename.html#CCD_Fits_Filename_Multrun_Get
  * @see moptop_multrun.html#Moptop_Multrun
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_List_Free
@@ -767,25 +765,8 @@ int Moptop_Command_Multrun(char *command_string,char **reply_string)
 			return FALSE;
 		return TRUE;
 	}
-	/* OBSTYPE FITS header */
-	if(do_standard)
-		retval = Moptop_Fits_Header_String_Add("OBSTYPE","STANDARD",NULL);
-	else
-		retval = Moptop_Fits_Header_String_Add("OBSTYPE","EXPOSE",NULL);
-	if(retval == FALSE)
-	{
-		Moptop_General_Error("command","moptop_command.c","Moptop_Command_Multrun",
-				     LOG_VERBOSITY_TERSE,"COMMAND");
-#if MOPTOP_DEBUG > 1
-		Moptop_General_Log("command","moptop_command.c","Moptop_Command_Multrun",
-				   LOG_VERBOSITY_TERSE,"COMMAND","Multrun failed:Failed to set OBSTYPE.");
-#endif
-		if(!Moptop_General_Add_String(reply_string,"1 Multrun failed:Failed to set OBSTYPE."))
-			return FALSE;
-		return TRUE;
-	}
 	/* do multrun */
-	retval = Moptop_Multrun(exposure_length,(exposure_length > 0),exposure_count,(exposure_count > 0),
+	retval = Moptop_Multrun(exposure_length,(exposure_length > 0),exposure_count,(exposure_count > 0),do_standard,
 				&filename_list,&filename_count);
 	if(retval == FALSE)
 	{

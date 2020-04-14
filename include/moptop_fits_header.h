@@ -14,5 +14,9 @@ extern int Moptop_Fits_Header_Float_Add(char *keyword,double value, char *commen
 extern int Moptop_Fits_Header_Logical_Add(char *keyword,int value, char *comment);
 extern int Moptop_Fits_Header_Delete(char *keyword);
 extern int Moptop_Fits_Header_Clear(void);
+extern void Moptop_Fits_Header_TimeSpec_To_Date_String(struct timespec time,char *time_string);
+extern void Moptop_Fits_Header_TimeSpec_To_Date_Obs_String(struct timespec time,char *time_string);
+extern void Moptop_Fits_Header_TimeSpec_To_UtStart_String(struct timespec time,char *time_string);
+extern int Moptop_Fits_Header_TimeSpec_To_Mjd(struct timespec time,int leap_second_correction,double *mjd);
 
 #endif

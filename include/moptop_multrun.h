@@ -3,7 +3,7 @@
 #define MOPTOP_MULTRUN_H
 extern int Moptop_Multrun_Setup(int *multrun_number);
 extern int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_count,int use_exposure_count,
-			  char ***filename_list,int *filename_count);
+			  int do_standard,char ***filename_list,int *filename_count);
 extern int Moptop_Multrun_Abort(void);
 extern int Moptop_Multrun_In_Progress(void);
 extern void Moptop_Multrun_Rotator_Run_Velocity_Set(double velocity);

@@ -29,13 +29,26 @@
 #include "ccd_command.h"
 #include "ccd_exposure.h"
 #include "ccd_fits_filename.h"
+#include "ccd_fits_header.h"
+#include "ccd_setup.h"
+#include "ccd_temperature.h"
+
+#include "filter_wheel_command.h"
+#include "filter_wheel_config.h"
 
 #include "pirot_command.h"
 #include "pirot_setup.h"
 
 #include "moptop_config.h"
+#include "moptop_fits_header.h"
 #include "moptop_general.h"
 #include "moptop_multrun.h"
+
+/* hash defines */
+/**
+ * Length of FITS filename string.
+ */
+#define MULTRUN_FITS_FILENAME_LENGTH  (256)
 
 /* internal data */
 /**
@@ -58,11 +71,27 @@ static double Multrun_Rotator_Run_Velocity;
  * A copy of the rotator step angle used to configure the rotator.
  */
 static double Multrun_Rotator_Step_Angle;
+/**
+ * A copy of the filter position taken at the start of the multrun, used for filling in FITS headers.
+ */
+static int Multrun_Filter_Position;
+/**
+ * A copy of the filter name taken at the start of the multrun, used for filling in FITS headers.
+ */
+static char Multrun_Filter_Name[32];
+/**
+ * A copy of the current CCD temperature, taken at the start of a multrun. Used to populate FITS headers.
+ */
+static double Multrun_CCD_Temperature;
+/**
+ * A copy of the current CCD temperature status, taken at the start of a multrun. Used to populate FITS headers.
+ */
+static char Multrun_CCD_Temperature_Status_String[64];
 
 /* internal functions */
-static int Multrun_Acquire_Images(int frame_count,char ***filename_list,int *filename_count);
-static int Multrun_Get_Fits_Filename(char *filename);
-static int Multrun_Write_Fits_Image(unsigned char *image_buffer,int image_buffer_length,char *filename);
+static int Multrun_Acquire_Images(int frame_count,int do_standard,char ***filename_list,int *filename_count);
+static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *filename,int filename_length);
+static int Multrun_Write_Fits_Image(int do_standard,struct timespec exposure_start_time,unsigned char *image_buffer,int image_buffer_length,char *filename);
 
 /* ----------------------------------------------------------------------------
 ** 		external functions 
@@ -73,16 +102,31 @@ static int Multrun_Write_Fits_Image(unsigned char *image_buffer,int image_buffer
  * <li>Check the rotator is in the correct start position using PIROT_Setup_Is_Rotator_At_Start_Position, 
  *     if the rotator is enabled.
  * <li>Increment the FITS filename multrun number and return it.
- * <li>
+ * <li>Increment the FITS filename run number.
+ * <li>We get the current filter wheel position using Filter_Wheel_Command_Get_Position.
+ * <li>We get the current filter name using Filter_Wheel_Config_Position_To_Name.
+ * <li>We get and cache the current CCD temperature using CCD_Temperature_Get to store the temperature in 
+ *     Multrun_CCD_Temperature.
+ * <li>We get and cache the current CCD temperature status string using CCD_Temperature_Get_Temperature_Status_String 
+ *     to store the temperature in Multrun_CCD_Temperature_Status_String.
  * </ul>
+ * @see #Multrun_Filter_Position
+ * @see #Multrun_Filter_Name
+ * @see #Multrun_CCD_Temperature
+ * @see #Multrun_CCD_Temperature_Status_String
  * @see moptop_general.html#Moptop_General_Log
  * @see moptop_general.html#Moptop_General_Log_Format
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_config.html#Moptop_Config_Rotator_Is_Enabled
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Next_Multrun
-C * @see ../ccd/cdocs/ccd_fits_filename.html#CD_Fits_Filename_Multrun_Get
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Multrun_Get
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Next_Run
+ * @see ../ccd/cdocs/ccd_temperature.html#CCD_Temperature_Get
+ * @see ../ccd/cdocs/ccd_temperature.html#CCD_Temperature_Get_Temperature_Status_String
  * @see ../pirot/cdocs/pirot_setup.html#PIROT_Setup_Is_Rotator_At_Start_Position
+ * @see ../filter_wheel/cdocs/filter_wheel_command.html#Filter_Wheel_Command_Get_Position
+ * @see ../filter_wheel/cdocs/filter_wheel_config.html#Filter_Wheel_Config_Position_To_Name
  */
 int Moptop_Multrun_Setup(int *multrun_number)
 {
@@ -105,6 +149,35 @@ int Moptop_Multrun_Setup(int *multrun_number)
 	/* increment the multrun number */
 	CCD_Fits_Filename_Next_Multrun();
 	(*multrun_number) = CCD_Fits_Filename_Multrun_Get();
+	/* increment the run number (effecticly which rotation we are on) to one */
+	CCD_Fits_Filename_Next_Run();
+	/* get and save the current filter wheel settings */
+	if(!Filter_Wheel_Command_Get_Position(&Multrun_Filter_Position))
+	{
+		Moptop_General_Error_Number = 626;
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun_Setup: Failed to get filter wheel position.");
+		return FALSE;		
+	}
+	if(!Filter_Wheel_Config_Position_To_Name(Multrun_Filter_Position,Multrun_Filter_Name))
+	{
+		Moptop_General_Error_Number = 627;
+		sprintf(Moptop_General_Error_String,
+			"Moptop_Multrun_Setup: Failed to get filter wheel name from it's position.");
+		return FALSE;		
+	}
+	/* get current CCD temperature/status and store it for later */
+	if(!CCD_Temperature_Get(&Multrun_CCD_Temperature))
+	{
+		Moptop_General_Error_Number = 628;
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun_Setup: Failed to get CCD temperature.");
+		return FALSE;		
+	}
+	if(!CCD_Temperature_Get_Temperature_Status_String(Multrun_CCD_Temperature_Status_String,64))
+	{
+		Moptop_General_Error_Number = 629;
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun_Setup: Failed to get CCD temperature status string.");
+		return FALSE;		
+	}
 	return TRUE;
 }
 
@@ -130,10 +203,12 @@ int Moptop_Multrun_Setup(int *multrun_number)
  * <li>If the rotator is enabled (Moptop_Config_Rotator_Is_Enabled):
  *     <ul>
  *     <li>We enable the rotator hardware triggers using PIROT_Command_TRO.
- *     <li>We command the rotator to start moving towards it's end position using PIROT_Command_MOV(rotator_end_position).
+ *     <li>We command the rotator to start moving towards it's end position using 
+ *         PIROT_Command_MOV(rotator_end_position).
  *     </ul>
  * <li>We acquire the image date using  Multrun_Acquire_Images.
  * <li>We disable the camera for acquisition using CCD_Command_Acquisition_Stop.
+ * <li>We flush the camera (and associated queued image buffers) using CCD_Command_Flush.
  * <li>If the rotator is enabled (Moptop_Config_Rotator_Is_Enabled):
  *     <ul>
  *     <li>We disable the rotator hardware triggers using PIROT_Command_TRO.
@@ -145,6 +220,7 @@ int Moptop_Multrun_Setup(int *multrun_number)
  * @param exposure_count The number of exposures to take. In this case, used to determine the number of complete
  *        rotations to use.
  * @param use_exposure_count A boolean, if TRUE use the exposure count.
+ * @param do_standard A boolean, if TRUE this is an observation of a standard, otherwise it is not.
  * @param filename_list The address of a list of filenames of FITS images acquired during this multrun.
  * @param filename_count The address of an integer to store the number of FITS images in filename_list.
  * @return Returns TRUE if the exposure succeeds, returns FALSE if an error occurs or the exposure is aborted.
@@ -161,13 +237,14 @@ int Moptop_Multrun_Setup(int *multrun_number)
  * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Queue_Images
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Start
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Stop
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Flush
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Timestamp_Clock_Reset
  * @see ../pirot/cdocs/pirot_command.html#PIROT_Command_TRO
  * @see ../pirot/cdocs/pirot_command.html#PIROT_Command_MOV
  * @see ../pirot/cdocs/pirot_setup.html#PIROT_SETUP_ROTATOR_TOLERANCE
  */
 int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_count,int use_exposure_count,
-		   char ***filename_list,int *filename_count)
+		   int do_standard,char ***filename_list,int *filename_count)
 {
 	double rotator_run_velocity,trigger_step_angle,rotator_end_position;
 	int retval,rotation_count,frame_count;
@@ -175,9 +252,10 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("multrun","moptop_multrun.c","Moptop_Multrun",LOG_VERBOSITY_TERSE,"MULTRUN",
 				  "(exposure_length_ms = %d,use_exposure_length = %d,exposure_count = %d,"
-				  "use_exposure_count = %d,filename_list = %p,filename_count = %p) started.",
+				  "use_exposure_count = %d,do_standard = %d,filename_list = %p,filename_count = %p)"
+				  " started.",
 				  exposure_length_ms,use_exposure_length,exposure_count,use_exposure_count,
-				  filename_list,filename_count);
+				  do_standard,filename_list,filename_count);
 #endif
 	/* check arguments */
 	if(filename_list == NULL)
@@ -299,10 +377,11 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 		}
 	}/* end if rotator enabled */
 	/* acquire camera images */
-	retval = Multrun_Acquire_Images(frame_count,filename_list,filename_count);
+	retval = Multrun_Acquire_Images(frame_count,do_standard,filename_list,filename_count);
 	if(retval == FALSE)
 	{
 		CCD_Command_Acquisition_Stop();
+		CCD_Command_Flush();
 		if(Moptop_Config_Rotator_Is_Enabled())
 			PIROT_Command_TRO(FALSE);
 		Multrun_In_Progress = FALSE;
@@ -316,6 +395,15 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 			PIROT_Command_TRO(FALSE);
 		Moptop_General_Error_Number = 616;
 		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to stop camera acquisition.");
+		return FALSE;
+	}
+	if(!CCD_Command_Flush())
+	{
+		Multrun_In_Progress = FALSE;
+		if(Moptop_Config_Rotator_Is_Enabled())
+			PIROT_Command_TRO(FALSE);
+		Moptop_General_Error_Number = 624;
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to flush camera.");
 		return FALSE;
 	}
 	/* only configure and move the rotator, this this is the C layer with it enabled */
@@ -344,7 +432,8 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
  * <li>If Multrun_In_Progress is true:
  *     <ul>
  *     <li>Stop camera acquisition using CCD_Command_Acquisition_Stop.
- *     <li>If therotator is enabled (Moptop_Config_Rotator_Is_Enabled), stop the rotator triggering using PIROT_Command_TRO.
+ *     <li>If therotator is enabled (Moptop_Config_Rotator_Is_Enabled), stop the rotator triggering using 
+ *         PIROT_Command_TRO.
  *     </ul>
  * <li>Returns Multrun_In_Progress (i.e. whether there was a multrun in progress to be aborted).
  * </ul>
@@ -378,9 +467,10 @@ int Moptop_Multrun_Abort(void)
 					"Moptop_Multrun_Abort:Failed to stop rotator triggering.");
 				return FALSE;
 			}
-			/* diddly stop the rotator moving */
+			/* diddly stop the rotator moving? */
 		}
 	}/* end if Multrun_In_Progress */
+	/* allow aborted multrun to call CCD_Command_Flush rather than call it here */
 	return Multrun_In_Progress;
 }
 
@@ -446,23 +536,38 @@ double Moptop_Multrun_Rotator_Step_Angle_Get(void)
  * <li>We initialise last_camera_ticks to zero.
  * <li>We loop over the frame_count:
  *     <ul>
- *     <li>
- *     <li>
- *     <li>
- *     <li>
- *     <li>
- *     <li>
- *     <li>
+ *     <li>We take a timestamp and store it in exposure_start_time.
+ *     <li>We compute the theoretical rotator start angle (within a rotation) and store it in rotator_start_angle.
+ *     <li>We compute which rotation we are on and store it in rotator_number.
+ *     <li>We compute the image we are taking within the current rotation and store it in sequence_number.
+ *     <li>We wait for a readout by calling CCD_Command_Wait_Buffer.
+ *     <li>If the rotator is configured (Moptop_Config_Rotator_Is_Enabled) we retrieve the actual final rotator 
+ *         position using PIROT_Command_Query_POS, and use it compute the rotator_difference and the
+ *         rotator_end_angle (the curent position in the current rotation).
+ *     <li>If the rotator is _not_ configured  we compute a theoretical rotator_difference and rotator_end_angle.
+ *     <li>We get the camera image timestamp from the image metadata using CCD_Command_Get_Timestamp_From_Metadata.
+ *     <li>We calculate the camera_clock_difference as the difference in camera ticks between this image and the 
+ *         last one, divided by the previously retrieved camera's internal clock frequency.
+ *     <li>We get an exposure end timestamp and store it in exposure_end_time.
+ *     <li>We call Multrun_Get_Fits_Filename to generate a new FITS filename.
+ *     <li>We call Multrun_Write_Fits_Image to write the image data to the generated FTYS filename.
+ *     <li>We add the generated filename to the filename list using CCD_Fits_Filename_List_Add.
+ *     <li>We increment requested_rotator_angle to the theoretical rotator start angle of the next image.
+ *     <li>We check whether the multrun has been aborted (Moptop_Abort).
  *     </ul>
  * <li>
  * </ul>
  * @param frame_count The number of frames to acquire.
+ * @param do_standard A boolean, if TRUE this is an observation of a standard, otherwise it is not.
  * @param filename_list The address of a list of filenames of FITS images acquired during this multrun.
  * @param filename_count The address of an integer to store the number of FITS images in filename_list.
  * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #MULTRUN_FITS_FILENAME_LENGTH
  * @see #Moptop_Abort
  * @see #Moptop_Multrun_Rotator_Step_Angle_Get
  * @see #Moptop_Multrun_Rotator_Run_Velocity_Get
+ * @see #Multrun_Get_Fits_Filename
+ * @see #Multrun_Write_Fits_Image
  * @see moptop_general.html#Moptop_General_Log
  * @see moptop_general.html#Moptop_General_Log_Format
  * @see moptop_general.html#Moptop_General_Error_Number
@@ -472,23 +577,25 @@ double Moptop_Multrun_Rotator_Step_Angle_Get(void)
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Timestamp_Clock_Frequency
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Timestamp_From_Metadata
  * @see ../ccd/cdocs/ccd_exposure.html#CCD_Exposure_Length_Get
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_List_Add
+ * @see ../pirot/cdocs/pirot_command.html#PIROT_Command_Query_POS
  */
-static int Multrun_Acquire_Images(int frame_count,char ***filename_list,int *filename_count)
+static int Multrun_Acquire_Images(int frame_count,int do_standard,char ***filename_list,int *filename_count)
 {
 	struct timespec exposure_start_time,exposure_end_time;
-	char filename[256];
+	char filename[MULTRUN_FITS_FILENAME_LENGTH];
 	unsigned char *image_buffer = NULL;
 	unsigned int timeout_ms;
 	double requested_rotator_angle = 0.0;
 	double rotator_start_angle,current_rotator_position,rotator_difference,rotator_end_angle;
+	double camera_clock_difference;
 	long long int camera_ticks,last_camera_ticks;
 	int andor_exposure_length_ms;
 	int i,image_buffer_length,images_per_cycle,rotator_number,sequence_number,timestamp_clock_frequency;
-	int camera_clock_difference;
 	
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("multrun","moptop_multrun.c","Multrun_Acquire_Images",LOG_VERBOSITY_INTERMEDIATE,
-				  "MULTRUN","started with frame_count %d.",frame_count);
+				  "MULTRUN","started with frame_count %d, do_standard = %d.",frame_count,do_standard);
 #endif
 	/* check arguments */
 	if(filename_list == NULL)
@@ -568,14 +675,14 @@ static int Multrun_Acquire_Images(int frame_count,char ***filename_list,int *fil
 				"Failed to get timestamp from metadata.");
 			return FALSE;
 		}
-		camera_clock_difference = (int)((camera_ticks-last_camera_ticks))/timestamp_clock_frequency;
+		camera_clock_difference = ((double)(camera_ticks-last_camera_ticks))/(double)timestamp_clock_frequency;
 		last_camera_ticks = camera_ticks;
 		/* get exposure end timestamp */
 		clock_gettime(CLOCK_REALTIME,&exposure_end_time);
 		/* generate a new filename for this FITS image */
-		Multrun_Get_Fits_Filename(filename);
+		Multrun_Get_Fits_Filename(images_per_cycle,do_standard,filename,MULTRUN_FITS_FILENAME_LENGTH);
 		/* write fits image */
-		Multrun_Write_Fits_Image(image_buffer,image_buffer_length,filename);
+		Multrun_Write_Fits_Image(do_standard,exposure_start_time,image_buffer,image_buffer_length,filename);
 		/* add fits image to list */
 		if(!CCD_Fits_Filename_List_Add(filename,filename_list,filename_count))
 		{
@@ -590,21 +697,13 @@ static int Multrun_Acquire_Images(int frame_count,char ***filename_list,int *fil
 		/* check for abort */
 		if(Moptop_Abort)
 		{
-			/* diddly do something here! */
-			
 			Moptop_General_Error_Number = 613;
 			sprintf(Moptop_General_Error_String,"Multrun_Acquire_Images:Multrun Aborted.");
 			return FALSE;
 		}
 	}/* end for on i / frame_count */
-	/* turn off camera acquisition */
-
-	/* turn off camera triggering */
-
 	/* get camera temperature */
 
-	/* flush camera */
-	
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("multrun","moptop_multrun.c","Multrun_Acquire_Images",LOG_VERBOSITY_INTERMEDIATE,
 				  "MULTRUN","finished.");
@@ -612,13 +711,315 @@ static int Multrun_Acquire_Images(int frame_count,char ***filename_list,int *fil
 	return TRUE;
 }
 
-static int Multrun_Get_Fits_Filename(char *filename)
+/**
+ * Generate the next FITS filename to write image data into.
+ * <ul>
+ * <li>Increment the window number by calling CCD_Fits_Filename_Next_Window.
+ * <li>If the current window number (CCD_Fits_Filename_Window_Get) is greater than images_per_cycle, we must
+ *     have started another rotation of the rotator.
+ *     <ul>
+ *     <li>Increment the run number (rotation number) by calling CCD_Fits_Filename_Next_Run. This resets the
+ *         window number to zero.
+ *     <li>Increment the window number back to one using CCD_Fits_Filename_Next_Window.
+ *     </ul>
+ * <li>Generate an unreduced FITS filename by calling CCD_Fits_Filename_Get_Filename.
+ * </ul>
+ * @param images_per_cycle The number of images we generate for a full rotation of the rotator.
+ *        If the incremented window number is greater than this number, we reset the window number to one
+ *        and increment the run number (rotation number).
+ * @param do_standard A boolean, if TRUE this is an observation of a standard, otherwise it is not.
+ * @param filename A previously allocated string to write the generated FITS image filename into.
+ * @param filename_length The length of the filename buffer to store a filename in characters.
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see moptop_general.html#Moptop_General_Log_Format
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_FITS_FILENAME_PIPELINE_FLAG_UNREDUCED
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Next_Window
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Next_Run
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Get_Filename
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Window_Get
+ */
+static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *filename,int filename_length)
 {
+	enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type;
+
+	/* increment the window number */
+	CCD_Fits_Filename_Next_Window();
+	/* if the window number is greater than the number of images we generate for a full rotation of the rotator,
+	** we reset the window number to one and increment the run number (rotation number).*/
+	if(CCD_Fits_Filename_Window_Get() > images_per_cycle)
+	{
+		CCD_Fits_Filename_Next_Run();
+		CCD_Fits_Filename_Next_Window();
+	}
+	if(do_standard)
+		exposure_type = CCD_FITS_FILENAME_EXPOSURE_TYPE_STANDARD;
+	else
+		exposure_type = CCD_FITS_FILENAME_EXPOSURE_TYPE_EXPOSURE;
+	if(!CCD_Fits_Filename_Get_Filename(exposure_type,CCD_FITS_FILENAME_PIPELINE_FLAG_UNREDUCED,
+					   filename,filename_length))
+	{
+		Moptop_General_Error_Number = 625;
+		sprintf(Moptop_General_Error_String,"Multrun_Get_Fits_Filename:Getting filename failed.");
+		return FALSE;		
+	}
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("multrun","moptop_multrun.c","Multrun_Get_Fits_Filename",LOG_VERBOSITY_INTERMEDIATE,
+				  "MULTRUN","New filename generated: '%s'.",filename);
+#endif
 	return TRUE;
 }
 
-static int Multrun_Write_Fits_Image(unsigned char *image_buffer,int image_buffer_length,char *filename)
+/**
+ * Write the FITS image to disk.
+ * <ul>
+ * <li>We set the "OBSTYPE" based on the value of do_standard.
+ * <li>We set the "FILTER1" FITS keyword based on the cached filter name in Multrun_Filter_Name.
+ * <li>We set the "DATE"/"DATE-OBS"/"UTSTART" and "MJD" keywords based on the value of exposure_start_time.
+ * <li>We set the "CCDXBIN"/"CCDYBIN" FITS keyword values based on CCD_Setup_Get_Binning. 
+ * <li>We set the "CCDATEMP" FITS keyword value based on the cached CCD temperature stored in Multrun_CCD_Temperature.
+ * <li>We set the "TEMPSTAT" FITS keyword value based on the cached CCD temperature status stored in
+ *     Multrun_CCD_Temperature_Status_String.
+ * <li>We create a file lock on the filename to write to using CCD_Fits_Filename_Lock.
+ * <li>We create the FITS filename using fits_create_file.
+ * <li>We calculate the binned image dimensions using CCD_Setup_Get_Sensor_Width / CCD_Setup_Get_Sensor_Height / 
+ *     CCD_Setup_Get_Binning.
+ * <li>We create an empty image of the correct dimensions using fits_create_img.
+ * <li>We write the FITS headers to the FITS image using CCD_Fits_Header_Write_To_Fits.
+ * <li>We check the computed binned image size is not larger than the image_buffer_length.
+ * <li>We write the image data to the FITS image using fits_write_img.
+ * <li>If the binning value is not 1, we retrieve the current CCDSCALE value, scale it by the binning, and update the FITS
+ *     keyword value.
+ * <li>We close the FITS image using fits_close_file.
+ * <li>We remove the file lock on the FITS image using CCD_Fits_Filename_UnLock.
+ * </ul>
+ * @param do_standard A boolean, if TRUE this is an observation of a standard, otherwise it is not.
+ * @param exposure_start_time A timestamp representing the start time of the exposure being saved.
+ * @param image_buffer The image buffer containing the data to write to disk.
+ * @param image_buffer_length The length of data in the image buffer (note this includes metadata).
+ * @param filename A string containing the FITS filename to write the data into.
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see #Multrun_Filter_Name
+ * @see #Multrun_CCD_Temperature
+ * @see #Multrun_CCD_Temperature_Status_String
+ * @see moptop_fits_header.html#Moptop_Fits_Header_String_Add
+ * @see moptop_fits_header.html#Moptop_Fits_Header_Float_Add
+ * @see moptop_fits_header.html#Moptop_Fits_Header_TimeSpec_To_Date_String
+ * @see moptop_fits_header.html#Moptop_Fits_Header_TimeSpec_To_Date_Obs_String
+ * @see moptop_fits_header.html#Moptop_Fits_Header_TimeSpec_To_UtStart_String
+ * @see moptop_fits_header.html#Moptop_Fits_Header_TimeSpec_To_Mjd
+ * @see moptop_general.html#Moptop_General_Log
+ * @see moptop_general.html#Moptop_General_Log_Format
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Lock
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_UnLock
+ * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Sensor_Width
+ * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Sensor_Height
+ * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Binning
+ */
+static int Multrun_Write_Fits_Image(int do_standard,struct timespec exposure_start_time,unsigned char *image_buffer,
+				    int image_buffer_length,char *filename)
 {
+	fitsfile *fp = NULL;
+	char exposure_start_time_string[64];
+	double mjd,ccdscale;
+	long axes[2];
+	int retval=0,status=0;
+	int ncols_unbinned,nrows_unbinned,binning,ncols_binned,nrows_binned,ivalue;
+	char buff[32]; /* fits_get_errstatus returns 30 chars max */
 	
+#if MOPTOP_DEBUG > 5
+	Moptop_General_Log_Format("multrun","moptop_multrun.c","Multrun_Write_Fits_Image",LOG_VERBOSITY_INTERMEDIATE,
+				  "MULTRUN","Started saving FITS filename '%s'.",filename);
+#endif
+	/* sort out some FITS headers for later */
+	/* OBSTYPE */
+	if(do_standard)
+		retval = Moptop_Fits_Header_String_Add("OBSTYPE","STANDARD",NULL);
+	else
+		retval = Moptop_Fits_Header_String_Add("OBSTYPE","EXPOSE",NULL);
+	if(retval == FALSE)
+		return FALSE;
+	/* FILTER1 */
+	if(!Moptop_Fits_Header_String_Add("FILTER1",Multrun_Filter_Name,NULL))
+		return FALSE;
+	/* FILTERI1 */
+	/* diddly
+	if(!Moptop_Fits_Header_String_Add("FILTERI1",diddly,NULL))
+		return FALSE;
+	*/
+	/* update DATE keyword from exposure_start_time */
+	Moptop_Fits_Header_TimeSpec_To_Date_String(exposure_start_time,exposure_start_time_string);
+	if(!Moptop_Fits_Header_String_Add("DATE",exposure_start_time_string,NULL))
+		return FALSE;
+	/* update DATE-OBS keyword from exposure_start_time */
+	Moptop_Fits_Header_TimeSpec_To_Date_Obs_String(exposure_start_time,exposure_start_time_string);
+	if(!Moptop_Fits_Header_String_Add("DATE-OBS",exposure_start_time_string,NULL))
+		return FALSE;
+	/* update UTSTART keyword from exposure_start_time */
+	Moptop_Fits_Header_TimeSpec_To_UtStart_String(exposure_start_time,exposure_start_time_string);
+	if(!Moptop_Fits_Header_String_Add("UTSTART",exposure_start_time_string,NULL))
+		return FALSE;
+	/* update MJD keyword from exposure_start_time */
+	/* note leap second correction not implemented yet (always FALSE). */
+	if(!Moptop_Fits_Header_TimeSpec_To_Mjd(exposure_start_time,FALSE,&mjd))
+		return FALSE;
+	if(!Moptop_Fits_Header_Float_Add("MJD",mjd,NULL))
+		return FALSE;	
+	/* ccdxbin */
+	ivalue = CCD_Setup_Get_Binning();
+	if(!Moptop_Fits_Header_Integer_Add("CCDXBIN",ivalue,NULL))
+		return FALSE;
+	/* ccdybin */
+	ivalue = CCD_Setup_Get_Binning();
+	if(!Moptop_Fits_Header_Integer_Add("CCDYBIN",ivalue,NULL))
+		return FALSE;
+	/* update actual ccd temperature with value stored at start of multrun */
+	if(!Moptop_Fits_Header_Float_Add("CCDATEMP",Multrun_CCD_Temperature,NULL))
+		return FALSE;
+	/* update ccd temperature status string with value stored at start of multrun */
+	if(!Moptop_Fits_Header_String_Add("TEMPSTAT",Multrun_CCD_Temperature_Status_String,NULL))
+		return FALSE;
+	/* create lock file */
+#if MOPTOP_DEBUG > 5
+	Moptop_General_Log_Format("multrun","moptop_multrun.c","Multrun_Write_Fits_Image",LOG_VERBOSITY_INTERMEDIATE,
+				  "MULTRUN","Locking FITS filename %s.",filename);
+#endif
+	if(!CCD_Fits_Filename_Lock(filename))
+	{
+		Moptop_General_Error_Number = 630;
+		sprintf(Moptop_General_Error_String,"Multrun_Write_Fits_Image:Failed to lock '%s'.",filename);
+		return FALSE;				
+	}
+#if MOPTOP_DEBUG > 5
+	Moptop_General_Log_Format("multrun","moptop_multrun.c","Multrun_Write_Fits_Image",LOG_VERBOSITY_INTERMEDIATE,
+				  "MULTRUN","Saving to filename %s.",filename);
+#endif
+	/* create FITS file */
+	retval = fits_create_file(&fp,filename,&status);
+	if(retval)
+	{
+		fits_get_errstatus(status,buff);
+		fits_report_error(stderr,status);
+		CCD_Fits_Filename_UnLock(filename);
+		Moptop_General_Error_Number = 631;
+		sprintf(Moptop_General_Error_String,"Multrun_Write_Fits_Image:File create failed(%s,%d,%s).",
+			filename,status,buff);
+		return FALSE;
+	}
+	/* basic dimensions */
+	ncols_unbinned = CCD_Setup_Get_Sensor_Width();
+	nrows_unbinned = CCD_Setup_Get_Sensor_Height();
+	binning = CCD_Setup_Get_Binning();
+	ncols_binned = ncols_unbinned/binning;
+	nrows_binned = nrows_unbinned/binning;
+	axes[0] = ncols_binned;
+	axes[1] = nrows_binned;
+	retval = fits_create_img(fp,USHORT_IMG,2,axes,&status);
+	if(retval)
+	{
+		fits_get_errstatus(status,buff);
+		fits_report_error(stderr,status);
+		fits_close_file(fp,&status);
+		CCD_Fits_Filename_UnLock(filename);
+		Moptop_General_Error_Number = 632;
+		sprintf(Moptop_General_Error_String,"Multrun_Write_Fits_Image:create image failed(%s,%d,%s).",
+			filename,status,buff);
+		return FALSE;
+	}
+	/* save FITS headers to filename */
+	if(!CCD_Fits_Header_Write_To_Fits(fp))
+	{
+		fits_close_file(fp,&status);
+		CCD_Fits_Filename_UnLock(filename);
+		Moptop_General_Error_Number = 633;
+		sprintf(Moptop_General_Error_String,"Multrun_Write_Fits_Image:CCD_Fits_Header_Write_To_Fits failed.");
+		return FALSE;
+	}
+	/* save data to filename */
+	if((ncols_binned*nrows_binned) > image_buffer_length)
+	{
+		fits_close_file(fp,&status);
+		CCD_Fits_Filename_UnLock(filename);
+		Moptop_General_Error_Number = 634;
+		sprintf(Moptop_General_Error_String,"Multrun_Write_Fits_Image:FITS image dimension mismatch:"
+			"filename '%s', binned ncols = %d, binned_nrows = %d, image buffer length = %d.",
+			filename,ncols_binned,nrows_binned,image_buffer_length);
+		return FALSE;
+	}
+	/* write the data */
+	retval = fits_write_img(fp,TUSHORT,1,ncols_binned*nrows_binned,image_buffer,&status);
+	if(retval)
+	{
+		fits_get_errstatus(status,buff);
+		fits_report_error(stderr,status);
+		fits_close_file(fp,&status);
+		CCD_Fits_Filename_UnLock(filename);
+		Moptop_General_Error_Number = 635;
+		sprintf(Moptop_General_Error_String,"Multrun_Write_Fits_Image:File write failed(%s,%d,%s).",
+			filename,status,buff);
+		return FALSE;
+	}
+	/* CCDSCALE */
+	/* bin1 value configured in Java layer and passed into fits header list.
+	** Should have been written to file in CCD_Fits_Header_Write_To_Fits.
+	** So retrieve bin1 value using CFITSIO, mod by binning and update value */
+	if(binning != 1)
+	{
+		retval = fits_read_key(fp,TDOUBLE,"CCDSCALE",&ccdscale,NULL,&status);
+		if(retval)
+		{
+			fits_get_errstatus(status,buff);
+			fits_report_error(stderr,status);
+			fits_close_file(fp,&status);
+			CCD_Fits_Filename_UnLock(filename);
+			Moptop_General_Error_Number = 636;
+			sprintf(Moptop_General_Error_String,
+				"Multrun_Write_Fits_Image: Retrieving ccdscale failed(%s,%d,%s).",
+				filename,status,buff);
+			return FALSE;
+		}
+		/* adjust for binning */
+		ccdscale *= binning; /* assume xbin and ybin are equal */
+		/* write adjusted value back */
+		retval = fits_update_key_fixdbl(fp,"CCDSCALE",ccdscale,6,NULL,&status);
+		if(retval)
+		{
+			fits_get_errstatus(status,buff);
+			fits_report_error(stderr,status);
+			fits_close_file(fp,&status);
+			CCD_Fits_Filename_UnLock(filename);
+			Moptop_General_Error_Number = 637;
+			sprintf(Moptop_General_Error_String,
+				"Multrun_Write_Fits_Image: Updating ccdscale failed(%.2f,%s,%d,%s).",
+				ccdscale,filename,status,buff);
+			return FALSE;
+		}
+	}/* end if binning != 1 */
+/* close file */
+	retval = fits_close_file(fp,&status);
+	if(retval)
+	{
+		fits_get_errstatus(status,buff);
+		fits_report_error(stderr,status);
+		CCD_Fits_Filename_UnLock(filename);
+		Moptop_General_Error_Number = 638;
+		sprintf(Moptop_General_Error_String,
+			"Multrun_Write_Fits_Image: File close failed(%s,%d,%s).",filename,status,buff);
+		return FALSE;
+	}
+	/* unlock FITS filename lock */
+	if(!CCD_Fits_Filename_UnLock(filename))
+	{
+		Moptop_General_Error_Number = 639;
+		sprintf(Moptop_General_Error_String,"Multi_Exposure_Save:Failed to unlock '%s'.",filename);
+		return FALSE;
+	}
+#if LOGGING > 0
+	CCD_Global_Log("ccd","ccd_multi_exposure.c","Multi_Exposure_Save",LOG_VERBOSITY_INTERMEDIATE,"Multi_Exposure",
+		       "Finished.");
+#endif
 	return TRUE;
 }
