@@ -84,6 +84,7 @@ extern void Moptop_General_Error_To_String(char *sub_system,char *source_filenam
 					       char *category,char *error_string);
 
 /* routine used by other modules error code */
+extern void Moptop_General_Get_Time_String(struct timespec timestamp,char *time_string,int string_length);
 extern void Moptop_General_Get_Current_Time_String(char *time_string,int string_length);
 
 /* logging routines */

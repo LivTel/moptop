@@ -893,8 +893,8 @@ int Moptop_Command_Multrun_Setup(char *command_string,char **reply_string)
  * <li>status temperature [get|status]
  * <li>status filterwheel [filter|position|status]
  * <li>status rotator [position|status]
- * <li>status exposure [status|count|length|start_time|trigger_mode|elapsed_time]
- * <li>status exposure [accumulation|series|index|multrun|run|window]
+ * <li>status exposure [status|count|length|start_time]
+ * <li>status exposure [index|multrun|run|window]
  * <li>status [name|identification|fits_instrument_code]
  * </ul>
  * <ul>
@@ -909,12 +909,20 @@ int Moptop_Command_Multrun_Setup(char *command_string,char **reply_string)
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_general.html#Moptop_General_Add_String
+ * @see moptop_general.html#Moptop_General_Get_Time_String
+ * @see moptop_multrun.html#Moptop_Multrun_In_Progress
+ * @see moptop_multrun.html#Moptop_Multrun_Count_Get
+ * @see moptop_multrun.html#Moptop_Multrun_Per_Frame_Exposure_Length_Get
+ * @see moptop_multrun.html#Moptop_Multrun_Exposure_Start_Time_Get
+ * @see moptop_multrun.html#Moptop_Multrun_Exposure_Index_Get
+ * @see moptop_multrun.html#Moptop_Multrun_Multrun_Get
+ * @see moptop_multrun.html#Moptop_Multrun_Run_Get
+ * @see moptop_multrun.html#Moptop_Multrun_Window_Get
  * @see ../ccd/cdocs/ccd_exposure.html#CCD_Exposure_Status_To_String
  * @see ../ccd/cdocs/ccd_exposure.html#CCD_EXPOSURE_TRIGGER_MODE
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Multrun_Get
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Run_Get
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Window_Get
- * @see ../ccd/cdocs/ccd_general.html#CCD_General_Get_Time_String
  * @see ../ccd/cdocs/ccd_temperature.html#CCD_Temperature_Get
  * @see ../ccd/cdocs/ccd_temperature.html#CCD_Temperature_Get_Temperature_Status_String
  * @see ../filter_wheel/cdocs/filter_wheel_command.html#Filter_Wheel_Command_Get_Position
@@ -923,9 +931,6 @@ int Moptop_Command_Multrun_Setup(char *command_string,char **reply_string)
 int Moptop_Command_Status(char *command_string,char **reply_string)
 {
 	struct timespec status_time;
-#ifndef _POSIX_TIMERS
-	struct timeval gtod_status_time;
-#endif
 	char time_string[32];
 	char return_string[128];
 	char subsystem_string[32];
@@ -960,124 +965,46 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 	/* parse subsystem */
 	if(strncmp(subsystem_string,"exposure",8) == 0)
 	{
-		/*
+
 		if(strncmp(command_string+command_string_index,"status",6)==0)
 		{
-			exposure_status = CCD_Multi_Exposure_Status_Get();
-			strcat(return_string,CCD_Exposure_Status_To_String(exposure_status));
+			ivalue = Moptop_Multrun_In_Progress();
+			sprintf(return_string+strlen(return_string),"%d",ivalue);
 		}
 		else if(strncmp(command_string+command_string_index,"count",5)==0)
 		{
-			ivalue = CCD_Multi_Exposure_Count_Get();
+			ivalue = Moptop_Multrun_Count_Get();
 			sprintf(return_string+strlen(return_string),"%d",ivalue);
-		}
-		else if(strncmp(command_string+command_string_index,"trigger_mode",12)==0)
-		{
-			trigger_mode = CCD_Multi_Exposure_Trigger_Mode_Get();
-			if(trigger_mode == CCD_EXPOSURE_TRIGGER_MODE_EXTERNAL)
-				strcat(return_string,"EXTERNAL");
-			else if(trigger_mode == CCD_EXPOSURE_TRIGGER_MODE_INTERNAL)
-				strcat(return_string,"INTERNAL");
-			else
-				strcat(return_string,"UNKNOWN");
 		}
 		else if(strncmp(command_string+command_string_index,"length",6)==0)
 		{
-			ivalue = CCD_Multi_Exposure_Exposure_Length_Get();
+			ivalue = Moptop_Multrun_Per_Frame_Exposure_Length_Get();
 			sprintf(return_string+strlen(return_string),"%d",ivalue);
 		}
 		else if(strncmp(command_string+command_string_index,"start_time",10)==0)
 		{
-			status_time = CCD_Multi_Exposure_Start_Time_Get();
-			CCD_Global_Get_Time_String(status_time,time_string,31);
+			Moptop_Multrun_Exposure_Start_Time_Get(&status_time);
+			Moptop_General_Get_Time_String(status_time,time_string,31);
 			sprintf(return_string+strlen(return_string),"%s",time_string);
-		}
-		else if(strncmp(command_string+command_string_index,"elapsed_time",12)==0)
-		{
-			ivalue = CCD_Multi_Exposure_Elapsed_Exposure_Time_Get();
-			sprintf(return_string+strlen(return_string),"%d",ivalue);
-		}
-		*/
-		/* these ones have a camera_index parameter */
-		/* the camera_index is the ANDOR camera index not an index into a list of cameras controlled
-		** by this C layer. See the Java GET_STATUS command for details. */
-		/*
-		else if(strncmp(command_string+command_string_index,"accumulation",12)==0)
-		{
-			retval = sscanf(command_string,"status exposure accumulation %d",&camera_index);
-			if(retval != 1)
-			{
-				if(!Moptop_General_Add_String(reply_string,
-				    "1 Failed to parse status exposure accumulation camera index."))
-					return FALSE;
-				return TRUE;
-			}
-			ivalue = CCD_Multi_Exposure_Accumulation_Get(camera_index);
-			sprintf(return_string+strlen(return_string),"%d",ivalue);
-		}
-		else if(strncmp(command_string+command_string_index,"series",6)==0)
-		{
-			retval = sscanf(command_string,"status exposure series %d",&camera_index);
-			if(retval != 1)
-			{
-				if(!Moptop_General_Add_String(reply_string,
-				    "1 Failed to parse status exposure series camera index."))
-					return FALSE;
-				return TRUE;
-			}
-			ivalue = CCD_Multi_Exposure_Series_Get(camera_index);
-			sprintf(return_string+strlen(return_string),"%d",ivalue);
 		}
 		else if(strncmp(command_string+command_string_index,"index",5)==0)
 		{
-			retval = sscanf(command_string,"status exposure index %d",&camera_index);
-			if(retval != 1)
-			{
-				if(!Moptop_General_Add_String(reply_string,
-				    "1 Failed to parse status exposure index camera index."))
-					return FALSE;
-				return TRUE;
-			}
-			ivalue = CCD_Multi_Exposure_Index_Get(camera_index);
+			ivalue = Moptop_Multrun_Exposure_Index_Get();
 			sprintf(return_string+strlen(return_string),"%d",ivalue);
 		}
 		else if(strncmp(command_string+command_string_index,"multrun",7)==0)
 		{
-			retval = sscanf(command_string,"status exposure multrun %d",&camera_index);
-			if(retval != 1)
-			{
-				if(!Moptop_General_Add_String(reply_string,
-				    "1 Failed to parse status exposure multrun camera index."))
-					return FALSE;
-				return TRUE;
-			}
-			ivalue = CCD_Fits_Filename_Multrun_Get(camera_index);
+			ivalue = Moptop_Multrun_Multrun_Get();
 			sprintf(return_string+strlen(return_string),"%d",ivalue);
 		}
 		else if(strncmp(command_string+command_string_index,"run",3)==0)
 		{
-			retval = sscanf(command_string,"status exposure run %d",&camera_index);
-			if(retval != 1)
-			{
-				if(!Moptop_General_Add_String(reply_string,
-				    "1 Failed to parse status exposure run camera index."))
-					return FALSE;
-				return TRUE;
-			}
-			ivalue = CCD_Fits_Filename_Run_Get(camera_index);
+			ivalue = Moptop_Multrun_Run_Get();
 			sprintf(return_string+strlen(return_string),"%d",ivalue);
 		}
 		else if(strncmp(command_string+command_string_index,"window",6)==0)
 		{
-			retval = sscanf(command_string,"status exposure window %d",&camera_index);
-			if(retval != 1)
-			{
-				if(!Moptop_General_Add_String(reply_string,
-				    "1 Failed to parse status exposure window camera index."))
-					return FALSE;
-				return TRUE;
-			}
-			ivalue = CCD_Fits_Filename_Window_Get(camera_index);
+			ivalue = Moptop_Multrun_Window_Get();
 			sprintf(return_string+strlen(return_string),"%d",ivalue);
 		}
 		else
@@ -1096,7 +1023,6 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 				return FALSE;
 			return TRUE;
 		}
-		*/
 	}
 	else if(strncmp(subsystem_string,"filterwheel",11) == 0)
 	{
@@ -1354,7 +1280,6 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 				return TRUE;
 			}
 			CCD_General_Get_Current_Time_String(time_string,31);
-			/*CCD_General_Get_Time_String(status_time,time_string,31);*/
 			sprintf(return_string+strlen(return_string),"%s %.2f",time_string,temperature);
 		}
 		else if(strncmp(get_set_string,"status",6)==0)
@@ -1375,7 +1300,6 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 				return TRUE;
 			}
 			CCD_General_Get_Current_Time_String(time_string,31);
-			/*CCD_General_Get_Time_String(status_time,time_string,31);*/
 			sprintf(return_string+strlen(return_string),"%s %s",time_string,temperature_status_string);
 		}
 		else

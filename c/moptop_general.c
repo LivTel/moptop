@@ -293,7 +293,7 @@ void Moptop_General_Error_To_String(char *sub_system,char *source_filename,char 
 
 /**
  * Routine to get the current time in a string. The string is returned in the format
- * '01/01/2000 13:59:59', or the string "Unknown time" if the routine failed.
+ * '2020-04-15T13:59:59.123 UTC', or the string "Unknown time" if the routine failed.
  * The time is in UTC.
  * We now use gmtime_r, as there is a possibility of some status commands calling gmtime whilst
  * FITS headers are being formatted with gmtime, which can cause corrupted FITS headers (Fault #2096).
@@ -312,6 +312,37 @@ void Moptop_General_Get_Current_Time_String(char *time_string,int string_length)
 	gmtime_r(&(current_time.tv_sec),&utc_time);
 	strftime(time_string,string_length,"%Y-%m-%dT%H:%M:%S",&utc_time);
 	sprintf(millsecond_string,"%03ld",(current_time.tv_nsec/MOPTOP_GENERAL_ONE_MILLISECOND_NS));
+	strftime(timezone_string,16,"%z",&utc_time);
+	if((strlen(time_string)+strlen(millsecond_string)+strlen(timezone_string)+3) < string_length)
+	{
+		strcat(time_string,".");
+		strcat(time_string,millsecond_string);
+		strcat(time_string," ");
+		strcat(time_string,timezone_string);
+	}
+}
+
+/**
+ * Routine to get the specified time in a string. The string is returned in the format
+ * '2020-04-15T13:59:59.123 UTC', or the string "Unknown time" if the routine failed.
+ * The time is in UTC.
+ * We now use gmtime_r, as there is a possibility of some status commands calling gmtime whilst
+ * FITS headers are being formatted with gmtime, which can cause corrupted FITS headers (Fault #2096).
+ * @param timestamp A timespec structure containing the timestamp to convert into a string.
+ * @param time_string The string to fill with the current time.
+ * @param string_length The length of the buffer passed in. It is recommended the length is at least 20 characters.
+ * @see #MOPTOP_GENERAL_ONE_MILLISECOND_NS
+ */
+void Moptop_General_Get_Time_String(struct timespec timestamp,char *time_string,int string_length)
+{
+	char timezone_string[16];
+	char millsecond_string[8];
+	struct timespec current_time;
+	struct tm utc_time;
+
+	gmtime_r(&(timestamp.tv_sec),&utc_time);
+	strftime(time_string,string_length,"%Y-%m-%dT%H:%M:%S",&utc_time);
+	sprintf(millsecond_string,"%03ld",(timestamp.tv_nsec/MOPTOP_GENERAL_ONE_MILLISECOND_NS));
 	strftime(timezone_string,16,"%z",&utc_time);
 	if((strlen(time_string)+strlen(millsecond_string)+strlen(timezone_string)+3) < string_length)
 	{
