@@ -11,6 +11,7 @@ extern int CCD_Fits_Header_Clear(void);
 extern int CCD_Fits_Header_Delete(char *keyword);
 extern int CCD_Fits_Header_Add_String(char *keyword,char *value,char *comment);
 extern int CCD_Fits_Header_Add_Int(char *keyword,int value,char *comment);
+extern int CCD_Fits_Header_Add_Long_Long_Int(char *keyword,long long int value,char *comment);
 extern int CCD_Fits_Header_Add_Float(char *keyword,double value,char *comment);
 extern int CCD_Fits_Header_Add_Logical(char *keyword,int value,char *comment);
 extern int CCD_Fits_Header_Free(void);

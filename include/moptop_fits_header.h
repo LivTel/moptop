@@ -10,6 +10,7 @@
 extern int Moptop_Fits_Header_Initialise(void);
 extern int Moptop_Fits_Header_String_Add(char *keyword,char *value, char *comment);
 extern int Moptop_Fits_Header_Integer_Add(char *keyword,int value, char *comment);
+extern int Moptop_Fits_Header_Long_Long_Integer_Add(char *keyword,long long int value, char *comment);
 extern int Moptop_Fits_Header_Float_Add(char *keyword,double value, char *comment);
 extern int Moptop_Fits_Header_Logical_Add(char *keyword,int value, char *comment);
 extern int Moptop_Fits_Header_Delete(char *keyword);

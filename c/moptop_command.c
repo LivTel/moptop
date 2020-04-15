@@ -133,6 +133,7 @@ int Moptop_Command_Abort(char *command_string,char **reply_string)
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_general.html#Moptop_General_Add_String
  * @see moptop_general.html#Moptop_General_Add_Integer_To_String
+ * @see moptop_multrun.html#Moptop_Multrun_Exposure_Length_Set
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Run_Velocity_Set
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Step_Angle_Set
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Run_Velocity_Get
@@ -386,12 +387,8 @@ int Moptop_Command_Config(char *command_string,char **reply_string)
 			}
 		} /* end if Moptop_Config_Rotator_Is_Enabled */
 		/* set CCD exposure length to match */
-		if(!CCD_Exposure_Length_Set(camera_exposure_length))
+		if(!Moptop_Multrun_Exposure_Length_Set(camera_exposure_length))
 		{
-			Moptop_General_Error_Number = 538;
-			sprintf(Moptop_General_Error_String,
-				"Moptop_Command_Config:Failed to set exposure length to %.2f s.",
-				camera_exposure_length);
 			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",LOG_VERBOSITY_TERSE,
 					     "COMMAND");
 #if MOPTOP_DEBUG > 1

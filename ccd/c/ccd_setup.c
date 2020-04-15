@@ -74,7 +74,7 @@
  *                       CCD_Setup_Startup.</dd>
  * <dt>Sensor_Height</dt> <dd>An integer storing the sensor height in pixels retrieved from the camera during 
  *                       CCD_Setup_Startup.</dd>
- * <dt>Timestamp_Clock_Frequency</dt> <dd>An integer storing the timestamp clock frequency in Hertz 
+ * <dt>Timestamp_Clock_Frequency</dt> <dd>A long long integer storing the timestamp clock frequency in Hertz 
  *                                    retrieved from the camera during CCD_Setup_Startup.</dd>
  * <dt>Image_Size_Bytes</dt> <dd>An integer storing the image size in bytes.</dd>
  * </dl>
@@ -96,7 +96,7 @@ struct Setup_Struct
 	double Pixel_Height;
 	int Sensor_Width;
 	int Sensor_Height;
-	int Timestamp_Clock_Frequency;
+	long long int Timestamp_Clock_Frequency;
 	int Image_Size_Bytes;
 };
 
@@ -122,7 +122,7 @@ static char rcsid[] = "$Id$";
  * <dt>Pixel_Height</dt> <dd>0.0</dd>
  * <dt>Sensor_Width</dt> <dd>0</dd>
  * <dt>Sensor_Height</dt> <dd>0</dd>
- * <dt>Timestamp_Clock_Frequency</dt> <dd>0</dd>
+ * <dt>Timestamp_Clock_Frequency</dt> <dd>0L</dd>
  * <dt>Image_Size_Bytes</dt> <dd>0</dd>
  * </dl>
  * @see ccd_command.html#CCD_COMMAND_SENSOR_READOUT_MODE_OUTSIDE_IN_SIMULTANEOUS
@@ -136,7 +136,7 @@ static struct Setup_Struct Setup_Data =
 	CCD_COMMAND_AMP_GAIN_16BIT_LOW,
 	CCD_COMMAND_PIXEL_ENCODING_16_BIT,
 	CCD_COMMAND_PIXEL_READOUT_RATE_100_MHZ,
-	1,-1,"","",-1,-1,0.0,0.0,0,0,0,0
+	1,-1,"","",-1,-1,0.0,0.0,0,0,0L,0
 };
 
 /**
@@ -703,7 +703,7 @@ int CCD_Setup_Get_Sensor_Height(void)
  * @return The timestamp clock frequency in Hertz.
  * @see #Setup_Data
  */
-int CCD_Setup_Get_Timestamp_Clock_Frequency(void)
+long long int CCD_Setup_Get_Timestamp_Clock_Frequency(void)
 {
 	return Setup_Data.Timestamp_Clock_Frequency;
 }

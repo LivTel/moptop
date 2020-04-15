@@ -45,7 +45,7 @@
 /**
  * The number of nanoseconds in one second. A struct timespec has fields in nanoseconds.
  */
-#define MOPTOP_GENERAL_ONE_SECOND_NS	(1000000000)
+#define MOPTOP_GENERAL_ONE_SECOND_NS	        (1000000000)
 /**
  * The number of nanoseconds in one millisecond. A struct timespec has fields in nanoseconds.
  */
@@ -53,11 +53,15 @@
 /**
  * The number of milliseconds in one second.
  */
-#define MOPTOP_GENERAL_ONE_SECOND_MS	(1000)
+#define MOPTOP_GENERAL_ONE_SECOND_MS	        (1000)
 /**
  * The number of nanoseconds in one microsecond.
  */
 #define MOPTOP_GENERAL_ONE_MICROSECOND_NS	(1000)
+/**
+ * The number of micrometres (microns) in a metre.
+ */
+#define MOPTOP_GENERAL_ONE_METRE_MICROMETRE     (1000000)
 
 #ifndef fdifftime
 /**

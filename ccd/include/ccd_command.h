@@ -347,11 +347,11 @@
 /**
  * Get the timestamp clock frequency from the camera/Andor library.
  * Uses the CCD_Command_Get_Int with feature name "TimestampClockFrequency".
- * @param i The address of an integer to store the timestamp clock frequency, in Hertz.
+ * @param i The address of a long long integer to store the timestamp clock frequency, in Hertz.
  * @return The routine returns TRUE on success and FALSE on failure.
- * @see #CCD_Command_Get_Int
+ * @see #CCD_Command_Get_Long_Long_Int
  */
-#define CCD_Command_Get_Timestamp_Clock_Frequency(i) CCD_Command_Get_Int("TimestampClockFrequency",i)
+#define CCD_Command_Get_Timestamp_Clock_Frequency(i) CCD_Command_Get_Long_Long_Int("TimestampClockFrequency",i)
 /**
  * Get the image size in bytes. This changes with AOI (area of interest) changes / binning etc...
  * Uses the CCD_Command_Get_Int with feature name "ImageSizeBytes".
@@ -430,6 +430,7 @@ extern int CCD_Command_Get_Float(char *feature_name_string,double *value);
 extern int CCD_Command_Get_Float_Min(char *feature_name_string,double *value);
 extern int CCD_Command_Get_Float_Max(char *feature_name_string,double *value);
 extern int CCD_Command_Get_Int(char *feature_name_string,int *value);
+extern int CCD_Command_Get_Long_Long_Int(char *feature_name_string,long long int *value);
 extern int CCD_Command_Get_String(char *feature_name_string,char *value,int value_length);
 extern int CCD_Command_Is_Readonly(char *feature_name_string,int *is_readonly);
 extern int CCD_Command_Set_Bool(char *feature_name_string,int value);

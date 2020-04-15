@@ -1295,6 +1295,100 @@ int CCD_Command_Get_Int(char *feature_name_string,int *value)
 }
 
 /**
+ * Get the long long integer value of the specified feature_name_string.
+ * @param feature_name_string The name of the feature to get the value of, as a normal string. The routine will fail if
+ *        the string is longer than COMMAND_MAX_FEATURE_NAME_LENGTH, which is used to allocate space
+ *        for the wide character version of this string passed into the Andor API.
+ * @param value A pointer to a long long integer, that on success will be set to 
+ *        the current integer value of the specified feature_name.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #COMMAND_MAX_FEATURE_NAME_LENGTH
+ * @see #Command_Data
+ * @see #Command_Get_Andor_Error_String
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see #Command_MBS_To_WCS_String
+ * @see ccd_general.html#CCD_GENERAL_ONE_SECOND_MS
+ * @see ccd_general.html#CCD_GENERAL_ONE_MILLISECOND_NS
+ * @see ccd_general.html#CCD_GENERAL_ONE_SECOND_NS
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Get_Long_Long_Int(char *feature_name_string,long long int *value)
+{
+	struct timespec sleep_time;
+	AT_WC feature_name_wide_string[COMMAND_MAX_FEATURE_NAME_LENGTH+1];
+	AT_64 andor_value;
+	int retval,retry_index;
+
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Get_Long_Long_Int: Started.");
+#endif /* LOGGING */
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Get_Long_Long_Int: Get %s.",feature_name_string);
+#endif /* LOGGING */
+	if(value == NULL)
+	{
+		Command_Error_Number = 58;
+		sprintf(Command_Error_String,"CCD_Command_Get_Long_Long_Int: '%s' value is NULL.",feature_name_string);
+		return FALSE;
+	}
+	/* convert feature name to a wide character string, suitable for the Andor API */
+	if(!Command_MBS_To_WCS_String(feature_name_string,feature_name_wide_string,COMMAND_MAX_FEATURE_NAME_LENGTH+1))
+		return FALSE;
+	/* initialse loop variables */
+	retry_index = 0;
+	/* AT_SUCCESS is 0, so this initialises retval to something other than AT_SUCCESS, currently -1 */
+	retval = AT_SUCCESS-1; 
+	while((retval != AT_SUCCESS)&&(retry_index < Command_Data.Retry_Count))
+	{
+#if LOGGING > 0
+		CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+				       "CCD_Command_Get_Long_Long_Int: Calling AT_GetInt(camera handle = %d,"
+				       "feature name = '%s', value = %p), attempt %d.",
+				       Command_Data.Handle,feature_name_string,value,(retry_index+1));
+#endif /* LOGGING */
+		retval = AT_GetInt(Command_Data.Handle,feature_name_wide_string,&andor_value);
+		if(retval != AT_SUCCESS)
+		{
+			Command_Error_Number = 59;
+			sprintf(Command_Error_String,"CCD_Command_Get_Long_Long_Int: AT_GetInt(camera handle = %d,"
+				"feature name = '%s', value = %p) attempt %d, failed (%d) : %s.",
+				Command_Data.Handle,feature_name_string,&andor_value,(retry_index+1),retval,
+				Command_Get_Andor_Error_String(retval));
+			/* don't fail here, just retry. Log the error though. */
+			CCD_General_Error();
+			/* also sleep for a time before retrying */
+			sleep_time.tv_sec = Command_Data.Retry_Sleep_Time_Ms/CCD_GENERAL_ONE_SECOND_MS;
+			sleep_time.tv_nsec = (Command_Data.Retry_Sleep_Time_Ms*CCD_GENERAL_ONE_MILLISECOND_NS)%
+				CCD_GENERAL_ONE_SECOND_NS;
+			nanosleep(&sleep_time,&sleep_time);
+		}/* end if retval was not a success */
+		retry_index ++;
+	}/* end while */
+	/* if we retried too many times without success, give up and return an error */
+	if(retry_index >= Command_Data.Retry_Count)
+	{
+		Command_Error_Number = 60;
+		sprintf(Command_Error_String,"CCD_Command_Get_Long_Long_Int: AT_GetInt(camera handle = %d,"
+			"feature name = '%s', value = %p) failed (%d) : %s after %d attempts.",
+			Command_Data.Handle,feature_name_string,value,retval,Command_Get_Andor_Error_String(retval),
+			retry_index);
+		return FALSE;
+	}
+	/* convert andor return value to an integer */
+	(*value) = andor_value;
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Get_Long_Long_Int: AT_GetInt(camera handle = %d,"
+			       "feature name = '%s', value = %ld = %ld) succeeded after %d attempts.",
+			       Command_Data.Handle,feature_name_string,andor_value,(*value),retry_index);
+#endif /* LOGGING */
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Get_Long_Long_Int: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
  * Get the string value of the specified feature_name_string.
  * @param feature_name_string The name of the feature to get the value of, as a normal string. The routine will fail if
  *        the string is longer than COMMAND_MAX_FEATURE_NAME_LENGTH, which is used to allocate space

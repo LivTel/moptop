@@ -48,6 +48,7 @@
  * <dl>
  * <dt>FITS_HEADER_TYPE_STRING</dt> <dd>String</dd>
  * <dt>FITS_HEADER_TYPE_INTEGER</dt> <dd>Integer</dd>
+ * <dt>FITS_HEADER_TYPE_LONG_LONG_INTEGER</dt> <dd>Long Long Integer</dd>
  * <dt>FITS_HEADER_TYPE_FLOAT</dt> <dd>Floating point (double).</dd>
  * <dt>FITS_HEADER_TYPE_LOGICAL</dt> <dd>Boolean (integer having value 1 (TRUE) or 0 (FALSE).</dd>
  * </dl>
@@ -56,6 +57,7 @@ enum Fits_Header_Type_Enum
 {
 	FITS_HEADER_TYPE_STRING,
 	FITS_HEADER_TYPE_INTEGER,
+	FITS_HEADER_TYPE_LONG_LONG_INTEGER,
 	FITS_HEADER_TYPE_FLOAT,
 	FITS_HEADER_TYPE_LOGICAL
 };
@@ -69,6 +71,7 @@ enum Fits_Header_Type_Enum
  *                    <ul>
  *                    <li>String (of length FITS_HEADER_VALUE_STRING_LENGTH).
  *                    <li>Int
+ *                    <li>Long_Long_Int
  *                    <li>Float (of type double).
  *                    <li>Boolean (an integer, should be 0 (FALSE) or 1 (TRUE)).
  *                    </ul>
@@ -87,6 +90,7 @@ struct Fits_Header_Card_Struct
 	{
 		char String[FITS_HEADER_VALUE_STRING_LENGTH]; /* columns 11-80 */
 		int Int;
+		long long int Long_Long_Int;
 		double Float;
 		int Boolean;
 	} Value;
@@ -384,6 +388,66 @@ int CCD_Fits_Header_Add_Int(char *keyword,int value,char *comment)
 }
 
 /**
+ * Routine to add a keyword with an long long integer value to a FITS header.
+ * @param keyword The keyword string, must be at least 1 character less in length than 
+ *        FITS_HEADER_KEYWORD_STRING_LENGTH.
+ * @param value The long long integer value.
+ * @param comment The comment string, which if longer than FITS_HEADER_COMMENT_STRING_LENGTH-1 
+ *        characters will be truncated. This parameter can also be NULL.
+ * @return The routine returns TRUE on success, and FALSE on failure. On failure, Fits_Header_Error_Number
+ *         and Fits_Header_Error_String should be filled in with suitable values.
+ * @see #Fits_Header_Card_Struct
+ * @see #Fits_Header_Type_Enum
+ * @see #FITS_HEADER_KEYWORD_STRING_LENGTH
+ * @see #FITS_HEADER_COMMENT_STRING_LENGTH
+ * @see #Fits_Header_Add_Card
+ * @see ccd_general.html#CCD_General_Log
+ * @see #Fits_Header_Error_Number
+ * @see #Fits_Header_Error_String
+ * @see #Fits_Header
+ */
+int CCD_Fits_Header_Add_Long_Long_Int(char *keyword,long long int value,char *comment)
+{
+	struct Fits_Header_Card_Struct card;
+
+#if LOGGING > 1
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Fits_Header_Add_Long_Long_Int: Started.");
+#endif
+	if(keyword == NULL)
+	{
+		Fits_Header_Error_Number = 1;
+		sprintf(Fits_Header_Error_String,"CCD_Fits_Header_Add_Long_Long_Int:Keyword is NULL.");
+		return FALSE;
+	}
+	if(strlen(keyword) > (FITS_HEADER_KEYWORD_STRING_LENGTH-1))
+	{
+		Fits_Header_Error_Number = 2;
+		sprintf(Fits_Header_Error_String,"CCD_Fits_Header_Add_Long_Long_Int:"
+			"Keyword %s (%lu) was too long.",keyword,strlen(keyword));
+		return FALSE;
+	}
+	strcpy(card.Keyword,keyword);
+	card.Type = FITS_HEADER_TYPE_LONG_LONG_INTEGER;
+	card.Value.Long_Long_Int = value;
+	/* the comment will be truncated to FITS_HEADER_COMMENT_STRING_LENGTH-1 */
+	if(comment != NULL)
+	{
+		strncpy(card.Comment,comment,FITS_HEADER_COMMENT_STRING_LENGTH-1);
+		card.Comment[FITS_HEADER_COMMENT_STRING_LENGTH-1] = '\0';
+	}
+	else
+	{
+		strcpy(card.Comment,"");
+	}
+	if(!Fits_Header_Add_Card(card))
+		return FALSE;
+#if LOGGING > 1
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Fits_Header_Add_Long_Long_Int: Finished.");
+#endif
+	return TRUE;
+}
+
+/**
  * Routine to add a keyword with an float (double) value to a FITS header.
  * @param keyword The keyword string, must be at least 1 character less in length than 
  *        FITS_HEADER_KEYWORD_STRING_LENGTH.
@@ -583,6 +647,17 @@ int CCD_Fits_Header_Write_To_Fits(fitsfile *fits_fp)
 #endif
 				retval = fits_update_key(fits_fp,TINT,Fits_Header.Card_List[i].Keyword,
 							 &(Fits_Header.Card_List[i].Value.Int),NULL,&status);
+				break;
+			case FITS_HEADER_TYPE_LONG_LONG_INTEGER:
+#if LOGGING > 9
+				CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+						       "CCD_Fits_Header_Write_To_Fits:%d: %s = %ld.",i,
+						       Fits_Header.Card_List[i].Keyword,
+						       Fits_Header.Card_List[i].Value.Long_Long_Int);
+#endif
+				/* we could use TLONGLONG, or even TULONG */
+				retval = fits_update_key(fits_fp,TLONG,Fits_Header.Card_List[i].Keyword,
+							 &(Fits_Header.Card_List[i].Value.Long_Long_Int),NULL,&status);
 				break;
 			case FITS_HEADER_TYPE_FLOAT:
 #if LOGGING > 9

@@ -98,6 +98,28 @@ int Moptop_Fits_Header_Integer_Add(char *keyword,int value, char *comment)
 }
 
 /**
+ * Routine to add a keyword with a integer value to the Fits_Header data structure.
+ * @param keyword The keyword string.
+ * @param value The value, a long long integer.
+ * @param comment The comment string. This parameter can also be NULL.
+ * @return The routine returns TRUE on success, and FALSE on failure.
+ * @see ../ccd/cdocs/ccd_fits_header.html#CCD_Fits_Header_Add_Long_Long_Int
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
+ */
+int Moptop_Fits_Header_Long_Long_Integer_Add(char *keyword,long long int value, char *comment)
+{
+	if(!CCD_Fits_Header_Add_Long_Long_Int(keyword,value,comment))
+	{
+		Moptop_General_Error_Number = 408;
+		sprintf(Moptop_General_Error_String,"Moptop_Fits_Header_Long_Long_Integer_Add:"
+			"Failed to add long long integer to FITS headers.");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * Routine to add a keyword with a float (or double) value to the Fits_Header data structure.
  * @param keyword The keyword string.
  * @param value The value, a double.

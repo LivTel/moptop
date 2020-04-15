@@ -87,15 +87,54 @@ static double Multrun_CCD_Temperature;
  * A copy of the current CCD temperature status, taken at the start of a multrun. Used to populate FITS headers.
  */
 static char Multrun_CCD_Temperature_Status_String[64];
+/**
+ * A copy of the per-frame requested exposure length used to configure the CCD camera. Used to populate FITS headers.
+ */
+static double Multrun_Requested_Exposure_Length;
 
 /* internal functions */
 static int Multrun_Acquire_Images(int frame_count,int do_standard,char ***filename_list,int *filename_count);
 static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *filename,int filename_length);
-static int Multrun_Write_Fits_Image(int do_standard,struct timespec exposure_start_time,unsigned char *image_buffer,int image_buffer_length,char *filename);
+static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms,struct timespec exposure_start_time,
+				    struct timespec exposure_end_time,long long int camera_ticks,
+				    int rotator_number,int sequence_number,
+				    int frame_count,double requested_rotator_angle,double rotator_start_angle,
+				    double rotator_end_angle,double rotator_difference,
+				    unsigned char *image_buffer,
+				    int image_buffer_length,char *filename);
 
 /* ----------------------------------------------------------------------------
 ** 		external functions 
 ** ---------------------------------------------------------------------------- */
+/**
+ * Routine to set the exposure length to be used for the Multrun. This is the exposure length _per-frame_, i.e. it depends
+ * on the rotorspeed, and leads to allow enough time to readout and save each image before the rotator triggers the
+ * start of the next exposure.
+ * <ul>
+ * <li>The camera exposure length is set using CCD_Exposure_Length_Set.
+ * <li>The requested exposure length is stored in Multrun_Requested_Exposure_Length (for later use in FITS headers).
+ * </ul>
+ * @param exposure_length_s The exposure length to use for each frame, in seconds.
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see #Multrun_Requested_Exposure_Length
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Exposure_Length_Set
+ */
+int Moptop_Multrun_Exposure_Length_Set(double exposure_length_s)
+{
+	/* configure the CCD camera exposure length 
+	** Note this might be modified by the Andor library. */
+	if(!CCD_Exposure_Length_Set(exposure_length_s))
+	{
+		Moptop_General_Error_Number = 640;
+		sprintf(Moptop_General_Error_String,
+			"Moptop_Multrun_Exposure_Length_Set: Failed to set exposure length %.3f s.",exposure_length_s);
+		return FALSE;
+	}
+	/* Save the requested exposure length for later inclusion in the FITS headers */
+	Multrun_Requested_Exposure_Length = exposure_length_s;
+	return TRUE;
+}
+
 /**
  * Routine to setup the Multrun.
  * <ul>
@@ -103,13 +142,15 @@ static int Multrun_Write_Fits_Image(int do_standard,struct timespec exposure_sta
  *     if the rotator is enabled.
  * <li>Increment the FITS filename multrun number and return it.
  * <li>Increment the FITS filename run number.
- * <li>We get the current filter wheel position using Filter_Wheel_Command_Get_Position.
- * <li>We get the current filter name using Filter_Wheel_Config_Position_To_Name.
+ * <li>If the filter wheel is enabled, we get the current filter wheel position using Filter_Wheel_Command_Get_Position.
+ * <li>If the filter wheel is enabled, We get the current filter name using Filter_Wheel_Config_Position_To_Name.
  * <li>We get and cache the current CCD temperature using CCD_Temperature_Get to store the temperature in 
  *     Multrun_CCD_Temperature.
  * <li>We get and cache the current CCD temperature status string using CCD_Temperature_Get_Temperature_Status_String 
  *     to store the temperature in Multrun_CCD_Temperature_Status_String.
  * </ul>
+ * @param multrun_number The address of an integer to store the multrun number we expect to use for this multrun.
+ * @return The routine returns TRUE on success and FALSE on failure.
  * @see #Multrun_Filter_Position
  * @see #Multrun_Filter_Name
  * @see #Multrun_CCD_Temperature
@@ -119,6 +160,7 @@ static int Multrun_Write_Fits_Image(int do_standard,struct timespec exposure_sta
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_config.html#Moptop_Config_Rotator_Is_Enabled
+ * @see moptop_config.html#Moptop_Config_Filter_Wheel_Is_Enabled
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Next_Multrun
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Multrun_Get
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Next_Run
@@ -151,19 +193,27 @@ int Moptop_Multrun_Setup(int *multrun_number)
 	(*multrun_number) = CCD_Fits_Filename_Multrun_Get();
 	/* increment the run number (effecticly which rotation we are on) to one */
 	CCD_Fits_Filename_Next_Run();
-	/* get and save the current filter wheel settings */
-	if(!Filter_Wheel_Command_Get_Position(&Multrun_Filter_Position))
+	/* get and save the current filter wheel settings, if enabled */
+	if(Moptop_Config_Filter_Wheel_Is_Enabled())
 	{
-		Moptop_General_Error_Number = 626;
-		sprintf(Moptop_General_Error_String,"Moptop_Multrun_Setup: Failed to get filter wheel position.");
-		return FALSE;		
+		if(!Filter_Wheel_Command_Get_Position(&Multrun_Filter_Position))
+		{
+			Moptop_General_Error_Number = 626;
+			sprintf(Moptop_General_Error_String,"Moptop_Multrun_Setup: Failed to get filter wheel position.");
+			return FALSE;		
+		}
+		if(!Filter_Wheel_Config_Position_To_Name(Multrun_Filter_Position,Multrun_Filter_Name))
+		{
+			Moptop_General_Error_Number = 627;
+			sprintf(Moptop_General_Error_String,
+				"Moptop_Multrun_Setup: Failed to get filter wheel name from it's position.");
+			return FALSE;		
+		}
 	}
-	if(!Filter_Wheel_Config_Position_To_Name(Multrun_Filter_Position,Multrun_Filter_Name))
+	else
 	{
-		Moptop_General_Error_Number = 627;
-		sprintf(Moptop_General_Error_String,
-			"Moptop_Multrun_Setup: Failed to get filter wheel name from it's position.");
-		return FALSE;		
+		Multrun_Filter_Position = -1;
+		strcpy(Multrun_Filter_Name,"UNKNOWN");
 	}
 	/* get current CCD temperature/status and store it for later */
 	if(!CCD_Temperature_Get(&Multrun_CCD_Temperature))
@@ -589,9 +639,9 @@ static int Multrun_Acquire_Images(int frame_count,int do_standard,char ***filena
 	double requested_rotator_angle = 0.0;
 	double rotator_start_angle,current_rotator_position,rotator_difference,rotator_end_angle;
 	double camera_clock_difference;
-	long long int camera_ticks,last_camera_ticks;
+	long long int camera_ticks,last_camera_ticks,timestamp_clock_frequency;
 	int andor_exposure_length_ms;
-	int i,image_buffer_length,images_per_cycle,rotator_number,sequence_number,timestamp_clock_frequency;
+	int i,image_buffer_length,images_per_cycle,rotator_number,sequence_number;
 	
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("multrun","moptop_multrun.c","Multrun_Acquire_Images",LOG_VERBOSITY_INTERMEDIATE,
@@ -682,7 +732,10 @@ static int Multrun_Acquire_Images(int frame_count,int do_standard,char ***filena
 		/* generate a new filename for this FITS image */
 		Multrun_Get_Fits_Filename(images_per_cycle,do_standard,filename,MULTRUN_FITS_FILENAME_LENGTH);
 		/* write fits image */
-		Multrun_Write_Fits_Image(do_standard,exposure_start_time,image_buffer,image_buffer_length,filename);
+		Multrun_Write_Fits_Image(do_standard,andor_exposure_length_ms,exposure_start_time,exposure_end_time,
+					 camera_ticks,rotator_number,sequence_number,
+					 frame_count,requested_rotator_angle,rotator_start_angle,rotator_end_angle,
+					 rotator_difference,image_buffer,image_buffer_length,filename);
 		/* add fits image to list */
 		if(!CCD_Fits_Filename_List_Add(filename,filename_list,filename_count))
 		{
@@ -774,13 +827,30 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
 /**
  * Write the FITS image to disk.
  * <ul>
- * <li>We set the "OBSTYPE" based on the value of do_standard.
- * <li>We set the "FILTER1" FITS keyword based on the cached filter name in Multrun_Filter_Name.
- * <li>We set the "DATE"/"DATE-OBS"/"UTSTART" and "MJD" keywords based on the value of exposure_start_time.
+ * <li>We set the "OBSTYPE" FITS keyword value based on the value of do_standard.
+ * <li>We set the "FILTER1" FITS keyword value based on the cached filter name in Multrun_Filter_Name.
+ * <li>We set the "DATE"/"DATE-OBS"/"UTSTART" and "MJD" keyword values based on the value of exposure_start_time.
+ * <li>We set the "ENDDATE"/"END-OBS" and "UTEND" keyword values based on the value of exposure_end_time.
+ * <li>We set the "DURATION" keyword value based on the time elapsed between exposure_start_time and exposure_end_time.
+ * <li>We set the "RUNNUM" keyword value to rotator_number.
+ * <li>We set the "EXPNUM" keyword value to sequence_number.
+ * <li>We set the "EXPTOTAL" keyword value to frame_count.
  * <li>We set the "CCDXBIN"/"CCDYBIN" FITS keyword values based on CCD_Setup_Get_Binning. 
  * <li>We set the "CCDATEMP" FITS keyword value based on the cached CCD temperature stored in Multrun_CCD_Temperature.
  * <li>We set the "TEMPSTAT" FITS keyword value based on the cached CCD temperature status stored in
  *     Multrun_CCD_Temperature_Status_String.
+ * <li>We set the "MOPRREQ" FITS keyword value to the requested_rotator_angle.
+ * <li>We set the "MOPRBEG" FITS keyword value to the rotator_start_angle.
+ * <li>We set the "MOPREND" FITS keyword value to the rotator_end_angle.
+ * <li>We set the "MOPRARC" FITS keyword value to the rotator_difference.
+ * <li>We set the "MOPRNUM" FITS keyword value to the rotator_number.
+ * <li>We set the "MOPRPOS" FITS keyword value to the sequence_number.
+ * <li>We set the "EXPTIME" FITS keyword value to thw andor_exposure_length_ms in seconds.
+ * <li>We set the "EXPREQST" FITS keyword value to the Multrun_Requested_Exposure_Length.
+ * <li>We set the "CCDXPIXE" FITS keyword value to CCD_Setup_Get_Pixel_Width in m.
+ * <li>We set the "CCDYPIXE" FITS keyword value to CCD_Setup_Get_Pixel_Height in m.
+ * <li>We set the "CLKFREQ" FITS keyword value to CCD_Setup_Get_Timestamp_Clock_Frequency.
+ * <li>We set the "CLKSTAMP" FITS keyword value to camera_ticks.
  * <li>We create a file lock on the filename to write to using CCD_Fits_Filename_Lock.
  * <li>We create the FITS filename using fits_create_file.
  * <li>We calculate the binned image dimensions using CCD_Setup_Get_Sensor_Width / CCD_Setup_Get_Sensor_Height / 
@@ -795,7 +865,25 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  * <li>We remove the file lock on the FITS image using CCD_Fits_Filename_UnLock.
  * </ul>
  * @param do_standard A boolean, if TRUE this is an observation of a standard, otherwise it is not.
- * @param exposure_start_time A timestamp representing the start time of the exposure being saved.
+ * @param andor_exposure_length_ms The exposure length as retrieved from the camera, in milliseconds.
+ * @param exposure_start_time A timestamp representing the start time of the exposure being saved. Actually a timestamp
+ *        taken just before starting to wait for the camera to signal a new image has arrived.
+ * @param exposure_end_time A timestamp representing the end time of the exposure being saved. Actually a timestamp
+ *        taken just after the camera has signalled a buffer is available.
+ * @param camera_ticks A long long int holding the camera clock ticks stored by the camera in it's meta-data at the
+ *        instant it began this exposure.
+ * @param rotator_number A number representing which rotation of the rotator we are on 
+ *        (from 1 to frame_count/images_per_cycle).
+ * @param sequence_number A number representing which image in the current rotation we are on
+ *        (from 1 to images_per_cycle).
+ * @param frame_count The total number of images we expect to acquire in this multrun.
+ * @param requested_rotator_angle The requested rotator angle at which we expect the exposure to have started at 
+ *        in degrees.
+ * @param rotator_start_angle The rotator angle _in the current rotation_ at which 
+ *        we expect the exposure to have started at in degrees.
+ * @param rotator_end_angle The rotator angle _in the current rotation_ either measured or predicted at the end of the 
+ *        exposure.
+ * @param rotator_difference The difference between the rotator start angle and the rotator end angle in degrees.
  * @param image_buffer The image buffer containing the data to write to disk.
  * @param image_buffer_length The length of data in the image buffer (note this includes metadata).
  * @param filename A string containing the FITS filename to write the data into.
@@ -803,12 +891,17 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  * @see #Multrun_Filter_Name
  * @see #Multrun_CCD_Temperature
  * @see #Multrun_CCD_Temperature_Status_String
+ * @see #Multrun_Requested_Exposure_Length
  * @see moptop_fits_header.html#Moptop_Fits_Header_String_Add
+ * @see moptop_fits_header.html#Moptop_Fits_Header_Integer_Add
+ * @see moptop_fits_header.html#Moptop_Fits_Header_Long_Long_Integer_Add
  * @see moptop_fits_header.html#Moptop_Fits_Header_Float_Add
  * @see moptop_fits_header.html#Moptop_Fits_Header_TimeSpec_To_Date_String
  * @see moptop_fits_header.html#Moptop_Fits_Header_TimeSpec_To_Date_Obs_String
  * @see moptop_fits_header.html#Moptop_Fits_Header_TimeSpec_To_UtStart_String
  * @see moptop_fits_header.html#Moptop_Fits_Header_TimeSpec_To_Mjd
+ * @see moptop_general.html#fdifftime
+ * @see moptop_general.html#MOPTOP_GENERAL_ONE_METRE_MICROMETRE
  * @see moptop_general.html#Moptop_General_Log
  * @see moptop_general.html#Moptop_General_Log_Format
  * @see moptop_general.html#Moptop_General_Error_Number
@@ -818,13 +911,21 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Sensor_Width
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Sensor_Height
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Binning
+ * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Pixel_Width
+ * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Pixel_Height
+ * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Timestamp_Clock_Frequency
  */
-static int Multrun_Write_Fits_Image(int do_standard,struct timespec exposure_start_time,unsigned char *image_buffer,
+static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms,struct timespec exposure_start_time,
+				    struct timespec exposure_end_time,long long int camera_ticks,
+				    int rotator_number,int sequence_number,
+				    int frame_count,double requested_rotator_angle,double rotator_start_angle,
+				    double rotator_end_angle,double rotator_difference,
+				    unsigned char *image_buffer,
 				    int image_buffer_length,char *filename)
 {
 	fitsfile *fp = NULL;
-	char exposure_start_time_string[64];
-	double mjd,ccdscale;
+	char exposure_time_string[64];
+	double mjd,ccdscale,dvalue;
 	long axes[2];
 	int retval=0,status=0;
 	int ncols_unbinned,nrows_unbinned,binning,ncols_binned,nrows_binned,ivalue;
@@ -851,23 +952,48 @@ static int Multrun_Write_Fits_Image(int do_standard,struct timespec exposure_sta
 		return FALSE;
 	*/
 	/* update DATE keyword from exposure_start_time */
-	Moptop_Fits_Header_TimeSpec_To_Date_String(exposure_start_time,exposure_start_time_string);
-	if(!Moptop_Fits_Header_String_Add("DATE",exposure_start_time_string,NULL))
+	Moptop_Fits_Header_TimeSpec_To_Date_String(exposure_start_time,exposure_time_string);
+	if(!Moptop_Fits_Header_String_Add("DATE",exposure_time_string,"[UTC] Start date of obs."))
 		return FALSE;
 	/* update DATE-OBS keyword from exposure_start_time */
-	Moptop_Fits_Header_TimeSpec_To_Date_Obs_String(exposure_start_time,exposure_start_time_string);
-	if(!Moptop_Fits_Header_String_Add("DATE-OBS",exposure_start_time_string,NULL))
+	Moptop_Fits_Header_TimeSpec_To_Date_Obs_String(exposure_start_time,exposure_time_string);
+	if(!Moptop_Fits_Header_String_Add("DATE-OBS",exposure_time_string,"[UTC] Start of obs."))
 		return FALSE;
 	/* update UTSTART keyword from exposure_start_time */
-	Moptop_Fits_Header_TimeSpec_To_UtStart_String(exposure_start_time,exposure_start_time_string);
-	if(!Moptop_Fits_Header_String_Add("UTSTART",exposure_start_time_string,NULL))
+	Moptop_Fits_Header_TimeSpec_To_UtStart_String(exposure_start_time,exposure_time_string);
+	if(!Moptop_Fits_Header_String_Add("UTSTART",exposure_time_string,"[UTC] Start time of obs."))
 		return FALSE;
 	/* update MJD keyword from exposure_start_time */
 	/* note leap second correction not implemented yet (always FALSE). */
 	if(!Moptop_Fits_Header_TimeSpec_To_Mjd(exposure_start_time,FALSE,&mjd))
 		return FALSE;
 	if(!Moptop_Fits_Header_Float_Add("MJD",mjd,NULL))
-		return FALSE;	
+		return FALSE;
+	/* create ENDDATE keyword from exposure_end_time */
+	Moptop_Fits_Header_TimeSpec_To_Date_String(exposure_end_time,exposure_time_string);
+	if(!Moptop_Fits_Header_String_Add("ENDDATE",exposure_time_string,"[UTC] End date of obs."))
+		return FALSE;
+	/* update END-OBS keyword from exposure_end_time */
+	Moptop_Fits_Header_TimeSpec_To_Date_Obs_String(exposure_end_time,exposure_time_string);
+	if(!Moptop_Fits_Header_String_Add("END-OBS",exposure_time_string,"[UTC] End of obs."))
+		return FALSE;
+	/* update UTENDT keyword from exposure_end_time */
+	Moptop_Fits_Header_TimeSpec_To_UtStart_String(exposure_end_time,exposure_time_string);
+	if(!Moptop_Fits_Header_String_Add("UTEND",exposure_time_string,"[UTC] End time of obs."))
+		return FALSE;
+	/* update DURATION keyword with difference between start and end timestamps */
+	dvalue = fdifftime(exposure_end_time,exposure_start_time);
+	if(!Moptop_Fits_Header_Float_Add("DURATION",dvalue,"[sec] Total obs. duration"))
+		return FALSE;
+	/* update RUNNUM keyword value with the rotator_number */
+	if(!Moptop_Fits_Header_Integer_Add("RUNNUM",rotator_number,"Which rotation of the rotator we are on."))
+		return FALSE;
+	/* update EXPNUM keyword value with the sequence_number */
+	if(!Moptop_Fits_Header_Integer_Add("EXPNUM",sequence_number,"Which image in the current rotation we are on."))
+		return FALSE;
+	/* update EXPTOTAL keyword value with frame_count */
+	if(!Moptop_Fits_Header_Integer_Add("EXPTOTAL",frame_count,"Total number of frames expected this multrun."))
+		return FALSE;
 	/* ccdxbin */
 	ivalue = CCD_Setup_Get_Binning();
 	if(!Moptop_Fits_Header_Integer_Add("CCDXBIN",ivalue,NULL))
@@ -881,6 +1007,49 @@ static int Multrun_Write_Fits_Image(int do_standard,struct timespec exposure_sta
 		return FALSE;
 	/* update ccd temperature status string with value stored at start of multrun */
 	if(!Moptop_Fits_Header_String_Add("TEMPSTAT",Multrun_CCD_Temperature_Status_String,NULL))
+		return FALSE;
+	/* update MOPRREQ with requested_rotator_angle */
+	if(!Moptop_Fits_Header_Float_Add("MOPRREQ",requested_rotator_angle,"[deg] MOPTOP Rotator requested angle"))
+		return FALSE;
+	/* update MOPRBEG with rotator_start_angle */
+	if(!Moptop_Fits_Header_Float_Add("MOPRBEG",rotator_start_angle,"[deg] MOPTOP Rotator begin angle"))
+		return FALSE;
+	/* update MOPREND with rotator_end_angle */
+	if(!Moptop_Fits_Header_Float_Add("MOPREND",rotator_end_angle,"[deg] MOPTOP Rotator angle at end of exposure"))
+		return FALSE;
+	/* update MOPRARC with rotator_difference */
+	if(!Moptop_Fits_Header_Float_Add("MOPRARC",rotator_difference,"[deg] MOPTOP Rotator exposure arc"))
+		return FALSE;
+	/* MOPRNUM is the rotator_number */
+	if(!Moptop_Fits_Header_Integer_Add("MOPRNUM",rotator_number,"MOPTOP Rotation number"))
+		return FALSE;
+	/* MOPRPOS is the sequence_number */
+	if(!Moptop_Fits_Header_Integer_Add("MOPRPOS",sequence_number,"MOPTOP Position number within rotation"))
+		return FALSE;
+	/* EXPTIME is the actual exposure length returned from the camera, in seconds */
+	if(!Moptop_Fits_Header_Float_Add("EXPTIME",
+					 ((double)andor_exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS),
+					 "[sec] Actual exposure"))
+		return FALSE;
+	/* EXPREQST is the requested exposure length in seconds (from Multrun_Requested_Exposure_Length) */
+	if(!Moptop_Fits_Header_Float_Add("EXPREQST",Multrun_Requested_Exposure_Length,"[sec] Requested exposure"))
+		return FALSE;
+	/* CCDXPIXE is the physical x width of a pixel in metres */
+	if(!Moptop_Fits_Header_Float_Add("CCDXPIXE",
+					 CCD_Setup_Get_Pixel_Width()/((double)MOPTOP_GENERAL_ONE_METRE_MICROMETRE),
+					 "[m] Detector pixel width"))
+		return FALSE;
+	/* CCDYPIXE is the physical y height of a pixel in metres */
+	if(!Moptop_Fits_Header_Float_Add("CCDYPIXE",
+					 CCD_Setup_Get_Pixel_Height()/((double)MOPTOP_GENERAL_ONE_METRE_MICROMETRE),
+					 "[m] Detector pixel height"))
+		return FALSE;
+	/* CLKFREQ is the timestamp clock frequency of the internal camera clock */
+	if(!Moptop_Fits_Header_Long_Long_Integer_Add("CLKFREQ",CCD_Setup_Get_Timestamp_Clock_Frequency(),
+						     "[Hz] Detector clock tick frequency"))
+		return FALSE;
+	/* CLKSTAMP is the camera clock timestamp (in ticks) the camera took when this exposure started */
+	if(!Moptop_Fits_Header_Long_Long_Integer_Add("CLKSTAMP",camera_ticks,"Image clock tick value"))
 		return FALSE;
 	/* create lock file */
 #if MOPTOP_DEBUG > 5
