@@ -29,8 +29,8 @@ CONFIG_SRCS	= moptop1.moptop.net.properties moptop1.moptop.properties moptop1.fi
 CONFIG_OBJS	= $(CONFIG_SRCS:%.properties=$(CONFIG_BINDIR)/%.properties)
 SCRIPT_SRCS	= 
 SCRIPT_OBJS	= $(SCRIPT_SRCS:%=$(SCRIPT_BINDIR)/%)
-DIRS 		= 
-#command test
+DIRS 		= command
+#test
 
 top: dirs $(OBJS) config scripts dirs
 

@@ -969,7 +969,10 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 		if(strncmp(command_string+command_string_index,"status",6)==0)
 		{
 			ivalue = Moptop_Multrun_In_Progress();
-			sprintf(return_string+strlen(return_string),"%d",ivalue);
+			if(ivalue == TRUE)
+				strcat(return_string,"true");
+			else
+				strcat(return_string,"false");
 		}
 		else if(strncmp(command_string+command_string_index,"count",5)==0)
 		{
