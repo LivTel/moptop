@@ -910,6 +910,7 @@ int Moptop_Command_Multrun_Setup(char *command_string,char **reply_string)
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_general.html#Moptop_General_Add_String
  * @see moptop_general.html#Moptop_General_Get_Time_String
+ * @see moptop_general.html#Moptop_General_Get_Current_Time_String
  * @see moptop_multrun.html#Moptop_Multrun_In_Progress
  * @see moptop_multrun.html#Moptop_Multrun_Count_Get
  * @see moptop_multrun.html#Moptop_Multrun_Per_Frame_Exposure_Length_Get
@@ -925,6 +926,8 @@ int Moptop_Command_Multrun_Setup(char *command_string,char **reply_string)
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Window_Get
  * @see ../ccd/cdocs/ccd_temperature.html#CCD_Temperature_Get
  * @see ../ccd/cdocs/ccd_temperature.html#CCD_Temperature_Get_Temperature_Status_String
+ * @see ../ccd/cdocs/ccd_temperature.html#CCD_Temperature_Get_Cached_Temperature
+ * @see ../ccd/cdocs/ccd_temperature.html#CCD_Temperature_Get_Cached_Temperature_Status_String
  * @see ../filter_wheel/cdocs/filter_wheel_command.html#Filter_Wheel_Command_Get_Position
  * @see ../pirot/cdocs/pirot_command.html#PIROT_Command_Query_POS
  */
@@ -1254,55 +1257,65 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 				return FALSE;
 			return TRUE;
 		}
-		/* set status_time to now */
-		/*
-#ifdef _POSIX_TIMERS
-		clock_gettime(CLOCK_REALTIME,&status_time);
-#else
-		gettimeofday(&gtod_status_time,NULL);
-		status_time.tv_sec = gtod_status_time.tv_sec;
-		status_time.tv_nsec = gtod_status_time.tv_usec*MOPTOP_GLOBAL_ONE_MICROSECOND_NS;
-#endif
-		*/
 		/* check subcommand */
 		if(strncmp(get_set_string,"get",3)==0)
 		{
-			if(!CCD_Temperature_Get(&temperature))
+			if(Moptop_Multrun_In_Progress() == FALSE)
 			{
-				Moptop_General_Error_Number = 513;
-				sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
-					"Failed to get temperature.");
-				Moptop_General_Error("command","moptop_command.c","Moptop_Command_Status",
-						     LOG_VERBOSITY_TERSE,"COMMAND");
+				if(!CCD_Temperature_Get(&temperature))
+				{
+					Moptop_General_Error_Number = 513;
+					sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
+						"Failed to get temperature.");
+					Moptop_General_Error("command","moptop_command.c","Moptop_Command_Status",
+							     LOG_VERBOSITY_TERSE,"COMMAND");
 #if MOPTOP_DEBUG > 1
-				Moptop_General_Log("command","moptop_command.c","Moptop_Command_Status",
-						   LOG_VERBOSITY_TERSE,"COMMAND","Failed to get temperature.");
+					Moptop_General_Log("command","moptop_command.c","Moptop_Command_Status",
+							   LOG_VERBOSITY_TERSE,"COMMAND","Failed to get temperature.");
 #endif
-				if(!Moptop_General_Add_String(reply_string,"1 Failed to get temperature."))
-					return FALSE;
-				return TRUE;
+					if(!Moptop_General_Add_String(reply_string,"1 Failed to get temperature."))
+						return FALSE;
+					return TRUE;
+				}
+				Moptop_General_Get_Current_Time_String(time_string,31);
 			}
-			CCD_General_Get_Current_Time_String(time_string,31);
+			else
+			{
+				CCD_Temperature_Get_Cached_Temperature(&temperature,&status_time);
+				Moptop_General_Get_Time_String(status_time,time_string,31);
+			}
 			sprintf(return_string+strlen(return_string),"%s %.2f",time_string,temperature);
 		}
 		else if(strncmp(get_set_string,"status",6)==0)
 		{
-			if(!CCD_Temperature_Get_Temperature_Status_String(temperature_status_string,31))
+			if(Moptop_Multrun_In_Progress() == FALSE)
 			{
-				Moptop_General_Error_Number = 508;
-				sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
-					"Failed to get temperature status.");
-				Moptop_General_Error("command","moptop_command.c","Moptop_Command_Status",
-						     LOG_VERBOSITY_TERSE,"COMMAND");
+				if(!CCD_Temperature_Get_Temperature_Status_String(temperature_status_string,31))
+				{
+					Moptop_General_Error_Number = 508;
+					sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
+						"Failed to get temperature status.");
+					Moptop_General_Error("command","moptop_command.c","Moptop_Command_Status",
+							     LOG_VERBOSITY_TERSE,"COMMAND");
 #if MOPTOP_DEBUG > 1
-				Moptop_General_Log("command","moptop_command.c","Moptop_Command_Status",
-						   LOG_VERBOSITY_TERSE,"COMMAND","Failed to get temperature.");
+					Moptop_General_Log("command","moptop_command.c","Moptop_Command_Status",
+							   LOG_VERBOSITY_TERSE,"COMMAND","Failed to get temperature.");
 #endif
-				if(!Moptop_General_Add_String(reply_string,"1 Failed to get temperature status."))
-					return FALSE;
-				return TRUE;
+					if(!Moptop_General_Add_String(reply_string,
+								      "1 Failed to get temperature status."))
+					{
+						return FALSE;
+					}
+					return TRUE;
+				}
+				Moptop_General_Get_Current_Time_String(time_string,31);
 			}
-			CCD_General_Get_Current_Time_String(time_string,31);
+			else
+			{
+				CCD_Temperature_Get_Cached_Temperature_Status_String(temperature_status_string,
+										     &status_time);
+				Moptop_General_Get_Time_String(status_time,time_string,31);				
+			}
 			sprintf(return_string+strlen(return_string),"%s %s",time_string,temperature_status_string);
 		}
 		else

@@ -410,6 +410,7 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 	/* setup CCD_Buffer for image acquisition */
 	if(!CCD_Buffer_Queue_Images(Multrun_Data.Image_Count))
 	{
+		Multrun_In_Progress = FALSE;
 		Moptop_General_Error_Number = 609;
 		sprintf(Moptop_General_Error_String,"Multrun_Acquire_Images:Failed to queue image buffers.");
 		return FALSE;
