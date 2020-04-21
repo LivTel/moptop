@@ -791,7 +791,6 @@ int Moptop_Command_Multrun(char *command_string,char **reply_string)
 		return FALSE;
 	}
 	/* get multrun number */
-	/* either the actual multrun number if all cameras have the same, else -1 */
 	multrun_number = CCD_Fits_Filename_Multrun_Get();
 	sprintf(count_string,"%d ",multrun_number);
 	if(!Moptop_General_Add_String(reply_string,count_string))
