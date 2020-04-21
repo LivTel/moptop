@@ -26,6 +26,8 @@ public class MoptopTCPServer extends TCPServer
 
 	/**
 	 * The constructor.
+	 * @param name The name of the server thread.
+	 * @param portNumber The port number to wait for connections on.
 	 */
 	public MoptopTCPServer(String name,int portNumber)
 	{

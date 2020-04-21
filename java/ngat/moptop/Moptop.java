@@ -12,7 +12,7 @@ import java.util.*;
 import ngat.net.*;
 import ngat.util.*;
 import ngat.util.logging.*;
-//import ngat.moptop.command.*;
+import ngat.moptop.command.*;
 import ngat.message.ISS_INST.*;
 import ngat.message.INST_DP.*;
 
@@ -113,8 +113,12 @@ public class Moptop
 	 * @see #titPortNumber
 	 * @see #issAddress
 	 * @see ngat.moptop.MoptopStatus
-	 * @see ngat.moptop.MoptopTCPServerConnectionThread.setDefaultAcknowledgeTime
-	 * @see ngat.moptop.MoptopTCPServerConnectionThread.setMinAcknowledgeTime
+	 * @see ngat.moptop.MoptopTCPServerConnectionThread#setDefaultAcknowledgeTime
+	 * @see ngat.moptop.MoptopTCPServerConnectionThread#setMinAcknowledgeTime
+	 * @throws FileNotFoundException Thrown if the MoptopStatus.load method fails.
+	 * @throws IOException Thrown if the MoptopStatus.load method fails.
+	 * @throws NumberFormatException Thrown if various port numbers cannot be parsed from the config file.
+	 * @throws Exception Thrown if an error occurs.
 	 */
 	private void init() throws FileNotFoundException,IOException,
 		NumberFormatException,Exception
@@ -1010,6 +1014,7 @@ public class Moptop
 	 * <li>init.
 	 * <li>run.
 	 * </ul>
+	 * @param args The command line arguments.
 	 * @see #init
 	 * @see #parseArguments
 	 * @see #run

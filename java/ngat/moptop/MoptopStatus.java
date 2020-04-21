@@ -36,13 +36,15 @@ public class MoptopStatus
 	 */
 	private final static String DEFAULT_FITS_PROPERTY_FILE_NAME = "./fits.properties";
 	/**
-	 * The logging level. An absolute filter is used by the loggers.
-	 * @link http://ltdevsrv.livjm.ac.uk/~dev/log_udp/cdocs/log_udp.html#LOG_VERBOSITY
-	 * @link http://ltdevsrv.livjm.ac.uk/~dev/ngat/javadocs/ngat/util/logging/ngat/util/logging/Logging.html#VERBOSITY_VERY_TERSE
-	 * @link http://ltdevsrv.livjm.ac.uk/~dev/ngat/javadocs/ngat/util/logging/ngat/util/logging/Logging.html#VERBOSITY_TERSE
-	 * @link http://ltdevsrv.livjm.ac.uk/~dev/ngat/javadocs/ngat/util/logging/ngat/util/logging/Logging.html#VERBOSITY_INTERMEDIATE
-	 * @link http://ltdevsrv.livjm.ac.uk/~dev/ngat/javadocs/ngat/util/logging/ngat/util/logging/Logging.html#VERBOSITY_VERBOSE
-	 * @link http://ltdevsrv.livjm.ac.uk/~dev/ngat/javadocs/ngat/util/logging/ngat/util/logging/Logging.html#VERBOSITY_VERY_VERBOSE
+	 * The logging level. An absolute filter is used by the loggers. See:
+	 * <ul>
+	 * <li><a href="http://ltdevsrv.livjm.ac.uk/~dev/log_udp/cdocs/log_udp.html#LOG_VERBOSITY">LOG_VERBOSITY</a>
+	 * <li><a href="http://ltdevsrv.livjm.ac.uk/~dev/ngat/javadocs/ngat/util/logging/ngat/util/logging/Logging.html#VERBOSITY_VERY_TERSE">VERBOSITY_VERY_TERSE</a>
+	 * <li><a href="http://ltdevsrv.livjm.ac.uk/~dev/ngat/javadocs/ngat/util/logging/ngat/util/logging/Logging.html#VERBOSITY_TERSE">VERBOSITY_TERSE</a>
+	 * <li><a href="http://ltdevsrv.livjm.ac.uk/~dev/ngat/javadocs/ngat/util/logging/ngat/util/logging/Logging.html#VERBOSITY_INTERMEDIATE">VERBOSITY_INTERMEDIATE</a>
+	 * <li><a href="http://ltdevsrv.livjm.ac.uk/~dev/ngat/javadocs/ngat/util/logging/ngat/util/logging/Logging.html#VERBOSITY_VERBOSE">VERBOSITY_VERBOSE</a>
+	 * <li><a href="http://ltdevsrv.livjm.ac.uk/~dev/ngat/javadocs/ngat/util/logging/ngat/util/logging/Logging.html#VERBOSITY_VERY_VERBOSE">VERBOSITY_VERY_VERBOSE</a>
+	 * </ul>
 	 */
 	private int logLevel = 0;
 	/**

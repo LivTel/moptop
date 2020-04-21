@@ -10,10 +10,10 @@ JARLIBDIR	= $(LT_JAVALIB_HOME)
 LIBDIR		= $(MOPTOP_BIN_HOME)/java/
 DOCSDIR 	= $(MOPTOP_DOC_HOME)/javadocs/
 DOCFLAGS 	= -version -author -private
-JAVASRCS 	= ngat/moptop/*.java 
-#ngat/moptop/command/*.java ngat/moptop/test/*.java 
-JAVAPKGS	= ngat.moptop 
-#ngat.moptop.command ngat.moptop.test
+JAVASRCS 	= ngat/moptop/*.java ngat/moptop/command/*.java
+#ngat/moptop/test/*.java 
+JAVAPKGS	= ngat.moptop ngat.moptop.command
+#ngat.moptop.test
 
 JAVADOCS 	= $(JAVASRCS:%.java=$(DOCSDIR)/%.html)
 OBJS 		= $(JAVASRCS:%.java=$(LIBDIR)/%.class)

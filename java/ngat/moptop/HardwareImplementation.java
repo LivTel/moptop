@@ -9,7 +9,7 @@ import java.util.*;
 import ngat.fits.*;
 import ngat.message.base.*;
 import ngat.message.ISS_INST.*;
-//import ngat.moptop.command.*;
+import ngat.moptop.command.*;
 import ngat.util.logging.*;
 
 /**
@@ -305,7 +305,7 @@ public class HardwareImplementation extends CommandImplementation implements JMS
 	/**
 	 * Try to extract a specified subset of the GET_FITS headers returned from the ISS (RCS),
 	 * and pass them onto the C layer.
-	 * The subset is specified by the "moptop.get_fits.keyword.<n>" properties in the fits property file.
+	 * The subset is specified by the "moptop.get_fits.keyword.&lt;n&gt;" properties in the fits property file.
 	 * @param list A Vector of FitsHeaderCardImage instances. A subset of these will be passed to the C layer.
 	 * @exception Exception Thrown if addFitsHeader fails.
 	 * @see #addFitsHeader
