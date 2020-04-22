@@ -120,20 +120,22 @@ int Moptop_Command_Abort(char *command_string,char **reply_string)
 /**
  * Handle config commands of the forms:
  * <ul>
- * <li>"config filter <filtername>"
  * <li>"config bin <bin>"
+ * <li>"config filter <filtername>"
  * <li>"config rotorspeed <slow|fast>"
  * </ul>
  * @param command_string The command. This is not changed during this routine.
  * @param reply_string The address of a pointer to allocate and set the reply string.
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see moptop_config.html#Moptop_Config_Rotator_Is_Enabled
+ * @see moptop_config.html#Moptop_Config_Filter_Wheel_Is_Enabled
  * @see moptop_general.html#Moptop_General_Log
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_general.html#Moptop_General_Add_String
  * @see moptop_general.html#Moptop_General_Add_Integer_To_String
  * @see moptop_multrun.html#Moptop_Multrun_Exposure_Length_Set
+ * @see moptop_multrun.html#Moptop_Multrun_Filter_Name_Set
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Run_Velocity_Set
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Step_Angle_Set
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Run_Velocity_Get
@@ -176,66 +178,7 @@ int Moptop_Command_Config(char *command_string,char **reply_string)
 				  "COMMAND","Sub config command string: %s, parameter index %d.",
 				  sub_config_command_string,parameter_index);
 #endif
-	if(strcmp(sub_config_command_string,"filter") == 0)
-	{
-		/* copy rest of command as filter name - filter names have spaces in them! */
-		strncpy(filter_string,command_string+parameter_index,31);
-#if MOPTOP_DEBUG > 9
-		Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
-					  LOG_VERBOSITY_VERY_VERBOSE,"COMMAND","Filter string: %s.",filter_string);
-#endif
-		/* string to position conversion */
-		if(!Filter_Wheel_Config_Name_To_Position(filter_string,&filter_position))
-		{
-			Moptop_General_Error_Number = 503;
-			sprintf(Moptop_General_Error_String,"Moptop_Command_Config:"
-				"Failed to convert filter name '%s' to a valid filter position.",filter_string);
-			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
-					     LOG_VERBOSITY_TERSE,"COMMAND");
-#if MOPTOP_DEBUG > 1
-			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
-						  LOG_VERBOSITY_TERSE,"COMMAND",
-						  "Failed to convert filter name '%s' to a valid filter position.",
-						  filter_string);
-#endif
-			if(!Moptop_General_Add_String(reply_string,"1 Failed to convert filter name:"))
-				return FALSE;
-			if(!Moptop_General_Add_String(reply_string,filter_string))
-				return FALSE;
-			return TRUE;
-		}
-#if MOPTOP_DEBUG > 9
-		Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
-					  LOG_VERBOSITY_VERY_VERBOSE,"COMMAND","Filter position: %d.",filter_position);
-#endif
-		/* actually move filter wheel */
-		if(!Filter_Wheel_Command_Move(filter_position))
-		{
-			Moptop_General_Error_Number = 504;
-			sprintf(Moptop_General_Error_String,"Moptop_Command_Config:"
-				"Failed to move filter wheel to filter '%s', position %d.",
-				filter_string,filter_position);
-			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
-					     LOG_VERBOSITY_TERSE,"COMMAND");
-#if MOPTOP_DEBUG > 1
-			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
-						  LOG_VERBOSITY_TERSE,"COMMAND",
-						  "Failed to move filter wheel to filter '%s', position %d.",
-						  filter_string,filter_position);
-#endif
-			if(!Moptop_General_Add_String(reply_string,"1 Failed to move filter wheel to filter:"))
-				return FALSE;
-			if(!Moptop_General_Add_String(reply_string,filter_string))
-				return FALSE;
-			return TRUE;
-		}
-		/* success */
-		if(!Moptop_General_Add_String(reply_string,"0 Filter wheel moved to position:"))
-			return FALSE;
-		if(!Moptop_General_Add_String(reply_string,filter_string))
-			return FALSE;
-	}
-	else if(strcmp(sub_config_command_string,"bin") == 0)
+        if(strcmp(sub_config_command_string,"bin") == 0)
 	{
 		retval = sscanf(command_string+parameter_index,"%d",&bin);
 		if(retval != 1)
@@ -276,6 +219,97 @@ int Moptop_Command_Config(char *command_string,char **reply_string)
 			return FALSE;
 		if(!Moptop_General_Add_Integer_To_String(reply_string,bin))
 			return FALSE;
+	}
+	else if(strcmp(sub_config_command_string,"filter") == 0)
+	{
+		/* copy rest of command as filter name - filter names have spaces in them! */
+		strncpy(filter_string,command_string+parameter_index,31);
+#if MOPTOP_DEBUG > 9
+		Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+					  LOG_VERBOSITY_VERY_VERBOSE,"COMMAND","Filter string: %s.",filter_string);
+#endif
+		if(Moptop_Config_Filter_Wheel_Is_Enabled())
+		{
+			/* string to position conversion */
+			if(!Filter_Wheel_Config_Name_To_Position(filter_string,&filter_position))
+			{
+				Moptop_General_Error_Number = 503;
+				sprintf(Moptop_General_Error_String,"Moptop_Command_Config:"
+					"Failed to convert filter name '%s' to a valid filter position.",filter_string);
+				Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
+						     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+				Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+							  LOG_VERBOSITY_TERSE,"COMMAND",
+							  "Failed to convert filter name '%s' to a valid filter position.",
+							  filter_string);
+#endif
+				if(!Moptop_General_Add_String(reply_string,"1 Failed to convert filter name:"))
+					return FALSE;
+				if(!Moptop_General_Add_String(reply_string,filter_string))
+					return FALSE;
+				return TRUE;
+			}
+#if MOPTOP_DEBUG > 9
+			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+					  LOG_VERBOSITY_VERY_VERBOSE,"COMMAND","Filter position: %d.",filter_position);
+#endif
+			/* actually move filter wheel */
+			if(!Filter_Wheel_Command_Move(filter_position))
+			{
+				Moptop_General_Error_Number = 504;
+				sprintf(Moptop_General_Error_String,"Moptop_Command_Config:"
+					"Failed to move filter wheel to filter '%s', position %d.",
+					filter_string,filter_position);
+				Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
+						     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+				Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+							  LOG_VERBOSITY_TERSE,"COMMAND",
+							  "Failed to move filter wheel to filter '%s', position %d.",
+							  filter_string,filter_position);
+#endif
+				if(!Moptop_General_Add_String(reply_string,"1 Failed to move filter wheel to filter:"))
+					return FALSE;
+				if(!Moptop_General_Add_String(reply_string,filter_string))
+					return FALSE;
+				return TRUE;
+			}
+			/* success */
+			if(!Moptop_General_Add_String(reply_string,"0 Filter wheel moved to position:"))
+				return FALSE;
+			if(!Moptop_General_Add_String(reply_string,filter_string))
+				return FALSE;
+		}
+		else // filter wheel is not enabled for this C layer
+		{
+			if(!Moptop_Multrun_Filter_Name_Set(filter_string))
+			{
+				Moptop_General_Error_Number = 502;
+				sprintf(Moptop_General_Error_String,"Moptop_Command_Config:"
+					"Failed to cache filter name data '%s'.",filter_string);
+				Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
+						     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+				Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+							  LOG_VERBOSITY_TERSE,"COMMAND",
+							  "Failed to cache filter name data '%s'.",
+							  filter_string);
+#endif
+				if(!Moptop_General_Add_String(reply_string,"1 Failed to cache filter name:"))
+					return FALSE;
+				if(!Moptop_General_Add_String(reply_string,filter_string))
+					return FALSE;
+				return TRUE;
+			}
+			/* success */
+			if(!Moptop_General_Add_String(reply_string,"0 Filter :"))
+				return FALSE;
+			if(!Moptop_General_Add_String(reply_string,filter_string))
+				return FALSE;
+			if(!Moptop_General_Add_String(reply_string," data cached."))
+				return FALSE;
+		}
 	}
 	else if(strcmp(sub_config_command_string,"rotorspeed") == 0)
 	{

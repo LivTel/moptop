@@ -4,6 +4,7 @@
 #include <time.h> /* struct timespec */
 
 extern int Moptop_Multrun_Exposure_Length_Set(double exposure_length_s);
+extern int Moptop_Multrun_Filter_Name_Set(char *filter_name);
 extern int Moptop_Multrun_Setup(int *multrun_number);
 extern int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_count,int use_exposure_count,
 			  int do_standard,char ***filename_list,int *filename_count);

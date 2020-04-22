@@ -19,8 +19,7 @@ CALIBRATE_IMPL_SRCS 	=
 EXPOSE_IMPL_SRCS	= MULTRUNImplementation.java 
 INTERRUPT_IMPL_SRCS 	= 
 #GET_STATUSImplementation.java ABORTImplementation.java REBOOTImplementation.java
-SETUP_IMPL_SRCS		= 
-#CONFIGImplementation.java
+SETUP_IMPL_SRCS		= CONFIGImplementation.java
 OBJS 		= $(SRCS:%.java=$(BINDIR)/%.class)
 
 CONFIG_SRCS	= moptop1.moptop.net.properties moptop1.moptop.properties moptop1.fits.properties

@@ -49,6 +49,10 @@
  * Length of FITS filename string.
  */
 #define MULTRUN_FITS_FILENAME_LENGTH  (256)
+/**
+ * Length of cached filter name data.
+ */
+#define MULTRUN_FILTER_NAME_LENGTH    (32)
 
 /* data types */
 /**
@@ -57,7 +61,7 @@
  * <dt>Rotator_Run_Velocity</dt> <dd>A copy of the rotator run velocity used to configure the rotator.</dd>
  * <dt>Rotator_Step_Angle</dt> <dd>A copy of the rotator step angle used to configure the rotator.</dd>
  * <dt>Filter_Position;</dt> <dd>A copy of the filter position taken at the start of the multrun, used for filling in FITS headers.</dd>
- * <dt>Filter_Name</dt> <dd>A copy of the filter name taken at the start of the multrun, used for filling in FITS headers.</dd>
+ * <dt>Filter_Name</dt> <dd>A copy of the filter name taken at the start of the multrun, used for filling in FITS headers. Of length MULTRUN_FILTER_NAME_LENGTH.</dd>
  * <dt>CCD_Temperature</dt> <dd>A copy of the current CCD temperature, taken at the start of a multrun. Used to populate FITS headers.</dd>
  * <dt>CCD_Temperature_Status_String</dt> <dd>A copy of the current CCD temperature status, taken at the start of a multrun. Used to populate FITS headers.</dd>
  * <dt>Requested_Exposure_Length</dt> <dd>A copy of the per-frame requested exposure length (in seconds) used to configure the CCD camera. 
@@ -71,13 +75,14 @@
  * <dt></dt> <dd></dd>
  * <dt></dt> <dd></dd>
  * </dl>
+ * @see #MULTRUN_FILTER_NAME_LENGTH
  */
 struct Multrun_Struct
 {
 	double Rotator_Run_Velocity;
 	double Rotator_Step_Angle;
 	int Filter_Position;
-	char Filter_Name[32];
+	char Filter_Name[MULTRUN_FILTER_NAME_LENGTH];
 	double CCD_Temperature;
 	char CCD_Temperature_Status_String[64];
 	double Requested_Exposure_Length;
@@ -151,6 +156,8 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
  * @param exposure_length_s The exposure length to use for each frame, in seconds.
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #Multrun_Data
+ * @see #Moptop_General_Error_Number
+ * @see #Moptop_General_Error_String
  * @see ../ccd/cdocs/ccd_command.html#CCD_Exposure_Length_Set
  */
 int Moptop_Multrun_Exposure_Length_Set(double exposure_length_s)
@@ -166,6 +173,37 @@ int Moptop_Multrun_Exposure_Length_Set(double exposure_length_s)
 	}
 	/* Save the requested exposure length for later inclusion in the FITS headers */
 	Multrun_Data.Requested_Exposure_Length = exposure_length_s;
+	return TRUE;
+}
+
+/**
+ * Routine to set the cached multrun filter name data, which is used to fill in the FILTER1 keyword when saving
+ * multrun FITS images. This routine should only be used by the C layer _not_ attached to the filter wheel,
+ * the C layer that has access to the filter wheel queries it's position and caches the filter name as part
+ * of the "multrun_setup" command.
+ * @param filter_name A string representation of the filter name to be cached.
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see #Multrun_Data
+ * @see #Moptop_General_Error_Number
+ * @see #Moptop_General_Error_String
+ */
+int Moptop_Multrun_Filter_Name_Set(char *filter_name)
+{
+	if(filter_name == NULL)
+	{
+		Moptop_General_Error_Number = 642;
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun_Filter_Name_Set: filter_name was NULL.");
+		return FALSE;
+	}
+	if(strlen(filter_name) >= MULTRUN_FILTER_NAME_LENGTH)
+	{
+		Moptop_General_Error_Number = 643;
+		sprintf(Moptop_General_Error_String,
+			"Moptop_Multrun_Filter_Name_Set: filter_name '%s' was too long (%ld, vs %d).",
+			filter_name,strlen(filter_name),MULTRUN_FILTER_NAME_LENGTH);
+		return FALSE;
+	}
+	strcpy(Multrun_Data.Filter_Name,filter_name);
 	return TRUE;
 }
 
@@ -241,11 +279,7 @@ int Moptop_Multrun_Setup(int *multrun_number)
 			return FALSE;		
 		}
 	}
-	else
-	{
-		Multrun_Data.Filter_Position = -1;
-		strcpy(Multrun_Data.Filter_Name,"UNKNOWN");
-	}
+	/* else do nothing, the config filter command should have updated Multrun_Data.Filter_Name */
 	/* get current CCD temperature/status and store it for later */
 	if(!CCD_Temperature_Get(&(Multrun_Data.CCD_Temperature)))
 	{
