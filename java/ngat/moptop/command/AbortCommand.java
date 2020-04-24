@@ -85,6 +85,5 @@ public class AbortCommand extends Command implements Runnable
 			System.exit(1);
 		}
 		System.exit(0);
-
 	}
 }

@@ -17,8 +17,8 @@ BASE_IMPL_SRCS		= CommandImplementation.java JMSCommandImplementation.java Unkno
 			HardwareImplementation.java
 CALIBRATE_IMPL_SRCS 	= 
 EXPOSE_IMPL_SRCS	= MULTRUNImplementation.java 
-INTERRUPT_IMPL_SRCS 	= 
-#GET_STATUSImplementation.java ABORTImplementation.java REBOOTImplementation.java
+INTERRUPT_IMPL_SRCS 	= ABORTImplementation.java REBOOTImplementation.java
+#GET_STATUSImplementation.java 
 SETUP_IMPL_SRCS		= CONFIGImplementation.java
 OBJS 		= $(SRCS:%.java=$(BINDIR)/%.class)
 
