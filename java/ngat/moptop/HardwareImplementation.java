@@ -135,12 +135,12 @@ public class HardwareImplementation extends CommandImplementation implements JMS
 		String valueString = null;
 		boolean done;
 		double dvalue;
-		int index,ivalue,cameraCount,cLayerIndex,cameraIndex;
+		int index,ivalue,cLayerCount;
 		boolean bvalue;
 
 		moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
 			   ":setFitsHeaders:Started.");
-				cameraCount = status.getPropertyInteger("moptop.camera.count");
+		cLayerCount = status.getPropertyInteger("moptop.c.count");
 		index = 0;
 		done = false;
 		while(done == false)
@@ -161,48 +161,43 @@ public class HardwareImplementation extends CommandImplementation implements JMS
 					commandDone.setSuccessful(false);
 					return false;
 				}
-				// Add FITS header to all cameras in all C layers
-				for(int i = 0; i < cameraCount; i++)
+				// Add FITS header to each C layer
+				for(int cLayerIndex = 0; cLayerIndex < cLayerCount; cLayerIndex++)
 				{
-					cLayerIndex = status.getPropertyInteger("moptop.camera.c.layer."+i);
-					cameraIndex = status.getPropertyInteger("moptop.camera.index."+i);
 					try
 					{
 						if(typeString.equals("string"))
 						{
 							valueString = status.getProperty("moptop.fits.value."+keyword+
-										      "."+cLayerIndex+"."+cameraIndex);
-							addFitsHeader(cLayerIndex,cameraIndex,keyword,valueString);
+										      "."+cLayerIndex);
+							addFitsHeader(cLayerIndex,keyword,valueString);
 						}
 						else if(typeString.equals("integer"))
 						{
 							Integer iov = null;
 							
 							ivalue = status.getPropertyInteger("moptop.fits.value."+
-											   keyword+"."+cLayerIndex+
-											   "."+cameraIndex);
+											   keyword+"."+cLayerIndex);
 							iov = new Integer(ivalue);
-							addFitsHeader(cLayerIndex,cameraIndex,keyword,iov);
+							addFitsHeader(cLayerIndex,keyword,iov);
 						}
 						else if(typeString.equals("float"))
 						{
 							Float fov = null;
 							
 							dvalue = status.getPropertyDouble("moptop.fits.value."+
-											  keyword+"."+cLayerIndex+"."+
-											  cameraIndex);
+											  keyword+"."+cLayerIndex);
 							fov = new Float(dvalue);
-							addFitsHeader(cLayerIndex,cameraIndex,keyword,fov);
+							addFitsHeader(cLayerIndex,keyword,fov);
 						}
 						else if(typeString.equals("boolean"))
 						{
 							Boolean bov = null;
 							
 							bvalue = status.getPropertyBoolean("moptop.fits.value."+
-											   keyword+"."+cLayerIndex+
-											   "."+cameraIndex);
+											   keyword+"."+cLayerIndex);
 							bov = new Boolean(bvalue);
-							addFitsHeader(cLayerIndex,cameraIndex,keyword,bov);
+							addFitsHeader(cLayerIndex,keyword,bov);
 						}
 						else
 						{
@@ -230,7 +225,7 @@ public class HardwareImplementation extends CommandImplementation implements JMS
 						commandDone.setSuccessful(false);
 						return false;
 					}
-				}// end for on cameraCount
+				}// end for on cLayerCount
 				// increment index
 				index++;
 			}
@@ -319,10 +314,12 @@ public class HardwareImplementation extends CommandImplementation implements JMS
 		FitsHeaderCardImage valueCardImage = null;
 		String keyword;
 		boolean done;
-		int index,listIndex,cameraCount,cLayerIndex,cameraIndex;
+		int index,listIndex,cLayerCount;
 
 		moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
 			   ":addISSFitsHeaderList:started.");
+		// get C layer Count for later
+		cLayerCount = status.getPropertyInteger("moptop.c.count");
 		// sort the List into keyword order.
 		cardImageCompareByKeyword = new FitsHeaderCardImageKeywordComparator();
 		Collections.sort(list,cardImageCompareByKeyword);
@@ -349,17 +346,12 @@ public class HardwareImplementation extends CommandImplementation implements JMS
 					moptop.log(Logging.VERBOSITY_VERBOSE,this.getClass().getName()+
 						   ":addISSFitsHeaderList:Adding "+keyword+" to all C layers.");
 					// Add FITS header to all cameras in all C layers
-					cameraCount = status.getPropertyInteger("moptop.camera.count");
-					for(int i = 0; i < cameraCount; i++)
+					for(int cLayerIndex = 0; cLayerIndex < cLayerCount; cLayerIndex++)
 					{
-						cLayerIndex = status.getPropertyInteger("moptop.camera.c.layer."+i);
-						cameraIndex = status.getPropertyInteger("moptop.camera.index."+i);
 						moptop.log(Logging.VERBOSITY_VERBOSE,this.getClass().getName()+
 							   ":addISSFitsHeaderList:Adding "+keyword+
-							   " to C layer index "+cLayerIndex+" and camera index "+
-							   cameraIndex+".");
-						addFitsHeader(cLayerIndex,cameraIndex,keyword,
-							      valueCardImage.getValue());
+							   " to C layer index "+cLayerIndex+".");
+						addFitsHeader(cLayerIndex,keyword,valueCardImage.getValue());
 					}
 				}
 				else
@@ -384,7 +376,6 @@ public class HardwareImplementation extends CommandImplementation implements JMS
 	 * "moptop.c.hostname.&lt;cMachineIndex&gt;" and "moptop.c.port_number.&lt;cMachineIndex&gt;" properties. 
 	 * An instance of FitsHeaderAddCommand is used to transmit the data.
 	 * @param cMachineIndex Which moptop C layer program to send the FITS header to.
-	 * @param cameraIndex Which camera we wish to add the header for.
 	 * @param keyword The FITS headers keyword.
 	 * @param value The FITS headers value - an object of class String,Integer,Float,Double,Boolean,Date.
 	 * @exception Exception Thrown if the FitsHeaderAddCommand internally errors, or the return code indicates a
@@ -401,9 +392,9 @@ public class HardwareImplementation extends CommandImplementation implements JMS
 	 * @see ngat.moptop.command.FitsHeaderAddCommand#getReturnCode
 	 * @see ngat.moptop.command.FitsHeaderAddCommand#getParsedReply
 	 */
-	protected void addFitsHeader(int cMachineIndex,int cameraIndex,String keyword,Object value) throws Exception
+	protected void addFitsHeader(int cMachineIndex,String keyword,Object value) throws Exception
 	{
-		//FitsHeaderAddCommand addCommand = null;
+		FitsHeaderAddCommand addCommand = null;
 		int portNumber,returnCode;
 		String hostname = null;
 		String errorString = null;
@@ -417,53 +408,53 @@ public class HardwareImplementation extends CommandImplementation implements JMS
 			throw new NullPointerException(this.getClass().getName()+
 						       ":addFitsHeader:value was null for keyword:"+keyword);
 		}
-		//addCommand = new FitsHeaderAddCommand();
+		addCommand = new FitsHeaderAddCommand();
 		// configure C comms
 		hostname = status.getProperty("moptop.c.hostname."+cMachineIndex);
 		portNumber = status.getPropertyInteger("moptop.c.port_number."+cMachineIndex);
-		//addCommand.setAddress(hostname);
-		//addCommand.setPortNumber(portNumber);
+		addCommand.setAddress(hostname);
+		addCommand.setPortNumber(portNumber);
 		// set command parameters
 		if(value instanceof String)
 		{
 			moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
 				   ":addFitsHeader:Adding keyword "+keyword+" with String value "+value+".");
-			//addCommand.setCommand(cameraIndex,keyword,(String)value);
+			addCommand.setCommand(keyword,(String)value);
 		}
 		else if(value instanceof Integer)
 		{
 			moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
 				   ":addFitsHeader:Adding keyword "+keyword+" with integer value "+
 				   ((Integer)value).intValue()+".");
-			//addCommand.setCommand(cameraIndex,keyword,((Integer)value).intValue());
+			addCommand.setCommand(keyword,((Integer)value).intValue());
 		}
 		else if(value instanceof Float)
 		{
 			moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
 				   ":addFitsHeader:Adding keyword "+keyword+" with float value "+
 				   ((Float)value).doubleValue()+".");
-			//addCommand.setCommand(cameraIndex,keyword,((Float)value).doubleValue());
+			addCommand.setCommand(keyword,((Float)value).doubleValue());
 		}
 		else if(value instanceof Double)
 		{
 			moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
 				   ":addFitsHeader:Adding keyword "+keyword+" with double value "+
 				   ((Double)value).doubleValue()+".");
-		        //addCommand.setCommand(cameraIndex,keyword,((Double)value).doubleValue());
+		        addCommand.setCommand(keyword,((Double)value).doubleValue());
 		}
 		else if(value instanceof Boolean)
 		{
 			moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
 				   ":addFitsHeader:Adding keyword "+keyword+" with boolean value "+
 				   ((Boolean)value).booleanValue()+".");
-			//addCommand.setCommand(cameraIndex,keyword,((Boolean)value).booleanValue());
+			addCommand.setCommand(keyword,((Boolean)value).booleanValue());
 		}
 		else if(value instanceof Date)
 		{
 			moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
 				   ":addFitsHeader:Adding keyword "+keyword+" with date value "+
 				   dateFitsFieldToString((Date)value)+".");
-			//addCommand.setCommand(cameraIndex,keyword,dateFitsFieldToString((Date)value));
+			addCommand.setCommand(keyword,dateFitsFieldToString((Date)value));
 		}
 		else
 		{
@@ -472,18 +463,18 @@ public class HardwareImplementation extends CommandImplementation implements JMS
 							   value.getClass().getName());
 		}
 		// actually send the command to the C layer
-		//addCommand.sendCommand();
+		addCommand.sendCommand();
 		// check the parsed reply
-		//if(addCommand.getParsedReplyOK() == false)
-		//{
-		//	returnCode = addCommand.getReturnCode();
-		//	errorString = addCommand.getParsedReply();
-		//	moptop.log(Logging.VERBOSITY_TERSE,"addFitsHeader:Command failed with return code "+
-		//		   returnCode+" and error string:"+errorString);
-		//	throw new Exception(this.getClass().getName()+
-		//			    ":addFitsHeader:Command failed with return code "+returnCode+
-		//			    " and error string:"+errorString);
-		//}
+		if(addCommand.getParsedReplyOK() == false)
+		{
+			returnCode = addCommand.getReturnCode();
+			errorString = addCommand.getParsedReply();
+			moptop.log(Logging.VERBOSITY_TERSE,"addFitsHeader:Command failed with return code "+
+				   returnCode+" and error string:"+errorString);
+			throw new Exception(this.getClass().getName()+
+					    ":addFitsHeader:Command failed with return code "+returnCode+
+					    " and error string:"+errorString);
+		}
 	}
 
 	/**
