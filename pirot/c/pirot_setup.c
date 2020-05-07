@@ -146,6 +146,7 @@ int PIROT_Setup_Trigger_Step_Angle(double trigger_step_angle)
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_TERSE,"PIROT_Setup_Trigger_Step_Angle: Finished.");
 #endif /* LOGGING */
+	return TRUE;
 }
 
 /**
