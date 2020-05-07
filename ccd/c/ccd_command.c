@@ -1804,7 +1804,7 @@ int CCD_Command_Set_Float(char *feature_name_string,double value)
 				       "feature name = '%s', value = %.2f), attempt %d.",
 				       Command_Data.Handle,feature_name_string,value,(retry_index+1));
 #endif /* LOGGING */
-		retval = AT_SetBool(Command_Data.Handle,feature_name_wide_string,value);
+		retval = AT_SetFloat(Command_Data.Handle,feature_name_wide_string,value);
 		if(retval != AT_SUCCESS)
 		{
 			Command_Error_Number = 22;
