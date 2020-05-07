@@ -197,6 +197,10 @@ int Moptop_Command_Config(char *command_string,char **reply_string)
 			return TRUE;
 		}
 		/* configure CCD binning */
+#if MOPTOP_DEBUG > 5
+		Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+					  LOG_VERBOSITY_VERBOSE,"COMMAND","Setting binning to: %d.",bin);
+#endif
 		if(!CCD_Setup_Dimensions(bin))
 		{
 			Moptop_General_Error_Number = 507;
@@ -224,9 +228,9 @@ int Moptop_Command_Config(char *command_string,char **reply_string)
 	{
 		/* copy rest of command as filter name - filter names have spaces in them! */
 		strncpy(filter_string,command_string+parameter_index,31);
-#if MOPTOP_DEBUG > 9
+#if MOPTOP_DEBUG > 5
 		Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
-					  LOG_VERBOSITY_VERY_VERBOSE,"COMMAND","Filter string: %s.",filter_string);
+					  LOG_VERBOSITY_VERBOSE,"COMMAND","Setting Filter to: %s.",filter_string);
 #endif
 		if(Moptop_Config_Filter_Wheel_Is_Enabled())
 		{
@@ -329,6 +333,11 @@ int Moptop_Command_Config(char *command_string,char **reply_string)
 				return FALSE;
 			return TRUE;
 		}
+#if MOPTOP_DEBUG > 5
+		Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+					  LOG_VERBOSITY_VERBOSE,"COMMAND","Setting rotor speed to: %s.",
+					  rotor_speed_string);
+#endif
 		if(strcmp(rotor_speed_string,"fast") == 0)
 		{
 			/* fast speed rotor: 45 deg/s (7.5 rpm) , 16 triggers per rotation, exposure length 0.4s 
@@ -368,6 +377,12 @@ int Moptop_Command_Config(char *command_string,char **reply_string)
 		/* configure rotator if enabled */
 		if(Moptop_Config_Rotator_Is_Enabled())
 		{
+#if MOPTOP_DEBUG > 5
+			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+						  LOG_VERBOSITY_VERBOSE,"COMMAND",
+						  "Setting rotor run velocity to: %.3f.",
+						  Moptop_Multrun_Rotator_Run_Velocity_Get());
+#endif
 			if(!PIROT_Setup_Rotator_Run_Velocity(Moptop_Multrun_Rotator_Run_Velocity_Get()))
 			{
 				Moptop_General_Error_Number = 535;
@@ -386,6 +401,12 @@ int Moptop_Command_Config(char *command_string,char **reply_string)
 					return FALSE;
 				return TRUE;
 			}
+#if MOPTOP_DEBUG > 5
+			Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+						  LOG_VERBOSITY_VERBOSE,"COMMAND",
+						  "Setting trigger step angle to: %.3f.",
+						  Moptop_Multrun_Rotator_Step_Angle_Get());
+#endif
 			if(!PIROT_Setup_Trigger_Step_Angle(Moptop_Multrun_Rotator_Step_Angle_Get()))
 			{
 				Moptop_General_Error_Number = 536;
@@ -404,6 +425,10 @@ int Moptop_Command_Config(char *command_string,char **reply_string)
 					return FALSE;
 				return TRUE;
 			}
+#if MOPTOP_DEBUG > 5
+			Moptop_General_Log("command","moptop_command.c","Moptop_Command_Config",
+					   LOG_VERBOSITY_VERBOSE,"COMMAND","Configuring rotator.");
+#endif
 			if(!PIROT_Setup_Rotator())
 			{
 				Moptop_General_Error_Number = 537;
@@ -421,6 +446,11 @@ int Moptop_Command_Config(char *command_string,char **reply_string)
 			}
 		} /* end if Moptop_Config_Rotator_Is_Enabled */
 		/* set CCD exposure length to match */
+#if MOPTOP_DEBUG > 5
+		Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
+					  LOG_VERBOSITY_VERBOSE,"COMMAND","Setting multrun exposure length to: %.3fs.",
+					  camera_exposure_length);
+#endif
 		if(!Moptop_Multrun_Exposure_Length_Set(camera_exposure_length))
 		{
 			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",LOG_VERBOSITY_TERSE,

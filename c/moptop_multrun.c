@@ -155,16 +155,18 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
  * </ul>
  * @param exposure_length_s The exposure length to use for each frame, in seconds.
  * @return The routine returns TRUE on success and FALSE on failure.
+ * @see moptop_general.html#MOPTOP_GENERAL_ONE_SECOND_MS
  * @see #Multrun_Data
- * @see #Moptop_General_Error_Number
- * @see #Moptop_General_Error_String
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
  * @see ../ccd/cdocs/ccd_command.html#CCD_Exposure_Length_Set
  */
 int Moptop_Multrun_Exposure_Length_Set(double exposure_length_s)
 {
 	/* configure the CCD camera exposure length 
-	** Note this might be modified by the Andor library. */
-	if(!CCD_Exposure_Length_Set(exposure_length_s))
+	** Note this might be modified by the Andor library. 
+	** Note CCD_Exposure_Length_Set requires the exposure length to be in milliseconds. */
+	if(!CCD_Exposure_Length_Set(exposure_length_s*MOPTOP_GENERAL_ONE_SECOND_MS))
 	{
 		Moptop_General_Error_Number = 640;
 		sprintf(Moptop_General_Error_String,
