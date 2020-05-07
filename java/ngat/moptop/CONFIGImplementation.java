@@ -17,7 +17,7 @@ import ngat.util.logging.*;
  * This class provides the implementation for the CONFIG command sent to a server using the
  * Java Message System.
  * @author Chris Mottram
- * @version $Revision: 1.1 $
+ * @version $Revision$
  */
 public class CONFIGImplementation extends CommandImplementation implements JMSCommandImplementation
 {
@@ -164,12 +164,17 @@ public class CONFIGImplementation extends CommandImplementation implements JMSCo
 			otherDetector = (MOPTOPPolarimeterDetector)(config.getDetector(i));
 			moptop.log(Logging.VERBOSITY_INTERMEDIATE,"CONFIGImplementation:processCommand:Detector "+
 				   i+":"+otherDetector);
-			if((detector.equals(otherDetector)) == false)
+			if((detector.getXBin() != otherDetector.getXBin())||
+			   (detector.getYBin() != otherDetector.getYBin()))
 			{
 				moptop.error(this.getClass().getName()+":processCommand:"+
-					     command+":Detector "+i+" did not match first detector.");
+					     command+":Detector "+i+" binning ("+otherDetector.getXBin()+","+
+					     otherDetector.getYBin()+") did not match first detector ("+
+					     detector.getXBin()+","+detector.getYBin()+").");
 				configDone.setErrorNum(MoptopConstants.MOPTOP_ERROR_CODE_BASE+807);
-				configDone.setErrorString("Detector "+i+" did not match first detector.");
+				configDone.setErrorString("Detector "+i+" binning  ("+otherDetector.getXBin()+","+
+					     otherDetector.getYBin()+") did not match first detector ("+
+					     detector.getXBin()+","+detector.getYBin()+").");
 				configDone.setSuccessful(false);
 				return configDone;
 			}
