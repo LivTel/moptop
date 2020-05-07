@@ -17,7 +17,7 @@ import ngat.util.ExecuteCommand;
  * This class provides the implementation for the GET_STATUS command sent to a server using the
  * Java Message System.
  * @author Chris Mottram
- * @version $Revision: 1.2 $
+ * @version $Revision$
  */
 public class GET_STATUSImplementation extends CommandImplementation implements JMSCommandImplementation
 {
@@ -281,7 +281,7 @@ public class GET_STATUSImplementation extends CommandImplementation implements J
 			cLayerPortNumber = ((Integer)(cLayerPortNumberList.get(cLayerIndex))).intValue();
 			// Setup StatusExposureStatusCommand for this C layer
 			moptop.log(Logging.VERBOSITY_INTERMEDIATE,"getExposureStatus:started for C layer Index:"+
-				   cLayerIndex+".");
+				   cLayerIndex+":Hostname: "+cLayerHostname+" Port Number: "+cLayerPortNumber+".");
 			statusCommand = new StatusExposureStatusCommand();
 			statusCommand.setAddress(cLayerHostname);
 			statusCommand.setPortNumber(cLayerPortNumber);
