@@ -272,9 +272,7 @@ public class CONFIGImplementation extends CommandImplementation implements JMSCo
 		String hostname = null;
 		String errorString = null;
 
-		moptop.log(Logging.VERBOSITY_INTERMEDIATE,"sendConfigBinCommand:"+
-			   "\n\t:X Bin = "+xBin+
-			   "\n\t:Y Bin = "+yBin+".");
+		moptop.log(Logging.VERBOSITY_INTERMEDIATE,"sendConfigBinCommand:X Bin = "+xBin+":Y Bin = "+yBin+".");
 		// we only support square binning
 		if(xBin != yBin)
 		{
@@ -334,8 +332,7 @@ public class CONFIGImplementation extends CommandImplementation implements JMSCo
 		String hostname = null;
 		String errorString = null;
 
-		moptop.log(Logging.VERBOSITY_INTERMEDIATE,"sendConfigFilterCommand:"+
-			   "\n\t:filter name = "+filterName+".");
+		moptop.log(Logging.VERBOSITY_INTERMEDIATE,"sendConfigFilterCommand:filter name = "+filterName+".");
 		cLayerCount = status.getPropertyInteger("moptop.c.count");
 		for(int cLayerIndex = 0; cLayerIndex < cLayerCount; cLayerIndex++)
 		{
@@ -387,8 +384,8 @@ public class CONFIGImplementation extends CommandImplementation implements JMSCo
 		String hostname = null;
 		String errorString = null;
 
-		moptop.log(Logging.VERBOSITY_INTERMEDIATE,"sendConfigRotorspeedCommand:"+
-			   "\n\t:rotor speed = "+rotorSpeedString+".");
+		moptop.log(Logging.VERBOSITY_INTERMEDIATE,"sendConfigRotorspeedCommand:rotor speed = "+
+			   rotorSpeedString+".");
 		cLayerCount = status.getPropertyInteger("moptop.c.count");
 		for(int cLayerIndex = 0; cLayerIndex < cLayerCount; cLayerIndex++)
 		{
