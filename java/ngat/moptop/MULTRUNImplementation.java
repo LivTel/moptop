@@ -18,7 +18,7 @@ import ngat.util.logging.*;
  * This class provides the implementation for the MULTRUN command sent to a server using the
  * Java Message System.
  * @author Chris Mottram
- * @version $Revision: 1.1 $
+ * @version $Revision$
  * @see ngat.moptop.HardwareImplementation
  */
 public class MULTRUNImplementation extends HardwareImplementation implements JMSCommandImplementation
@@ -336,7 +336,7 @@ public class MULTRUNImplementation extends HardwareImplementation implements JMS
 		for(int cLayerIndex = 0; cLayerIndex < cLayerCount; cLayerIndex++)
 		{
 			// if we threw an exception, log exception and setup failed multRunDone
-			if(multrunSetupThreadList[cLayerIndex].getException() != null)
+			if(multrunThreadList[cLayerIndex].getException() != null)
 			{
 				moptop.error(this.getClass().getName()+":processCommand:C Layer "+cLayerIndex+
 					     " returned exception:",multrunThreadList[cLayerIndex].getException());
