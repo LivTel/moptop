@@ -12,7 +12,7 @@ import java.util.*;
  * start_time of the current/last exposure, as a timestamp.
  * This status is available per C layer.
  * @author Chris Mottram
- * @version $Revision: 1.1 $
+ * @version $Revision$
  */
 public class StatusExposureStartTimeCommand extends Command implements Runnable
 {
@@ -69,10 +69,11 @@ public class StatusExposureStartTimeCommand extends Command implements Runnable
 	public void parseReplyString() throws Exception
 	{
 		Calendar calendar = null;
+		TimeZone timeZone = null;
 		StringTokenizer st = null;
 		String timeStampDateString = null;
 		String timeStampTimeString = null;
-		String temperatureString = null;
+		String timeStampTimeZoneString = null;
 		double second=0.0;
 		int sindex,tokenIndex,day=0,month=0,year=0,hour=0,minute=0;
 		
@@ -82,7 +83,7 @@ public class StatusExposureStartTimeCommand extends Command implements Runnable
 			parsedReplyTimestamp = null;
 			return;
 		}
-		st = new StringTokenizer(parsedReplyString,"T");
+		st = new StringTokenizer(parsedReplyString,"T ");
 		tokenIndex = 0;
 		while(st.hasMoreTokens())
 		{
@@ -90,6 +91,8 @@ public class StatusExposureStartTimeCommand extends Command implements Runnable
 				timeStampDateString = st.nextToken();
 			else if(tokenIndex == 1)
 				timeStampTimeString = st.nextToken();
+			else if(tokenIndex == 2)
+				timeStampTimeZoneString = st.nextToken();
 			else
 				st.nextToken();
 			tokenIndex++;
@@ -120,8 +123,11 @@ public class StatusExposureStartTimeCommand extends Command implements Runnable
 				second = Double.parseDouble(st.nextToken());// 00..61 + milliseconds as decimal
 			tokenIndex++;
 		}// end while
+		// parse the timezone string timeStampTimezoneString
+		timeZone = TimeZone.getTimeZone(timeStampTimeZoneString);
 		// create calendar
 		calendar = Calendar.getInstance();
+		calendar.setTimeZone(timeZone);
 		// set calendar
 		calendar.set(year,month-1,day,hour,minute,(int)second);// month is zero-based.
 		// get timestamp from calendar 
