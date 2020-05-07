@@ -11,7 +11,7 @@ import java.util.*;
  * The "config" command is an extension of the Command, and configures the instrument for exposures.
  * This command configures the rotator speed to be used.
  * @author Chris Mottram
- * @version $Revision: 1.1 $
+ * @version $Revision$
  */
 public class ConfigRotorspeedCommand extends Command implements Runnable
 {
@@ -67,7 +67,7 @@ public class ConfigRotorspeedCommand extends Command implements Runnable
 	 */
 	public void setCommand(String rotorspeedString)
 	{
-		commandString = new String("config rotospeed "+rotorspeedString);
+		commandString = new String("config rotorspeed "+rotorspeedString);
 	}
 	/**
 	 * Main test program.
