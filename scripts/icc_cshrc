@@ -25,7 +25,7 @@ foreach dir ( ${LT_BIN_HOME}/lib/${HOSTTYPE} )
 end
 
 # Useful command aliass
-alias icsgui                            '/icc/bin/ccs_gui/java/icsgui'
+alias icsgui                            '/icc/bin/ics_gui/java/icsgui'
 alias moptop_engineering_mode   	'/icc/bin/scripts/moptop_engineering_mode'
 alias myps             			'ps -e -o pid,pcpu,vsz,ruser,args'
 alias send_command			'/icc/bin/commandserver/test/${HOSTTYPE}/send_command'

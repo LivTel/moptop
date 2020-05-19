@@ -96,7 +96,7 @@ set dir_count = 0
 # ${deployment_bin_dir}/libdprt/object/test/${HOSTTYPE} 
 set dir_list = "${deployment_dir} ${deployment_dir}/${init_d_dir} ${deployment_icc_dir} ${deployment_bin_dir} ${deployment_dir}/icc/tmp ${deployment_dir}/icc/tmp/log_archive ${deployment_dir}/icc/log ${deployment_icc_dir}/config ${deployment_icc_dir}/dprt/dark ${deployment_icc_dir}/dprt/flat ${deployment_bin_dir}/scripts ${deployment_bin_dir}/moptop/scripts ${deployment_bin_dir}/moptop/c/${HOSTTYPE} ${deployment_bin_dir}/moptop/ccd/test/${HOSTTYPE} ${deployment_bin_dir}/ics_util/c/${HOSTTYPE} ${deployment_bin_dir}/ccd/misc/${HOSTTYPE} ${deployment_bin_dir}/lib/${HOSTTYPE} ${deployment_bin_dir}/log_udp/test/${HOSTTYPE} ${deployment_bin_dir}/commandserver/test/${HOSTTYPE} ${deployment_bin_dir}/ngatastro/test/${HOSTTYPE} ${deployment_bin_dir}/javalib ${deployment_bin_dir}/autobooter/java "
 if( ${install_java_software} ) then
-    set dir_list = "${dir_list} ${deployment_bin_dir}/moptop/test ${deployment_bin_dir}/moptop/java/ ${deployment_bin_dir}/ccs_gui/java ${deployment_bin_dir}/ccs_gui/java/wav "
+    set dir_list = "${dir_list} ${deployment_bin_dir}/moptop/test ${deployment_bin_dir}/moptop/java/ ${deployment_bin_dir}/ics_gui/java ${deployment_bin_dir}/ics_gui/java/wav "
 endif
 if( ${install_filter_wheel_software} ) then
     set dir_list = "${dir_list} ${deployment_bin_dir}/moptop/filter_wheel/test/${HOSTTYPE}"
@@ -161,7 +161,7 @@ echo "${jar_count} jars copied."
 echo "Copying Java class directories..."
 set java_class_dir_list = "autobooter/java"
 if( ${install_java_software} ) then
-    set java_class_dir_list = "${java_class_dir_list} ccs_gui/java"
+    set java_class_dir_list = "${java_class_dir_list} ics_gui/java"
 endif
 set java_class_dir_count = 0
 set java_class_file_count = 0
@@ -296,7 +296,7 @@ echo "${dir_count} C test program directories copied, containg ${file_count} C t
 echo "Copying scripts..."
 set file_list = "bin/scripts/configure_tai_data.csh bin/scripts/delete_log_files.csh bin/scripts/killhup.csh bin/scripts/fuser_check bin/moptop/scripts/moptop_engineering_mode"
 if( ${install_java_software} ) then
-    set file_list = "${file_list} bin/ccs_gui/java/icsgui"
+    set file_list = "${file_list} bin/ics_gui/java/icsgui"
 endif
 set file_count = 0
 cd ${dev_dir}
@@ -318,7 +318,7 @@ echo "${file_count} scripts copied."
 echo "Copying machine configuration files..."
 set file_list = "autobooter/java/${machine_name}.autobooter.properties moptop/c/${HOSTTYPE}/${machine_name}.moptop.c.properties "
 if( ${install_java_software} ) then
-    set file_list = "${file_list} moptop/java/${machine_name}.fits.properties moptop/java/${machine_name}.moptop.net.properties moptop/java/${machine_name}.moptop.properties ccs_gui/java/${machine_name}.ccs_gui.properties ccs_gui/java/${machine_name}.ccs_gui_config.properties ccs_gui/java/${machine_name}.ccs_gui.fits.properties"
+    set file_list = "${file_list} moptop/java/${machine_name}.fits.properties moptop/java/${machine_name}.moptop.net.properties moptop/java/${machine_name}.moptop.properties ics_gui/java/${machine_name}.ics_gui.properties ics_gui/java/${machine_name}.ics_gui_config.properties ics_gui/java/${machine_name}.ics_gui.fits.properties"
 endif
 set file_count = 0
 cd ${dev_dir}
@@ -350,7 +350,7 @@ endif
 #
 if( ${install_java_software} ) then
     echo "Copying gif/wav files..."
-    set file_list = "ccs_gui/java/lt_icon.gif ccs_gui/java/lt.gif ccs_gui/java/wav/command_completed.wav ccs_gui/java/wav/command_failed.wav ccs_gui/java/wav/filename.wav ccs_gui/java/wav/iss_message.wav ccs_gui/java/wav/welcome.wav"
+    set file_list = "ics_gui/java/lt_icon.gif ics_gui/java/lt.gif ics_gui/java/wav/command_completed.wav ics_gui/java/wav/command_failed.wav ics_gui/java/wav/filename.wav ics_gui/java/wav/iss_message.wav ics_gui/java/wav/welcome.wav"
     set file_count = 0
     cd ${dev_dir}
     foreach file ( ${file_list} )
