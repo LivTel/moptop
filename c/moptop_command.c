@@ -107,6 +107,7 @@ int Moptop_Command_Abort(char *command_string,char **reply_string)
 #endif
 		if(!Moptop_General_Add_String(reply_string,"1 Failed to abort multrun command."))
 			return FALSE;
+		return TRUE;
 	}
 	if(!Moptop_General_Add_String(reply_string,"0 Multrun aborted."))
 		return FALSE;
