@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 	fprintf(stdout,"Pixel Size: %.3f x %.3f micrometers.\n",CCD_Setup_Get_Pixel_Width(),
 		CCD_Setup_Get_Pixel_Height());
 	fprintf(stdout,"Sensor Size: %d x %d pixels.\n",CCD_Setup_Get_Sensor_Width(),CCD_Setup_Get_Sensor_Height());
-	fprintf(stdout,"Timestamp Clock Frequency: %d Hz.\n",CCD_Setup_Get_Timestamp_Clock_Frequency());
+	fprintf(stdout,"Timestamp Clock Frequency: %lld Hz.\n",CCD_Setup_Get_Timestamp_Clock_Frequency());
 	fprintf(stdout,"Image Size: %d bytes.\n",CCD_Setup_Get_Image_Size_Bytes());
 	/* do shutdown */
 	if(!CCD_Setup_Shutdown())
