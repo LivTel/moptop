@@ -52,8 +52,8 @@ public class MULTRUNImplementation extends HardwareImplementation implements JMS
 	 * <li>If the MULTRUN exposure length is greater than zero, the acknowledge time is the exposure length,
 	 * <li>If the MULTRUN exposure count is greater than zero, 
 	 *     each exposure count tells the C layer to do one rotation's worth of exposures.
-	 *     The acknowledge time is the exposure count multiplied by 4 
-	 *     (the slowest length of time to do an exposure), 
+	 *     The acknowledge time is the exposure count multiplied by 8 
+	 *     (at 45 deg/s the slowest length of time to do an exposure), 
 	 *     multiplied by 1000 (acknowledge time is in milliseconds).
 	 * <li>The default acknowledge time is added to the total and returned.
 	 * </ul>
@@ -82,8 +82,8 @@ public class MULTRUNImplementation extends HardwareImplementation implements JMS
 		else if(exposureCount > 0)
 		{
 			// exposureCount is rotationCount,
-			// up to 4 seconds per rotation
-			ackTime = (exposureCount*4*1000/7);
+			// up to 8 seconds per rotation at 45 deg/s
+			ackTime = (exposureCount*8*1000);
 		}
 		moptop.log(Logging.VERBOSITY_VERBOSE,this.getClass().getName()+
 			   ":calculateAcknowledgeTime:ackTime = "+ackTime);
