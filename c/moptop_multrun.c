@@ -853,8 +853,9 @@ static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *fil
 		return FALSE;
 	}
 	/* time taken between two triggers is rotator_step_angle/rotator_run_velocity 
-	** Lets make it twice that in milliseconds */
-	timeout_ms = (int)(2.0*(Moptop_Multrun_Rotator_Step_Angle_Get()/Moptop_Multrun_Rotator_Run_Velocity_Get()))*
+	** Lets make it four times that in milliseconds, at two times the wait on moptop2 can timeout for the first frame
+	** as it starts earlier than that on moptop1 (as moptop1 is also starting the rotator etc...) */
+	timeout_ms = (int)(4.0*(Moptop_Multrun_Rotator_Step_Angle_Get()/Moptop_Multrun_Rotator_Run_Velocity_Get()))*
 		MOPTOP_GENERAL_ONE_SECOND_MS;
 	images_per_cycle = (int)(360.0 / Moptop_Multrun_Rotator_Step_Angle_Get());
 	last_camera_ticks = 0;
