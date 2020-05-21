@@ -220,7 +220,7 @@ int CCD_Exposure_Length_Get(int *exposure_length_ms)
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,
 			       "CCD_Exposure_Length_Get: Retrieved exposure length is %.3f s / %d ms.",
-			       exposure_length_s,exposure_length_ms);
+			       exposure_length_s,(*exposure_length_ms));
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Get: Finished.");
