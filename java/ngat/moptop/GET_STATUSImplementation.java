@@ -168,6 +168,7 @@ public class GET_STATUSImplementation extends CommandImplementation implements J
 			else
 				hashTable.put("currentCommand",currentCommand.getClass().getName());
 			// basic information
+			getFilterWheelStatus();
 			// per c layer
 			// "Exposure Count" is searched for by the IcsGUI
 			getStatusExposureCount(); 
@@ -248,6 +249,94 @@ public class GET_STATUSImplementation extends CommandImplementation implements J
 		}
 	}
 
+	/**
+	 * Get the status/position of the filter wheel.
+	 * @exception Exception Thrown if an error occurs.
+	 * @see #cLayerHostnameList
+	 * @see #cLayerPortNumberList
+	 */
+	protected void getFilterWheelStatus() throws Exception
+	{
+		StatusFilterWheelFilterCommand statusFilterWheelFilterCommand = null;
+		StatusFilterWheelPositionCommand statusFilterWheelPositionCommand = null;
+		StatusFilterWheelStatusCommand statusFilterWheelStatusCommand = null;
+		String cLayerHostname = null;
+		String errorString = null;
+		String filterName = null;
+		String filterWheelStatus = null;
+		int returnCode,cLayerIndex,cLayerPortNumber,filterWheelPosition;
+
+		// The filter wheel is attached to C layer 0 only
+		cLayerIndex = 0;
+		// "status filterwheel filter" command
+		cLayerHostname = (String)(cLayerHostnameList.get(cLayerIndex));
+		cLayerPortNumber = ((Integer)(cLayerPortNumberList.get(cLayerIndex))).intValue();
+		moptop.log(Logging.VERBOSITY_INTERMEDIATE,"getFilterWheelStatus:started for C layer Index:"+
+			   cLayerIndex+":Hostname: "+cLayerHostname+" Port Number: "+cLayerPortNumber+".");
+		// Setup StatusFilterWheelFilterCommand
+		statusFilterWheelFilterCommand = new StatusFilterWheelFilterCommand();
+		statusFilterWheelFilterCommand.setAddress(cLayerHostname);
+		statusFilterWheelFilterCommand.setPortNumber(cLayerPortNumber);
+		// actually send the command to the C layer
+		statusFilterWheelFilterCommand.sendCommand();
+		// check the parsed reply
+		if(statusFilterWheelFilterCommand.getParsedReplyOK() == false)
+		{
+			returnCode = statusFilterWheelFilterCommand.getReturnCode();
+			errorString = statusFilterWheelFilterCommand.getParsedReply();
+			moptop.log(Logging.VERBOSITY_TERSE,
+				   "getFilterWheelStatus:filter wheel filter command for C layer Index:"+
+				   cLayerIndex+" failed with return code "+returnCode+" and error string:"+errorString);
+			throw new Exception(this.getClass().getName()+
+					    ":getFilterWheelStatus:filter wheel filter command for C layer Index:"+
+					    cLayerIndex+" failed with return code "+returnCode+" and error string:"+errorString);
+		}
+		filterName = statusFilterWheelFilterCommand.getFilterName();
+		hashTable.put("Filter Wheel:1",new String(filterName));
+		// "status filterwheel position" command
+		statusFilterWheelPositionCommand = new StatusFilterWheelPositionCommand();
+		statusFilterWheelPositionCommand.setAddress(cLayerHostname);
+		statusFilterWheelPositionCommand.setPortNumber(cLayerPortNumber);
+		// actually send the command to the C layer
+		statusFilterWheelPositionCommand.sendCommand();
+		// check the parsed reply
+		if(statusFilterWheelPositionCommand.getParsedReplyOK() == false)
+		{
+			returnCode = statusFilterWheelPositionCommand.getReturnCode();
+			errorString = statusFilterWheelPositionCommand.getParsedReply();
+			moptop.log(Logging.VERBOSITY_TERSE,
+				   "getFilterWheelStatus:filter wheel position command for C layer Index:"+
+				   cLayerIndex+" failed with return code "+returnCode+" and error string:"+errorString);
+			throw new Exception(this.getClass().getName()+
+					    ":getFilterWheelStatus:filter wheel position command for C layer Index:"+
+					    cLayerIndex+" failed with return code "+returnCode+
+					    " and error string:"+errorString);
+		}
+		filterWheelPosition = statusFilterWheelPositionCommand.getFilterWheelPosition();
+		hashTable.put("Filter Wheel Position:1",new Integer(filterWheelPosition));
+		// "status filterwheel status" command
+		statusFilterWheelStatusCommand = new StatusFilterWheelStatusCommand();
+		statusFilterWheelStatusCommand.setAddress(cLayerHostname);
+		statusFilterWheelStatusCommand.setPortNumber(cLayerPortNumber);
+		// actually send the command to the C layer
+		statusFilterWheelStatusCommand.sendCommand();
+		// check the parsed reply
+		if(statusFilterWheelStatusCommand.getParsedReplyOK() == false)
+		{
+			returnCode = statusFilterWheelStatusCommand.getReturnCode();
+			errorString = statusFilterWheelStatusCommand.getParsedReply();
+			moptop.log(Logging.VERBOSITY_TERSE,
+				   "getFilterWheelStatus:filter wheel status command for C layer Index:"+
+				   cLayerIndex+" failed with return code "+returnCode+" and error string:"+errorString);
+			throw new Exception(this.getClass().getName()+
+					    ":getFilterWheelStatus:filter wheel status command for C layer Index:"+
+					    cLayerIndex+" failed with return code "+returnCode+
+					    " and error string:"+errorString);
+		}
+		filterWheelStatus = statusFilterWheelStatusCommand.getFilterWheelStatus();
+		hashTable.put("Filter Wheel Status:1",new String(filterWheelStatus));
+	}
+	
 	/**
 	 * Get the exposure status. 
 	 * This retrieved using an instance of StatusExposureStatusCommand for each C layer.
