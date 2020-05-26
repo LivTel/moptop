@@ -176,8 +176,10 @@ public class GET_STATUSImplementation extends CommandImplementation implements J
 			getStatusExposureLength();  
 			// "Exposure Start Time" is needed for IcsGUI
 			getStatusExposureStartTime(); 
-			// "Elapsed Exposure Time" is needed for IcsGUI
-			// diddly TODO getStatusExposureElapsedTime();
+			// "Elapsed Exposure Time" is needed for IcsGUI.
+			// This requires "Exposure Length" and "Exposure Start Time hashtable entries to have
+			// already been inserted by getStatusExposureLength/getStatusExposureStartTime
+			getStatusExposureElapsedTime();
 			// "Exposure Number" is added in getStatusExposureIndex
 			getStatusExposureIndex(); 
 			getStatusExposureMultrun(); 
@@ -598,6 +600,54 @@ public class GET_STATUSImplementation extends CommandImplementation implements J
 			   exposureStartTime);
 	}
 
+	/**
+	 * Compute and insert the "Elapsed Exposure Time" key. 
+	 * The IcsgUI calculates the remaining exposure time by doing the calculation(exposureLength-elapsedExposureTime).
+	 * Here, we do the following:
+	 * <ul>
+	 * <li>We get the current time nowTime.
+	 * <li>We initialise the largestElapsedExposureTime to -1.
+	 * <li>We loop over the C layers:
+	 *     <ul>
+	 *     <li>We retrieve the "Exposure Start Time."+cLayerIndex hashtable value 
+	 *         (previously generated in getStatusExposureStartTime).
+	 *     <li>We retrieve the "Exposure Length."+cLayerIndex hashtable value 
+	 *         (previously generated in getStatusExposureLength).
+	 *     <li>We compute the elapsed exposure time as being nowTime minus the exposure start time.
+	 *     <li>If this elapsed exposure time is the largest so far, we store it.
+	 *     </ul>
+	 * <li>We set the "Elapsed Exposure Time" hashTable key to the computed largest elapsed exposure time.
+	 * </ul>
+	 * @see #hashTable
+	 * @see #getStatusExposureStartTime
+	 * @see #getStatusExposureLength
+	 */
+	protected void getStatusExposureElapsedTime()
+	{
+		Date nowTime = null;
+		Integer exposureLengthObject = null;
+		Long exposureStartTimeObject = null;
+		long exposureStartTime[] = new long[cLayerCount];
+	        int exposureLength[] = new int[cLayerCount];
+	        int elapsedExposureTime[] = new int[cLayerCount];
+		int largestElapsedExposureTime;
+		
+		nowTime = new Date();
+		largestElapsedExposureTime = -1;
+		for(int cLayerIndex = 0; cLayerIndex < cLayerCount; cLayerIndex++)
+		{
+			exposureStartTimeObject = (Long)(hashTable.get("Exposure Start Time."+cLayerIndex));
+			exposureLengthObject = (Integer)(hashTable.get("Exposure Length."+cLayerIndex));
+			exposureStartTime[cLayerIndex] = exposureStartTimeObject.longValue();
+			exposureLength[cLayerIndex] = exposureLengthObject.intValue();
+			elapsedExposureTime[cLayerIndex] = (int)(nowTime.getTime()-exposureStartTime[cLayerIndex]);
+			hashTable.put("Elapsed Exposure Time."+cLayerIndex,new Integer(elapsedExposureTime[cLayerIndex]));
+			if(elapsedExposureTime[cLayerIndex] > largestElapsedExposureTime)
+				largestElapsedExposureTime = elapsedExposureTime[cLayerIndex];
+		}// end for on cLayerIndex
+		hashTable.put("Elapsed Exposure Time",new Integer(largestElapsedExposureTime));
+	}
+	
 	/**
 	 * Get the exposure index for each camera. 
 	 * An instance of StatusExposureIndexCommand is used to send the command to each C layer. 
