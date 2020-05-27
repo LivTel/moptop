@@ -333,6 +333,21 @@ foreach file ( ${file_list} )
     @ file_count ++
 end
 echo "${file_count} configuration files copied."
+echo "Copying camera configuration files..."
+set file_list = "config/${camera_name}.current.filter.properties"
+set file_count = 0
+cd ${dev_dir}
+foreach file ( ${file_list} )
+    set new_file = `echo ${file} | sed "s#${camera_name}\.##"`
+    cp ${dev_bin_dir}/${file} ${deployment_icc_dir}/${new_file}
+    set cp_status = $status
+    if( ${cp_status} != 0 ) then
+	echo "Copy failed: ${dev_bin_dir}/${file} to ${deployment_icc_dir}/${new_file}"
+	exit 5
+    endif
+    @ file_count ++
+end
+echo "${file_count} camera configuration files copied."
 #
 # /etc init scripts
 #
