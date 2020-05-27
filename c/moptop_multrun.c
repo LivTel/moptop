@@ -306,10 +306,11 @@ int Moptop_Multrun_Setup(int *multrun_number)
  * <li>If use_exposure_length is TRUE, we:
  *     <ul>
  *     <li>Retrieve the configured rotator_run_velocity using Moptop_Multrun_Rotator_Run_Velocity_Get.
- *     <li>Compute the number of rotations (rotation_count) = exposure_length_ms/(360.0/rotator_run_velocity)
+ *     <li>Compute the number of rotations (rotation_count) = (exposure_length_ms/1000.0)/(360.0/rotator_run_velocity)
  *     <li>Check the computed rotation_count is at least one.
  *     </ul>
  * <li>If use_exposure_count is set, we set the rotation_count to exposure_count.
+ * <li>We check the computed/passed in rotation_count is in the range (1..100).
  * <li>We retrieve the configured rotator_step_angle using Moptop_Multrun_Rotator_Step_Angle_Get.
  * <li>We compute the number of exposures (Multrun_Data.Image_Count) = rotation_count*(360.0/trigger_step_angle).
  * <li>We compute the rotator_end_position = (360.0 * rotation_count)-PIROT_SETUP_ROTATOR_TOLERANCE. 
@@ -442,8 +443,9 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 		Multrun_In_Progress = FALSE;
 		Moptop_General_Error_Number = 646;
 		sprintf(Moptop_General_Error_String,
-			"Moptop_Multrun:Using Exposure length %d ms,Exposure Count %d,gives rotation count out of range (1..100).",
-			exposure_length_ms,exposure_count);
+			"Moptop_Multrun:Using Exposure length %d ms,Exposure Count %d,"
+			"gives rotation count %d out of range (1..100).",
+			exposure_length_ms,exposure_count,rotation_count);
 		return FALSE;		
 	}
 	/* how many exposures are we expecting */
