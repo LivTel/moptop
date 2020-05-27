@@ -855,7 +855,7 @@ int Moptop_General_Add_Integer_To_String(char **string,int i)
 	char integer_buff[32];
 
 	retval = sprintf(integer_buff,"%d",i);
-	if(retval != 1)
+	if(retval < 1)
 	{
 		Moptop_General_Error_Number = 120;
 		sprintf(Moptop_General_Error_String,
