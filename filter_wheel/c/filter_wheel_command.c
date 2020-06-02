@@ -37,8 +37,9 @@
 #define STRING_LENGTH                (256)
 /**
  * The default filter wheel move timeout in milliseconds.
+ * 10000 milliseconds was too short and caused timeouts, now try 20000.
  */
-#define DEFAULT_MOVE_TIMEOUT_MS      (10000)
+#define DEFAULT_MOVE_TIMEOUT_MS      (20000)
 
 /* data types/structures */
 /**
