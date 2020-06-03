@@ -350,8 +350,12 @@ public class MULTRUNImplementation extends HardwareImplementation implements JMS
 			}
 			else
 			{
-				// this c Lasyer multrun was successful, pull last filename
-				multRunDone.setFilename(multrunThreadList[cLayerIndex].getLastFilename());
+				// this c Layer multrun was successful
+				// If this is C layer 0 (which is on the same machine as the Java layer),
+				// pull last filename. This means the filename returned to the IcsGUI can be
+				// displayed by it
+				if(cLayerIndex == 0)
+					multRunDone.setFilename(multrunThreadList[cLayerIndex].getLastFilename());
 			}
 		}// end for on cLayerIndex
 	// return done object.
@@ -508,7 +512,7 @@ public class MULTRUNImplementation extends HardwareImplementation implements JMS
 		 */
 		int multrunNumber;
 		/**
-		 * Return value from C layer: The lsat FITS filename produced.
+		 * Return value from C layer: The last FITS filename produced.
 		 */
 		String lastFilename;
 		/**
