@@ -1019,8 +1019,8 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  * <li>We set the "OBSTYPE" FITS keyword value based on the value of do_standard.
  * <li>We set the "FILTER1" FITS keyword value based on the cached filter name in Multrun_Data.Filter_Name.
  * <li>We set the "DATE"/"DATE-OBS"/"UTSTART" and "MJD" keyword values based on the value of Multrun_Data.Exposure_Start_Time.
- * <li>We set the "ENDDATE"/"END-OBS" and "UTEND" keyword values based on the value of exposure_end_time.
- * <li>We set the "DURATION" keyword value based on the time elapsed between Multrun_Data.Exposure_Start_Time and exposure_end_time.
+ * <li>We set the "DATE-END" and "UTEND" keyword values based on the value of exposure_end_time.
+ * <li>We set the "TELAPSE" keyword value based on the time elapsed between Multrun_Data.Exposure_Start_Time and exposure_end_time.
  * <li>We set the "RUNNUM" keyword value to Multrun_Data.Rotation_Number.
  * <li>We set the "EXPNUM" keyword value to Multrun_Data.Sequence_Number.
  * <li>We set the "EXPTOTAL" keyword value to Multrun_Data.Image_Count.
@@ -1034,7 +1034,7 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  * <li>We set the "MOPRARC" FITS keyword value to the rotator_difference.
  * <li>We set the "MOPRNUM" FITS keyword value to the Multrun_Data.Rotation_Number.
  * <li>We set the "MOPRPOS" FITS keyword value to the Multrun_Data.Sequence_Number.
- * <li>We set the "EXPTIME" FITS keyword value to thw andor_exposure_length_ms in seconds.
+ * <li>We set the "EXPTIME" and "XPOSURE" FITS keyword value to the andor_exposure_length_ms in seconds.
  * <li>We set the "EXPREQST" FITS keyword value to the Multrun_Data.Requested_Exposure_Length.
  * <li>We set the "CCDXPIXE" FITS keyword value to CCD_Setup_Get_Pixel_Width in m.
  * <li>We set the "CCDYPIXE" FITS keyword value to CCD_Setup_Get_Pixel_Height in m.
@@ -1147,21 +1147,17 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 		return FALSE;
 	if(!Moptop_Fits_Header_Float_Add("MJD",mjd,NULL))
 		return FALSE;
-	/* create ENDDATE keyword from exposure_end_time */
-	Moptop_Fits_Header_TimeSpec_To_Date_String(exposure_end_time,exposure_time_string);
-	if(!Moptop_Fits_Header_String_Add("ENDDATE",exposure_time_string,"[UTC] End date of obs."))
-		return FALSE;
-	/* update END-OBS keyword from exposure_end_time */
+	/* update DATE-END keyword from exposure_end_time */
 	Moptop_Fits_Header_TimeSpec_To_Date_Obs_String(exposure_end_time,exposure_time_string);
-	if(!Moptop_Fits_Header_String_Add("END-OBS",exposure_time_string,"[UTC] End of obs."))
+	if(!Moptop_Fits_Header_String_Add("DATE-END",exposure_time_string,"[UTC] End of obs."))
 		return FALSE;
 	/* update UTENDT keyword from exposure_end_time */
 	Moptop_Fits_Header_TimeSpec_To_UtStart_String(exposure_end_time,exposure_time_string);
 	if(!Moptop_Fits_Header_String_Add("UTEND",exposure_time_string,"[UTC] End time of obs."))
 		return FALSE;
-	/* update DURATION keyword with difference between start and end timestamps */
+	/* update TELAPSE keyword with difference between start and end timestamps */
 	dvalue = fdifftime(exposure_end_time,Multrun_Data.Exposure_Start_Time);
-	if(!Moptop_Fits_Header_Float_Add("DURATION",dvalue,"[sec] Total obs. duration"))
+	if(!Moptop_Fits_Header_Float_Add("TELAPSE",dvalue,"[sec] Total obs. duration"))
 		return FALSE;
 	/* update RUNNUM keyword value with the Multrun_Data.Rotation_Number */
 	if(!Moptop_Fits_Header_Integer_Add("RUNNUM",Multrun_Data.Rotation_Number,"Which rotation of the rotator we are on."))
@@ -1206,6 +1202,11 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 		return FALSE;
 	/* EXPTIME is the actual exposure length returned from the camera, in seconds */
 	if(!Moptop_Fits_Header_Float_Add("EXPTIME",
+					 ((double)andor_exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS),
+					 "[sec] Actual exposure"))
+		return FALSE;
+	/* XPOSURE is the actual exposure length returned from the camera, in seconds */
+	if(!Moptop_Fits_Header_Float_Add("XPOSURE",
 					 ((double)andor_exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS),
 					 "[sec] Actual exposure"))
 		return FALSE;
