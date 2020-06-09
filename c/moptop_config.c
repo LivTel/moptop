@@ -46,9 +46,9 @@ static eSTAR_Config_Properties_t Config_Properties;
  * Load the configuration file. 
  * <ul>
  * <li>Calls eSTAR_Config_Parse_File with the specified filename.
- * <li>Checks the "filter_wheel.enable" property to see if the filter wheel is enabled.
- * <li>If the filter wheel is enabled, calls Filter_Wheel_Config_Initialise to load the filter configuration
- *     into the filter wheel library.
+ * <li>We call Filter_Wheel_Config_Initialise to load the filter configuration
+ *     into the filter wheel library. We do this even if the filter wheel is not enabled, as the
+ *     filter wheel name -> Id mapping is used for FITS header generation.
  * </ul>
  * @param filename The filename to load from.
  * @return The routine returns TRUE on sucess, FALSE on failure.
@@ -83,32 +83,16 @@ int Moptop_Config_Load(char *filename)
 		eSTAR_Config_Error_To_String(Moptop_General_Error_String+strlen(Moptop_General_Error_String));
 		return FALSE;
 	}
-	/* is the filter wheel active/enabled for this instance of the C layer */
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Load",LOG_VERBOSITY_VERBOSE,NULL,
-				  "Check is filter wheel enabled.");
+				  "Load filter configuration into filter wheel library.");
 #endif
-	if(!Moptop_Config_Get_Boolean("filter_wheel.enable",&filter_wheel_enabled))
+	if(!Filter_Wheel_Config_Initialise(Config_Properties))
 	{
-		Moptop_General_Error_Number = 312;
+		Moptop_General_Error_Number = 313;
 		sprintf(Moptop_General_Error_String,"Moptop_Config_Load:"
-			"Failed to get whether filter wheel is enabled.");
+			"Failed to initialise filter wheel configuration.");
 		return FALSE;
-	}
-	/* load the filter wheel configuration, if the filter wheel is enabled */
-	if(filter_wheel_enabled)
-	{
-#if MOPTOP_DEBUG > 1
-		Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Load",LOG_VERBOSITY_VERBOSE,NULL,
-			   "Filter wheel _is_ enabled: Load filter confiuration into filter wheel library.");
-#endif
-		if(!Filter_Wheel_Config_Initialise(Config_Properties))
-		{
-			Moptop_General_Error_Number = 313;
-			sprintf(Moptop_General_Error_String,"Moptop_Config_Load:"
-				"Failed to initialise filter wheel configuration.");
-			return FALSE;
-		}
 	}
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("moptop","moptop_config.c","Moptop_Config_Load",LOG_VERBOSITY_INTERMEDIATE,NULL,

@@ -50,7 +50,7 @@
  */
 #define MULTRUN_FITS_FILENAME_LENGTH  (256)
 /**
- * Length of cached filter name data.
+ * Length of cached filter name and id data.
  */
 #define MULTRUN_FILTER_NAME_LENGTH    (32)
 
@@ -62,6 +62,7 @@
  * <dt>Rotator_Step_Angle</dt> <dd>A copy of the rotator step angle used to configure the rotator.</dd>
  * <dt>Filter_Position;</dt> <dd>A copy of the filter position taken at the start of the multrun, used for filling in FITS headers.</dd>
  * <dt>Filter_Name</dt> <dd>A copy of the filter name taken at the start of the multrun, used for filling in FITS headers. Of length MULTRUN_FILTER_NAME_LENGTH.</dd>
+ * <dt>Filter_Id</dt> <dd>A copy of the filter Id taken at the start of the multrun, used for filling in FITS headers. Of length MULTRUN_FILTER_NAME_LENGTH.</dd>
  * <dt>CCD_Temperature</dt> <dd>A copy of the current CCD temperature, taken at the start of a multrun. Used to populate FITS headers.</dd>
  * <dt>CCD_Temperature_Status_String</dt> <dd>A copy of the current CCD temperature status, taken at the start of a multrun. Used to populate FITS headers.</dd>
  * <dt>Requested_Exposure_Length</dt> <dd>A copy of the per-frame requested exposure length (in seconds) used to configure the CCD camera. 
@@ -83,6 +84,7 @@ struct Multrun_Struct
 	double Rotator_Step_Angle;
 	int Filter_Position;
 	char Filter_Name[MULTRUN_FILTER_NAME_LENGTH];
+	char Filter_Id[MULTRUN_FILTER_NAME_LENGTH];
 	double CCD_Temperature;
 	char CCD_Temperature_Status_String[64];
 	double Requested_Exposure_Length;
@@ -105,6 +107,7 @@ static char rcsid[] = "$Id$";
  * <dt>Rotator_Step_Angle</dt>            <dd>0.0</dd>
  * <dt>Filter_Position</dt>               <dd>-1</dd>
  * <dt>Filter_Name</dt>                   <dd>""</dd>
+ * <dt>Filter_Id</dt>                     <dd>""</dd>
  * <dt>CCD_Temperature</dt>               <dd>0.0</dd>
  * <dt>CCD_Temperature_Status_String</dt> <dd>""</dd>
  * <dt>Requested_Exposure_Length</dt>     <dd>0.0</dd>
@@ -122,7 +125,7 @@ static char rcsid[] = "$Id$";
  */
 static struct Multrun_Struct Multrun_Data =
 {
-	0.0,0.0,-1,"",0.0,"",0.0,0,0,{0,0},0,0
+	0.0,0.0,-1,"","",0.0,"",0.0,0,0,{0,0},0,0
 };
 
 /**
@@ -137,8 +140,8 @@ static int Moptop_Abort = FALSE;
 /* internal functions */
 static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *filename_count);
 static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *filename,int filename_length);
-static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms,struct timespec exposure_end_time,long long int camera_ticks,
-				    double requested_rotator_angle,double rotator_start_angle,
+static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms,struct timespec exposure_end_time,
+				    long long int camera_ticks,double requested_rotator_angle,double rotator_start_angle,
 				    double rotator_end_angle,double rotator_difference,
 				    unsigned char *image_buffer,int image_buffer_length,char *filename);
 
@@ -1125,10 +1128,20 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 	if(!Moptop_Fits_Header_String_Add("FILTER1",Multrun_Data.Filter_Name,NULL))
 		return FALSE;
 	/* FILTERI1 */
-	/* diddly
-	if(!Moptop_Fits_Header_String_Add("FILTERI1",diddly,NULL))
+	/* Convert the filter name Multrun_Data.Filter_Name into an Id Multrun_Data.Filter_Id, and write it into
+	** the FITS header FILTERI1. We do the conversion here rather than Moptop_Multrun_Filter_Name_Set, as
+	** Moptop_Multrun_Filter_Name_Set only gets called on C layers that have no filter wheel (moptop2).
+	** We have also modified Moptop_Config_Load to _always_ call Filter_Wheel_Config_Initialise so we can
+	** use the name -> id mapping here. */
+	if(!Filter_Wheel_Config_Name_To_Id(Multrun_Data.Filter_Name,Multrun_Data.Filter_Id))
+	{
+		Moptop_General_Error_Number = 647;
+		sprintf(Moptop_General_Error_String,"Multrun_Write_Fits_Image:"
+			"Failed to find filter name id for filter name '%s'.",Multrun_Data.Filter_Name);
 		return FALSE;
-	*/
+	}
+	if(!Moptop_Fits_Header_String_Add("FILTERI1",Multrun_Data.Filter_Id,NULL))
+		return FALSE;
 	/* update DATE keyword from Multrun_Data.Exposure_Start_Time */
 	Moptop_Fits_Header_TimeSpec_To_Date_String(Multrun_Data.Exposure_Start_Time,exposure_time_string);
 	if(!Moptop_Fits_Header_String_Add("DATE",exposure_time_string,"[UTC] Start date of obs."))

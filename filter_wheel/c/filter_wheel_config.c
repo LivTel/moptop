@@ -27,7 +27,9 @@
  * Data type holding local data to filter_wheel_config. This consists of the following:
  * <dl>
  * <dt>Position</dt> <dd>The position of the filter in the wheel.</dd>
- * <dt>Name</dt> <dd>The filter name of the filter, of length CONFIG_NAME_STRING_LENGTH.</dd>
+ * <dt>Name</dt> <dd>The filter name (which type) of the filter, of length CONFIG_NAME_STRING_LENGTH.</dd>
+ * <dt>Id</dt> <dd>The filter Id (which physical piece of glass) of the filter, 
+ *                 of length CONFIG_NAME_STRING_LENGTH.</dd>
  * </dl>
  * @see #CONFIG_NAME_STRING_LENGTH
  */
@@ -35,6 +37,7 @@ struct Config_Struct
 {
 	int Position;
 	char Name[CONFIG_NAME_STRING_LENGTH];
+	char Id[CONFIG_NAME_STRING_LENGTH];
 };
 
 /* internal variables */
@@ -84,15 +87,20 @@ int Filter_Wheel_Config_Initialise(eSTAR_Config_Properties_t Config_Properties)
 	char *value = NULL;
 	int i,retval;
 
+	Config_Error_Number = 0;
 #if LOGGING > 0
 	Filter_Wheel_General_Log(LOG_VERBOSITY_VERBOSE,"Filter_Wheel_Config_Initialise: Started.");
 #endif /* LOGGING */
 	/* blank the 0 index config data - the valid positions are 1 to 5 (FILTER_WHEEL_COMMAND_FILTER_COUNT) */
 	Config_Data[0].Position = 0;
 	strcpy(Config_Data[0].Name,"None");
+	strcpy(Config_Data[0].Id,"None");
 	/* loop over the valid positions 1 to 5 (FILTER_WHEEL_COMMAND_FILTER_COUNT) */
 	for(i = 1; i <= FILTER_WHEEL_COMMAND_FILTER_COUNT; i++)
 	{
+		/* position */
+		Config_Data[i].Position = i;
+		/* name */
 		sprintf(keyword,"filter_wheel.filter.name.%d",i);
 		retval = eSTAR_Config_Get_String(&Config_Properties,keyword,&value);
 		if(retval == FALSE)
@@ -110,16 +118,39 @@ int Filter_Wheel_Config_Initialise(eSTAR_Config_Properties_t Config_Properties)
 				keyword,value,(strlen(value)+1),CONFIG_NAME_STRING_LENGTH);
 			return FALSE;
 		}
-		Config_Data[i].Position = i;
 		strcpy(Config_Data[i].Name,value);
-#if LOGGING > 5
-		Filter_Wheel_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
-			     "Filter_Wheel_Config_Initialise: Config Data index %d for Position %d with name '%s'.",
-						i,Config_Data[i].Position,Config_Data[i].Name);
-#endif /* LOGGING */
 		if(value != NULL)
 			free(value);
-	}
+		value = NULL;
+		/* id */
+		sprintf(keyword,"filter_wheel.filter.id.%d",i);
+		retval = eSTAR_Config_Get_String(&Config_Properties,keyword,&value);
+		if(retval == FALSE)
+		{
+			Config_Error_Number = 6;
+			sprintf(Config_Error_String,
+				"Filter_Wheel_Config_Initialise: failed to get value for keyword '%s'.",keyword);
+			return FALSE;
+		}
+		if((strlen(value)+1) > CONFIG_NAME_STRING_LENGTH)
+		{
+			Config_Error_Number = 7;
+			sprintf(Config_Error_String,
+				"Filter_Wheel_Config_Initialise: keyword '%s' value '%s' is too long (%lu vs %d).",
+				keyword,value,(strlen(value)+1),CONFIG_NAME_STRING_LENGTH);
+			return FALSE;
+		}
+		strcpy(Config_Data[i].Id,value);
+		if(value != NULL)
+			free(value);
+		value = NULL;
+#if LOGGING > 5
+		Filter_Wheel_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
+						"Filter_Wheel_Config_Initialise: Config Data index %d for Position %d "
+						"with name '%s' and id '%s'.",
+						i,Config_Data[i].Position,Config_Data[i].Name,Config_Data[i].Id);
+#endif /* LOGGING */
+	}/* end for */
 #if LOGGING > 0
 	Filter_Wheel_General_Log(LOG_VERBOSITY_VERBOSE,"Filter_Wheel_Config_Initialise: Finished.");
 #endif /* LOGGING */
@@ -141,6 +172,13 @@ int Filter_Wheel_Config_Name_To_Position(char* filter_name,int *position)
 {
 	int found,index;
 
+	Config_Error_Number = 0;
+	if(filter_name == NULL)
+	{
+		Config_Error_Number = 12;
+		sprintf(Config_Error_String,"Filter_Wheel_Config_Name_To_Position: filter_name is NULL.");
+		return FALSE;
+	}
 	if(position == NULL)
 	{
 		Config_Error_Number = 3;
@@ -202,6 +240,13 @@ int Filter_Wheel_Config_Name_To_Position(char* filter_name,int *position)
  */
 int Filter_Wheel_Config_Position_To_Name(int position,char* filter_name)
 {
+	Config_Error_Number = 0;
+	if(filter_name == NULL)
+	{
+		Config_Error_Number = 13;
+		sprintf(Config_Error_String,"Filter_Wheel_Config_Position_To_Name: filter_name is NULL.");
+		return FALSE;
+	}
 	if((position < 1) || (position > FILTER_WHEEL_COMMAND_FILTER_COUNT))
 	{
 		Config_Error_Number = 5;
@@ -214,6 +259,111 @@ int Filter_Wheel_Config_Position_To_Name(int position,char* filter_name)
 	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
 					"Filter_Wheel_Config_Position_To_Name: Position %d has filter name '%s'.",
 					position,filter_name);
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Get the filter id associated with the specified filter name.
+ * @param filter_name The name of the string to get the position for.
+ * @param id A string to store the id of the filter with the specified name. 
+ *           The string must be at least characters long.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Config_Data
+ * @see #Config_Error_Number
+ * @see #Config_Error_String
+ * @see filter_wheel_general.html#Filter_Wheel_General_Log_Format
+ */
+int Filter_Wheel_Config_Name_To_Id(char* filter_name,char *id)
+{
+	int found,index;
+
+	Config_Error_Number = 0;
+	if(filter_name == NULL)
+	{
+		Config_Error_Number = 9;
+		sprintf(Config_Error_String,"Filter_Wheel_Config_Name_To_Id: filter_name is NULL.");
+		return FALSE;
+	}
+	if(id == NULL)
+	{
+		Config_Error_Number = 10;
+		sprintf(Config_Error_String,"Filter_Wheel_Config_Name_To_Id: id is NULL.");
+		return FALSE;
+	}
+#if LOGGING > 5
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_VERBOSE,
+					"Filter_Wheel_Config_Name_To_Id: Looking for Filter '%s'.",filter_name);
+#endif /* LOGGING */
+	found = FALSE;
+	index = 0;
+	while((found == FALSE)&&(index <= FILTER_WHEEL_COMMAND_FILTER_COUNT))
+	{
+#if LOGGING > 5
+		Filter_Wheel_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
+		     "Filter_Wheel_Config_Name_To_Id: Index %d: Comparing Filter '%s' to '%s'.",
+						index,filter_name,Config_Data[index].Name);
+#endif /* LOGGING */
+		if(strcmp(filter_name,Config_Data[index].Name) == 0)
+		{
+#if LOGGING > 5
+			Filter_Wheel_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
+			     "Filter_Wheel_Config_Name_To_Id: Found match at Index %d, Position %d, id '%s'.",
+							index,Config_Data[index].Position,Config_Data[index].Id);
+#endif /* LOGGING */
+			strcpy(id,Config_Data[index].Id);
+			found  = TRUE;
+		}
+		index++;
+	}/* end while */
+	if(found == FALSE)
+	{
+		Config_Error_Number = 11;
+		sprintf(Config_Error_String,
+			"Filter_Wheel_Config_Name_To_Id: Failed to find filter name '%s' in list of length %d.",
+			filter_name,FILTER_WHEEL_COMMAND_FILTER_COUNT);
+		return FALSE;
+	}
+#if LOGGING > 5
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+					"Filter_Wheel_Config_Name_To_Id: Filter '%s' has id '%s'.",filter_name,id);
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Get the id associated with the physical position.
+ * @param position The physical filter position to retrieve (1 to 5 (FILTER_WHEEL_COMMAND_FILTER_COUNT)).
+ * @param id The string to copy the id of the filter at this position into. The string should be at 
+ *        least CONFIG_NAME_STRING_LENGTH long.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #CONFIG_NAME_STRING_LENGTH
+ * @see #Config_Data
+ * @see #Config_Error_Number
+ * @see #Config_Error_String
+ * @see filter_wheel_general.html#Filter_Wheel_General_Log_Format
+ */
+int Filter_Wheel_Config_Position_To_Id(int position,char* id)
+{
+	Config_Error_Number = 0;
+	if(id == NULL)
+	{
+		Config_Error_Number = 14;
+		sprintf(Config_Error_String,"Filter_Wheel_Config_Position_To_Id: id is NULL.");
+		return FALSE;
+	}
+	if((position < 1) || (position > FILTER_WHEEL_COMMAND_FILTER_COUNT))
+	{
+		Config_Error_Number = 8;
+		sprintf(Config_Error_String,"Filter_Wheel_Config_Position_To_Id: Position %d out of range (1..%d).",
+			position,FILTER_WHEEL_COMMAND_FILTER_COUNT);
+		return FALSE;
+	}
+	strcpy(id,Config_Data[position].Id);
+#if LOGGING > 5
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+					"Filter_Wheel_Config_Position_To_Id: Position %d has filter id '%s'.",
+					position,id);
 #endif /* LOGGING */
 	return TRUE;
 }
