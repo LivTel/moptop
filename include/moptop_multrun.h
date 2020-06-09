@@ -20,6 +20,8 @@ extern int Moptop_Multrun_Multrun_Get(void);
 extern int Moptop_Multrun_Run_Get(void);
 extern int Moptop_Multrun_Window_Get(void);
 
+/* rotator caching setters/getters */
+extern int Moptop_Multrun_Rotator_Speed_Set(char *rotator_speed);
 extern void Moptop_Multrun_Rotator_Run_Velocity_Set(double velocity);
 extern void Moptop_Multrun_Rotator_Step_Angle_Set(double step_angle);
 extern double Moptop_Multrun_Rotator_Run_Velocity_Get(void);

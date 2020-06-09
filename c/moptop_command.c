@@ -339,6 +339,8 @@ int Moptop_Command_Config(char *command_string,char **reply_string)
 					  LOG_VERBOSITY_VERBOSE,"COMMAND","Setting rotor speed to: %s.",
 					  rotor_speed_string);
 #endif
+		/* cache the rotator speed setting in the multrun data for FITS header generation */
+		Moptop_Multrun_Rotator_Speed_Set(rotor_speed_string);
 		if(strcmp(rotor_speed_string,"fast") == 0)
 		{
 			/* fast speed rotor: 45 deg/s (7.5 rpm) , 16 triggers per rotation, exposure length 0.4s 

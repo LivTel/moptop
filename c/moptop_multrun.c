@@ -53,33 +53,47 @@
  * Length of cached filter name and id data.
  */
 #define MULTRUN_FILTER_NAME_LENGTH    (32)
+/**
+ * Length of cached rotator speed.
+ */
+#define MULTRUN_ROTATOR_SPEED_LENGTH  (32)
 
 /* data types */
 /**
  * Data type holding local data to moptop multruns.
  * <dl>
+ * <dt>Rotator_Speed</dt> <dd>A copy of the rotator speed string used to configure the rotator, 
+ *                            used for filling in the FITS headers. Of length MULTRUN_ROTATOR_SPEED_LENGTH.</dd>
  * <dt>Rotator_Run_Velocity</dt> <dd>A copy of the rotator run velocity used to configure the rotator.</dd>
  * <dt>Rotator_Step_Angle</dt> <dd>A copy of the rotator step angle used to configure the rotator.</dd>
- * <dt>Filter_Position;</dt> <dd>A copy of the filter position taken at the start of the multrun, used for filling in FITS headers.</dd>
- * <dt>Filter_Name</dt> <dd>A copy of the filter name taken at the start of the multrun, used for filling in FITS headers. Of length MULTRUN_FILTER_NAME_LENGTH.</dd>
- * <dt>Filter_Id</dt> <dd>A copy of the filter Id taken at the start of the multrun, used for filling in FITS headers. Of length MULTRUN_FILTER_NAME_LENGTH.</dd>
- * <dt>CCD_Temperature</dt> <dd>A copy of the current CCD temperature, taken at the start of a multrun. Used to populate FITS headers.</dd>
- * <dt>CCD_Temperature_Status_String</dt> <dd>A copy of the current CCD temperature status, taken at the start of a multrun. Used to populate FITS headers.</dd>
- * <dt>Requested_Exposure_Length</dt> <dd>A copy of the per-frame requested exposure length (in seconds) used to configure the CCD camera. 
- *                                     Used to populate FITS headers.</dd>
+ * <dt>Filter_Position</dt> <dd>A copy of the filter position taken at the start of the multrun, 
+ *                              used for filling in FITS headers.</dd>
+ * <dt>Filter_Name</dt> <dd>A copy of the filter name taken at the start of the multrun, used for filling in FITS headers. 
+ *                          Of length MULTRUN_FILTER_NAME_LENGTH.</dd>
+ * <dt>Filter_Id</dt> <dd>A copy of the filter Id taken at the start of the multrun, used for filling in FITS headers. 
+ *                        Of length MULTRUN_FILTER_NAME_LENGTH.</dd>
+ * <dt>CCD_Temperature</dt> <dd>A copy of the current CCD temperature, taken at the start of a multrun. 
+ *                              Used to populate FITS headers.</dd>
+ * <dt>CCD_Temperature_Status_String</dt> <dd>A copy of the current CCD temperature status, 
+ *                                            taken at the start of a multrun. Used to populate FITS headers.</dd>
+ * <dt>Requested_Exposure_Length</dt> <dd>A copy of the per-frame requested exposure length (in seconds) 
+ *                                        used to configure the CCD camera. Used to populate FITS headers.</dd>
  * <dt>Image_Index</dt> <dd>Which frame in the multrun we are currently working on.</dd>
  * <dt>Image_Count</dt> <dd>The number of FITS images we are expecting to generate in the current multrun.</dd>
  * <dt>Exposure_Start_Time</dt> <dd>A timestamp taken the last time an exposure was started in the multrun 
- *                              (actually, just before we start waiting for the next image to arrive, the timestamp is only approximate).</dd>
- * <dt>Rotation_Number</dt> <dd>A number representing which rotation of the rotator we are on (from 1 to Multrun_Data.Image_Count/images_per_cycle).</dd>
- * <dt>Sequence_Number</dt> <dd>A number representing which image in the current rotation we are on (from 1 to images_per_cycle).</dd>
- * <dt></dt> <dd></dd>
- * <dt></dt> <dd></dd>
+ *                              (actually, just before we start waiting for the next image to arrive, 
+ *                              the timestamp is only approximate).</dd>
+ * <dt>Rotation_Number</dt> <dd>A number representing which rotation of the rotator we are on 
+ *                              (from 1 to Multrun_Data.Image_Count/images_per_cycle).</dd>
+ * <dt>Sequence_Number</dt> <dd>A number representing which image in the current rotation we are on 
+ *                              (from 1 to images_per_cycle).</dd>
  * </dl>
+ * @see #MULTRUN_ROTATOR_SPEED_LENGTH
  * @see #MULTRUN_FILTER_NAME_LENGTH
  */
 struct Multrun_Struct
 {
+	char Rotator_Speed[MULTRUN_ROTATOR_SPEED_LENGTH];
 	double Rotator_Run_Velocity;
 	double Rotator_Step_Angle;
 	int Filter_Position;
@@ -103,6 +117,7 @@ static char rcsid[] = "$Id$";
 /**
  * Multrun Data holding local data to moptop multruns.
  * <dl>
+ * <dt>Rotator_Speed</dt>                 <dd>""</dd>
  * <dt>Rotator_Run_Velocity</dt>          <dd>0.0</dd>
  * <dt>Rotator_Step_Angle</dt>            <dd>0.0</dd>
  * <dt>Filter_Position</dt>               <dd>-1</dd>
@@ -125,7 +140,7 @@ static char rcsid[] = "$Id$";
  */
 static struct Multrun_Struct Multrun_Data =
 {
-	0.0,0.0,-1,"","",0.0,"",0.0,0,0,{0,0},0,0
+	"",0.0,0.0,-1,"","",0.0,"",0.0,0,0,{0,0},0,0
 };
 
 /**
@@ -733,13 +748,43 @@ int Moptop_Multrun_Run_Get(void)
 }
 
 /**
- * Return the window number (in the generated FITS filenames) of this multrun. This is the image within a rotation we are on.
+ * Return the window number (in the generated FITS filenames) of this multrun. 
+ * This is the image within a rotation we are on.
  * @return The current run number (the image within a rotation).
  * @see #Multrun_Data
  */
 int Moptop_Multrun_Window_Get(void)
 {
 	return Multrun_Data.Sequence_Number;	
+}
+
+/**
+ * Take a copy of the rotator speed string used to configure the speed of the rotator. This is stored in
+ * Multrun_Data.Rotator_Speed.
+ * @param rotator_speed The rotator speed string used to configure the rotator. This is usually "slow" or "fast".
+ * @return The routine returns TRUE on success and FALSE on failure (rotator_speed was NULL, rotator_speed string
+ *         was too long).
+ * @see #MULTRUN_ROTATOR_SPEED_LENGTH
+ * @see #Multrun_Data
+ */
+int Moptop_Multrun_Rotator_Speed_Set(char *rotator_speed)
+{
+	if(rotator_speed == NULL)
+	{
+		Moptop_General_Error_Number = 648;
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun_Rotator_Speed_Set: rotator_speed was NULL.");
+		return FALSE;
+	}
+	if(strlen(rotator_speed) > MULTRUN_ROTATOR_SPEED_LENGTH)
+	{
+		Moptop_General_Error_Number = 649;
+		sprintf(Moptop_General_Error_String,
+			"Moptop_Multrun_Rotator_Speed_Set: rotator_speed string was too long (%lu vs %d).",
+			strlen(rotator_speed),MULTRUN_ROTATOR_SPEED_LENGTH);
+		return FALSE;
+	}		
+	strcpy(Multrun_Data.Rotator_Speed,rotator_speed);
+	return TRUE;
 }
 
 /**
@@ -1047,6 +1092,8 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  * <li>We set the "CCDATEMP" FITS keyword value based on the cached CCD temperature stored in Multrun_Data.CCD_Temperature.
  * <li>We set the "TEMPSTAT" FITS keyword value based on the cached CCD temperature status stored in
  *     Multrun_Data.CCD_Temperature_Status_String.
+ * <li>We set the "MOPRMODE" FITS keyword value to the requested rotator speed stored in Multrun_Data.Rotator_Speed.
+ * <li>We set the "MOPRRATE" FITS keyword value to the rotator angular velocity stored in Multrun_Data.Rotator_Run_Velocity.
  * <li>We set the "MOPRREQ" FITS keyword value to the requested_rotator_angle.
  * <li>We set the "MOPRBEG" FITS keyword value to the rotator_start_angle.
  * <li>We set the "MOPREND" FITS keyword value to the rotator_end_angle.
@@ -1177,13 +1224,16 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 	if(!Moptop_Fits_Header_Float_Add("TELAPSE",dvalue,"[sec] Total obs. duration"))
 		return FALSE;
 	/* update RUNNUM keyword value with the Multrun_Data.Rotation_Number */
-	if(!Moptop_Fits_Header_Integer_Add("RUNNUM",Multrun_Data.Rotation_Number,"Which rotation of the rotator we are on."))
+	if(!Moptop_Fits_Header_Integer_Add("RUNNUM",Multrun_Data.Rotation_Number,
+					   "Which rotation of the rotator we are on."))
 		return FALSE;
 	/* update EXPNUM keyword value with the Multrun_Data.Sequence_Number */
-	if(!Moptop_Fits_Header_Integer_Add("EXPNUM",Multrun_Data.Sequence_Number,"Which image in the current rotation we are on."))
+	if(!Moptop_Fits_Header_Integer_Add("EXPNUM",Multrun_Data.Sequence_Number,
+					   "Which image in the current rotation we are on."))
 		return FALSE;
 	/* update EXPTOTAL keyword value with Multrun_Data.Image_Count */
-	if(!Moptop_Fits_Header_Integer_Add("EXPTOTAL",Multrun_Data.Image_Count,"Total number of frames expected this multrun."))
+	if(!Moptop_Fits_Header_Integer_Add("EXPTOTAL",Multrun_Data.Image_Count,
+					   "Total number of frames expected this multrun."))
 		return FALSE;
 	/* ccdxbin */
 	ivalue = CCD_Setup_Get_Binning();
@@ -1198,6 +1248,13 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 		return FALSE;
 	/* update ccd temperature status string with value stored at start of multrun */
 	if(!Moptop_Fits_Header_String_Add("TEMPSTAT",Multrun_Data.CCD_Temperature_Status_String,NULL))
+		return FALSE;
+	/* update MOPRMODE with configured rotator speed string */
+	if(!Moptop_Fits_Header_String_Add("MOPRMODE",Multrun_Data.Rotator_Speed,"Configured rotator speed"))
+		return FALSE;
+	/* update MOPRRATE with stored angular velocity of rotor in deg/sec */
+	if(!Moptop_Fits_Header_Float_Add("MOPRRATE",Multrun_Data.Rotator_Run_Velocity,
+					 "[deg/s] Angular velocity of rotator"))
 		return FALSE;
 	/* update MOPRREQ with requested_rotator_angle */
 	if(!Moptop_Fits_Header_Float_Add("MOPRREQ",requested_rotator_angle,"[deg] MOPTOP Rotator requested angle"))
