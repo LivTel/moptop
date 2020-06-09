@@ -221,6 +221,8 @@ int Moptop_Multrun_Filter_Name_Set(char *filter_name)
  * <li>Increment the FITS filename run number.
  * <li>If the filter wheel is enabled, we get the current filter wheel position using Filter_Wheel_Command_Get_Position.
  * <li>If the filter wheel is enabled, We get the current filter name using Filter_Wheel_Config_Position_To_Name.
+ * <li>We get the filter id associated with the filter name (either previously cached or just retrieved) by calling
+ *     Filter_Wheel_Config_Name_To_Id.
  * <li>We get and cache the current CCD temperature using CCD_Temperature_Get to store the temperature in 
  *     Multrun_Data.CCD_Temperature.
  * <li>We get and cache the current CCD temperature status string using CCD_Temperature_Get_Temperature_Status_String 
@@ -243,6 +245,7 @@ int Moptop_Multrun_Filter_Name_Set(char *filter_name)
  * @see ../pirot/cdocs/pirot_setup.html#PIROT_Setup_Is_Rotator_At_Start_Position
  * @see ../filter_wheel/cdocs/filter_wheel_command.html#Filter_Wheel_Command_Get_Position
  * @see ../filter_wheel/cdocs/filter_wheel_config.html#Filter_Wheel_Config_Position_To_Name
+ * @see ../filter_wheel/cdocs/filter_wheel_config.html#Filter_Wheel_Config_Name_To_Id
  */
 int Moptop_Multrun_Setup(int *multrun_number)
 {
@@ -265,7 +268,7 @@ int Moptop_Multrun_Setup(int *multrun_number)
 	/* increment the multrun number */
 	CCD_Fits_Filename_Next_Multrun();
 	(*multrun_number) = CCD_Fits_Filename_Multrun_Get();
-	/* increment the run number (effecticly which rotation we are on) to one */
+	/* increment the run number (effectively which rotation we are on) to one */
 	CCD_Fits_Filename_Next_Run();
 	/* get and save the current filter wheel settings, if enabled */
 	if(Moptop_Config_Filter_Wheel_Is_Enabled())
@@ -285,6 +288,18 @@ int Moptop_Multrun_Setup(int *multrun_number)
 		}
 	}
 	/* else do nothing, the config filter command should have updated Multrun_Data.Filter_Name */
+	/* Convert the filter name Multrun_Data.Filter_Name into an Id Multrun_Data.Filter_Id.
+	** We do the conversion here rather than Moptop_Multrun_Filter_Name_Set, as
+	** Moptop_Multrun_Filter_Name_Set only gets called on C layers that have no filter wheel (moptop2).
+	** We have also modified Moptop_Config_Load to _always_ call Filter_Wheel_Config_Initialise so we can
+	** use the name -> id mapping here. */
+	if(!Filter_Wheel_Config_Name_To_Id(Multrun_Data.Filter_Name,Multrun_Data.Filter_Id))
+	{
+		Moptop_General_Error_Number = 647;
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun_Setup:"
+			"Failed to find filter name id for filter name '%s'.",Multrun_Data.Filter_Name);
+		return FALSE;
+	}
 	/* get current CCD temperature/status and store it for later */
 	if(!CCD_Temperature_Get(&(Multrun_Data.CCD_Temperature)))
 	{
@@ -1021,6 +1036,7 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  * <ul>
  * <li>We set the "OBSTYPE" FITS keyword value based on the value of do_standard.
  * <li>We set the "FILTER1" FITS keyword value based on the cached filter name in Multrun_Data.Filter_Name.
+ * <li>We set the "FILTERI1" FITS keyword value based on the cached filter name in Multrun_Data.Filter_Id.
  * <li>We set the "DATE"/"DATE-OBS"/"UTSTART" and "MJD" keyword values based on the value of Multrun_Data.Exposure_Start_Time.
  * <li>We set the "DATE-END" and "UTEND" keyword values based on the value of exposure_end_time.
  * <li>We set the "TELAPSE" keyword value based on the time elapsed between Multrun_Data.Exposure_Start_Time and exposure_end_time.
@@ -1128,18 +1144,6 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 	if(!Moptop_Fits_Header_String_Add("FILTER1",Multrun_Data.Filter_Name,NULL))
 		return FALSE;
 	/* FILTERI1 */
-	/* Convert the filter name Multrun_Data.Filter_Name into an Id Multrun_Data.Filter_Id, and write it into
-	** the FITS header FILTERI1. We do the conversion here rather than Moptop_Multrun_Filter_Name_Set, as
-	** Moptop_Multrun_Filter_Name_Set only gets called on C layers that have no filter wheel (moptop2).
-	** We have also modified Moptop_Config_Load to _always_ call Filter_Wheel_Config_Initialise so we can
-	** use the name -> id mapping here. */
-	if(!Filter_Wheel_Config_Name_To_Id(Multrun_Data.Filter_Name,Multrun_Data.Filter_Id))
-	{
-		Moptop_General_Error_Number = 647;
-		sprintf(Moptop_General_Error_String,"Multrun_Write_Fits_Image:"
-			"Failed to find filter name id for filter name '%s'.",Multrun_Data.Filter_Name);
-		return FALSE;
-	}
 	if(!Moptop_Fits_Header_String_Add("FILTERI1",Multrun_Data.Filter_Id,NULL))
 		return FALSE;
 	/* update DATE keyword from Multrun_Data.Exposure_Start_Time */
