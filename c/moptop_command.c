@@ -137,6 +137,7 @@ int Moptop_Command_Abort(char *command_string,char **reply_string)
  * @see moptop_general.html#Moptop_General_Add_Integer_To_String
  * @see moptop_multrun.html#Moptop_Multrun_Exposure_Length_Set
  * @see moptop_multrun.html#Moptop_Multrun_Filter_Name_Set
+ * @see moptop_multrun.html#Moptop_Multrun_Rotator_Speed_Set
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Run_Velocity_Set
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Step_Angle_Set
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Run_Velocity_Get
