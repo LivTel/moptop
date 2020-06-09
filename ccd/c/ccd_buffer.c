@@ -199,6 +199,7 @@ int CCD_Buffer_Initialise(void)
  * @see #Buffer_Data
  * @see ccd_command.html#CCD_Command_Queue_Buffer
  * @see ccd_general.html#CCD_General_Log_Format
+ * @see ccd_setup.html#CCD_Setup_Get_Image_Size_Bytes
  */
 int CCD_Buffer_Queue_Images(int image_count)
 {
@@ -219,15 +220,17 @@ int CCD_Buffer_Queue_Images(int image_count)
 				       "CCD_Buffer_Queue_Images: Using image buffer list index %d for image %d.",
 				       buffer_index,i);
 #endif /* LOGGING */
-
+		/* Queue the buffer. Here we use CCD_Setup_Get_Image_Size_Bytes to get the binned image size,
+		** as otherwise CCD_Command_Queue_Buffer returns INVALID_SIZE. The actual buffer
+		** is allocated to the size Buffer_Data.Image_Size_Bytes, which was computed for binning 1 */
 		if(!CCD_Command_Queue_Buffer(Buffer_Data.Image_Buffer_List[buffer_index],
-					     Buffer_Data.Image_Size_Bytes))
+					     CCD_Setup_Get_Image_Size_Bytes()))
 		{
 			Buffer_Error_Number = 3;
 			sprintf(Buffer_Error_String,
-				"CCD_Buffer_Initialise: Failed to queue image buffer list index %d (%p, size %d) "
+				"CCD_Buffer_Initialise: Failed to queue image buffer list index %d (%p, size %d/%d) "
 				"for image %d.",buffer_index,Buffer_Data.Image_Buffer_List[buffer_index],
-				Buffer_Data.Image_Size_Bytes,i);
+				CCD_Setup_Get_Image_Size_Bytes(),Buffer_Data.Image_Size_Bytes,i);
 			return FALSE;
 		}
 	}/* end for */
