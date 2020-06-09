@@ -165,7 +165,7 @@ static char Setup_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * <li>We turn off the spurious noise filter using CCD_Command_Set_Spurious_Noise_Filter.
  * <li>We turn off the static blemish correction using CCD_Command_Set_Static_Blemish_Correction.
  * <li>We turn on rolling shutter global clear readout mode using CCD_Command_Set_Rolling_Shutter_Global_Clear.
- * <li>We configure the direction in which the sensor will be read out, usingCCD_Command_Set_Sensor_Readout_Mode
+ * <li>We configure the direction in which the sensor will be read out, using CCD_Command_Set_Sensor_Readout_Mode
  *     with the value stored in Setup_Data.Sensor_Readout_Mode.
  * <li>We configure the sensitivity and dynamic range using CCD_Command_Set_Simple_Pre_Amp_Gain_Control with the 
  *     value stored in Setup_Data.Pre_Amp_Gain_Control.
