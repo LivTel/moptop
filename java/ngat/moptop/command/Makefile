@@ -14,6 +14,7 @@ SRCS 		= Command.java BooleanReplyCommand.java DoubleReplyCommand.java IntegerRe
 		StatusExposureWindowCommand.java \
 		StatusFilterWheelFilterCommand.java StatusFilterWheelPositionCommand.java \
 		StatusFilterWheelStatusCommand.java \
+		StatusRotatorPositionCommand.java StatusRotatorSpeedCommand.java StatusRotatorStatusCommand.java \
 		StatusTemperatureGetCommand.java StatusTemperatureStatusCommand.java
 
 OBJS 		= $(SRCS:%.java=$(BINDIR)/%.class)

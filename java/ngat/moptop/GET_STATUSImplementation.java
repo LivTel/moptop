@@ -256,6 +256,9 @@ public class GET_STATUSImplementation extends CommandImplementation implements J
 	 * @exception Exception Thrown if an error occurs.
 	 * @see #cLayerHostnameList
 	 * @see #cLayerPortNumberList
+	 * @see ngat.moptop.command.StatusFilterWheelFilterCommand
+	 * @see ngat.moptop.command.StatusFilterWheelPositionCommand
+	 * @see ngat.moptop.command.StatusFilterWheelStatusCommand
 	 */
 	protected void getFilterWheelStatus() throws Exception
 	{
@@ -878,9 +881,14 @@ public class GET_STATUSImplementation extends CommandImplementation implements J
 	}
 	
 	/**
-	 * Get intermediate level status. This is mainly temperature information.
+	 * Get intermediate level status. This is:
+	 * <ul>
+	 * <li>CCD temperature information from each camera.
+	 * <li>Rotator status.
+	 * </ul>
 	 * The overall health and well-being statii are then computed using setInstrumentStatus.
 	 * @see #getTemperature
+	 * @see #getRotatorStatus
 	 * @see #setInstrumentStatus
 	 */
 	private void getIntermediateStatus()
@@ -888,12 +896,22 @@ public class GET_STATUSImplementation extends CommandImplementation implements J
 		try
 		{
 			// per clayer
-			getTemperature(); 
+			getTemperature();
 		}
 		catch(Exception e)
 		{
 			moptop.error(this.getClass().getName()+
 				     ":getIntermediateStatus:Retrieving temperature status failed.",e);
+		}
+		try
+		{
+			// The rotator is on C layer 0 only
+			getRotatorStatus();
+		}
+		catch(Exception e)
+		{
+			moptop.error(this.getClass().getName()+
+				     ":getIntermediateStatus:Retrieving rotator status failed.",e);
 		}
 	// Standard status
 		setInstrumentStatus();
@@ -1084,6 +1102,98 @@ public class GET_STATUSImplementation extends CommandImplementation implements J
 		hashTable.put(GET_STATUS_DONE.KEYWORD_INSTRUMENT_STATUS,instrumentStatus);
 	}
 
+	/**
+	 * Get the speed/status/position of the rotator.
+	 * @exception Exception Thrown if an error occurs.
+	 * @see #cLayerHostnameList
+	 * @see #cLayerPortNumberList
+	 * @see ngat.moptop.command.StatusRotatorSpeedCommand
+	 * @see ngat.moptop.command.StatusRotatorPositionCommand
+	 * @see ngat.moptop.command.StatusRotatorStatusCommand
+	 */
+	protected void getRotatorStatus() throws Exception
+	{
+		StatusRotatorSpeedCommand statusRotatorSpeedCommand = null;
+		StatusRotatorPositionCommand statusRotatorPositionCommand = null;
+		StatusRotatorStatusCommand statusRotatorStatusCommand = null;
+		String cLayerHostname = null;
+		String errorString = null;
+		String rotatorSpeed = null;
+		String rotatorStatus = null;
+		int returnCode,cLayerIndex,cLayerPortNumber;
+		double rotatorPosition;
+		
+		// The rotator is attached to C layer 0 only
+		cLayerIndex = 0;
+		// "status rotator speed" command
+		cLayerHostname = (String)(cLayerHostnameList.get(cLayerIndex));
+		cLayerPortNumber = ((Integer)(cLayerPortNumberList.get(cLayerIndex))).intValue();
+		moptop.log(Logging.VERBOSITY_INTERMEDIATE,"getRotatorStatus:started for C layer Index:"+
+			   cLayerIndex+":Hostname: "+cLayerHostname+" Port Number: "+cLayerPortNumber+".");
+		// Setup StatusRotatorSpeedCommand
+		statusRotatorSpeedCommand = new StatusRotatorSpeedCommand();
+		statusRotatorSpeedCommand.setAddress(cLayerHostname);
+		statusRotatorSpeedCommand.setPortNumber(cLayerPortNumber);
+		// actually send the command to the C layer
+		statusRotatorSpeedCommand.sendCommand();
+		// check the parsed reply
+		if(statusRotatorSpeedCommand.getParsedReplyOK() == false)
+		{
+			returnCode = statusRotatorSpeedCommand.getReturnCode();
+			errorString = statusRotatorSpeedCommand.getParsedReply();
+			moptop.log(Logging.VERBOSITY_TERSE,
+				   "getRotatorStatus:rotator speed command for C layer Index:"+
+				   cLayerIndex+" failed with return code "+returnCode+" and error string:"+errorString);
+			throw new Exception(this.getClass().getName()+
+					    ":getRotatorStatus:rotator speed command for C layer Index:"+
+					    cLayerIndex+" failed with return code "+returnCode+" and error string:"+errorString);
+		}
+		rotatorSpeed = statusRotatorSpeedCommand.getRotatorSpeed();
+		hashTable.put("Rotator Speed",new String(rotatorSpeed));
+		// "status rotator position" command
+		statusRotatorPositionCommand = new StatusRotatorPositionCommand();
+		statusRotatorPositionCommand.setAddress(cLayerHostname);
+		statusRotatorPositionCommand.setPortNumber(cLayerPortNumber);
+		// actually send the command to the C layer
+		statusRotatorPositionCommand.sendCommand();
+		// check the parsed reply
+		if(statusRotatorPositionCommand.getParsedReplyOK() == false)
+		{
+			returnCode = statusRotatorPositionCommand.getReturnCode();
+			errorString = statusRotatorPositionCommand.getParsedReply();
+			moptop.log(Logging.VERBOSITY_TERSE,
+				   "getRotatorStatus:rotator position command for C layer Index:"+
+				   cLayerIndex+" failed with return code "+returnCode+" and error string:"+errorString);
+			throw new Exception(this.getClass().getName()+
+					    ":getRotatorStatus:rotator position command for C layer Index:"+
+					    cLayerIndex+" failed with return code "+returnCode+
+					    " and error string:"+errorString);
+		}
+		rotatorPosition = statusRotatorPositionCommand.getRotatorPosition();
+		hashTable.put("Rotator Position",new Double(rotatorPosition));
+		// "status rotator status" command
+		statusRotatorStatusCommand = new StatusRotatorStatusCommand();
+		statusRotatorStatusCommand.setAddress(cLayerHostname);
+		statusRotatorStatusCommand.setPortNumber(cLayerPortNumber);
+		// actually send the command to the C layer
+		statusRotatorStatusCommand.sendCommand();
+		// check the parsed reply
+		if(statusRotatorStatusCommand.getParsedReplyOK() == false)
+		{
+			returnCode = statusRotatorStatusCommand.getReturnCode();
+			errorString = statusRotatorStatusCommand.getParsedReply();
+			moptop.log(Logging.VERBOSITY_TERSE,
+				   "getRotatorStatus:rotator status command for C layer Index:"+
+				   cLayerIndex+" failed with return code "+returnCode+" and error string:"+errorString);
+			throw new Exception(this.getClass().getName()+
+					    ":getRotatorStatus:rotator status command for C layer Index:"+
+					    cLayerIndex+" failed with return code "+returnCode+
+					    " and error string:"+errorString);
+		}
+		rotatorStatus = statusRotatorStatusCommand.getRotatorStatus();
+		hashTable.put("Rotator Status",new String(rotatorStatus));
+	}
+	
 	/**
 	 * Method to get misc status, when level FULL has been selected.
 	 * The following data is put into the hashTable:
