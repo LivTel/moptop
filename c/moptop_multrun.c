@@ -808,6 +808,21 @@ void Moptop_Multrun_Rotator_Step_Angle_Set(double step_angle)
 }
 
 /**
+ * Retrieve the cached rotator speed string used to configure the speed of the rotator. This is stored in
+ * Multrun_Data.Rotator_Speed.
+ * @param rotator_speed A string, on return to be filled with the cached rotator speed string 
+ *                      used to configure the rotator. This is usually "slow" or "fast". 
+ *                      The string should have an allocated length of MULTRUN_ROTATOR_SPEED_LENGTH,
+ *                      though currently only 5 characters are used.
+ * @see #MULTRUN_ROTATOR_SPEED_LENGTH
+ * @see #Multrun_Data
+ */
+void Moptop_Multrun_Rotator_Speed_Get(char *rotator_speed)
+{
+	strcpy(rotator_speed,Multrun_Data.Rotator_Speed);
+}
+
+/**
  * Get the stored rotator run velocity (used for computations inside Multrun_Multrun).
  * @return The stored rotator velocity in degrees/s.
  * @see #Multrun_Data

@@ -959,7 +959,7 @@ int Moptop_Command_Multrun_Setup(char *command_string,char **reply_string)
  * <ul>
  * <li>status temperature [get|status]
  * <li>status filterwheel [filter|position|status]
- * <li>status rotator [position|status]
+ * <li>status rotator [position|speed|status]
  * <li>status exposure [status|count|length|start_time]
  * <li>status exposure [index|multrun|run|window]
  * <li>status [name|identification|fits_instrument_code]
@@ -978,6 +978,7 @@ int Moptop_Command_Multrun_Setup(char *command_string,char **reply_string)
  * @see moptop_general.html#Moptop_General_Add_String
  * @see moptop_general.html#Moptop_General_Get_Time_String
  * @see moptop_general.html#Moptop_General_Get_Current_Time_String
+ * @see moptop_multrun.html#Moptop_Multrun_Rotator_Speed_Get
  * @see moptop_multrun.html#Moptop_Multrun_In_Progress
  * @see moptop_multrun.html#Moptop_Multrun_Count_Get
  * @see moptop_multrun.html#Moptop_Multrun_Per_Frame_Exposure_Length_Get
@@ -1008,6 +1009,7 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 	char key_string[64];
 	char temperature_status_string[32];
 	char filter_name_string[32];
+	char rotator_speed_string[32];
 	char instrument_code;
 	char *camera_name_string = NULL;
 	int retval,command_string_index,ivalue,filter_wheel_position,rotator_on_target;
@@ -1263,6 +1265,11 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 				return TRUE;
 			}
 			sprintf(return_string+strlen(return_string),"%.2f",rotator_position);			
+		}
+		else if(strncmp(command_string+command_string_index,"speed",5)==0)
+		{
+			Moptop_Multrun_Rotator_Speed_Get(rotator_speed_string);
+			strcat(return_string,rotator_speed_string);
 		}
 		else if(strncmp(command_string+command_string_index,"status",6)==0)
 		{
