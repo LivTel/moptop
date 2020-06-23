@@ -5,6 +5,7 @@
 
 extern int Moptop_Multrun_Exposure_Length_Set(double exposure_length_s);
 extern int Moptop_Multrun_Filter_Name_Set(char *filter_name);
+extern int Moptop_Multrun_Flip_Set(int flip_x,int flip_y);
 extern int Moptop_Multrun_Setup(int *multrun_number);
 extern int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_count,int use_exposure_count,
 			  int do_standard,char ***filename_list,int *filename_count);
@@ -24,6 +25,7 @@ extern int Moptop_Multrun_Window_Get(void);
 extern int Moptop_Multrun_Rotator_Speed_Set(char *rotator_speed);
 extern void Moptop_Multrun_Rotator_Run_Velocity_Set(double velocity);
 extern void Moptop_Multrun_Rotator_Step_Angle_Set(double step_angle);
+extern void Moptop_Multrun_Rotator_Speed_Get(char *rotator_speed);
 extern double Moptop_Multrun_Rotator_Run_Velocity_Get(void);
 extern double Moptop_Multrun_Rotator_Step_Angle_Get(void);
 
