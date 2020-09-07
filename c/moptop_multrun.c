@@ -262,10 +262,11 @@ int Moptop_Multrun_Flip_Set(int flip_x,int flip_y)
 /**
  * Routine to setup the Multrun.
  * <ul>
+ * <li>Increment the FITS filename multrun number and return it. We do this before checking whether the 
+ *     rotator is in the right start position, so the multrun numbers do not become mismatched across C layers.
+ * <li>Increment the FITS filename run number.
  * <li>Check the rotator is in the correct start position using PIROT_Setup_Is_Rotator_At_Start_Position, 
  *     if the rotator is enabled.
- * <li>Increment the FITS filename multrun number and return it.
- * <li>Increment the FITS filename run number.
  * <li>If the filter wheel is enabled, we get the current filter wheel position using Filter_Wheel_Command_Get_Position.
  * <li>If the filter wheel is enabled, We get the current filter name using Filter_Wheel_Config_Position_To_Name.
  * <li>We get the filter id associated with the filter name (either previously cached or just retrieved) by calling
@@ -309,6 +310,11 @@ int Moptop_Multrun_Setup(int *multrun_number)
 		sprintf(Moptop_General_Error_String,"Moptop_Multrun_Setup: multrun_number was NULL.");
 		return FALSE;
 	}
+	/* increment the multrun number */
+	CCD_Fits_Filename_Next_Multrun();
+	(*multrun_number) = CCD_Fits_Filename_Multrun_Get();
+	/* increment the run number (effectively which rotation we are on) to one */
+	CCD_Fits_Filename_Next_Run();
 	/* if the rotator is enabled, check it is in the right start position */
 	if(Moptop_Config_Rotator_Is_Enabled())
 	{
@@ -319,11 +325,6 @@ int Moptop_Multrun_Setup(int *multrun_number)
 			return FALSE;
 		}
 	}
-	/* increment the multrun number */
-	CCD_Fits_Filename_Next_Multrun();
-	(*multrun_number) = CCD_Fits_Filename_Multrun_Get();
-	/* increment the run number (effectively which rotation we are on) to one */
-	CCD_Fits_Filename_Next_Run();
 	/* get and save the current filter wheel settings, if enabled */
 	if(Moptop_Config_Filter_Wheel_Is_Enabled())
 	{

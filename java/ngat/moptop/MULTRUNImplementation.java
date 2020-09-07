@@ -101,11 +101,8 @@ public class MULTRUNImplementation extends HardwareImplementation implements JMS
 	 * <li>setFitsHeaders is called to get some FITS headers from the properties files and add them to the C layers.
 	 * <li>getFitsHeadersFromISS is called to gets some FITS headers from the ISS (RCS). A filtered subset
 	 *     is sent on to the C layer.
-	 * <li>A thread of class MultrunSetupCommandThread, is instantiated, and started, for each C Layer.
-	 *     Each thread sends the multrun setup command to it's C layer, and then waits for an answer, 
-	 *     and parses the result.
-	 * <li>We enter a loop monitoring the threads, until they have all terminated.
-	 * <li>We check whether any of the C layer threads threw an exception, during execution.
+	 * <li>We call doMultrunSetupCommands to call multrun_setup on each C layer, check the result,
+	 *     and fix any multrun mismatches.
 	 * <li>A thread of class MultrunCommandThread, is instantiated, and started, for each C Layer.
 	 *     Each thread sends the multrun command to it's C layer, and then waits for an answer, 
 	 *     and parses the result.
@@ -120,17 +117,16 @@ public class MULTRUNImplementation extends HardwareImplementation implements JMS
 	 * @see ngat.moptop.HardwareImplementation#getFitsHeadersFromISS
 	 * @see ngat.moptop.MoptopConstants#MOPTOP_MAX_C_LAYER_COUNT
 	 * @see MultrunCommandThread
+	 * @see #doMultrunSetupCommands
 	 */
 	public COMMAND_DONE processCommand(COMMAND command)
 	{
 		MULTRUN multRunCommand = (MULTRUN)command;
 		MULTRUN_ACK multRunAck = null;
 		MULTRUN_DONE multRunDone = new MULTRUN_DONE(command.getId());
-		MultrunSetupCommandThread multrunSetupThreadList[] =
-			new MultrunSetupCommandThread[MoptopConstants.MOPTOP_MAX_C_LAYER_COUNT];
 		MultrunCommandThread multrunThreadList[] =
 			new MultrunCommandThread[MoptopConstants.MOPTOP_MAX_C_LAYER_COUNT];
-		int exposureLength,exposureCount,cLayerCount,threadFinishedCount,multrunNumber;
+		int exposureLength,exposureCount,cLayerCount,threadFinishedCount;
 		boolean standard;
 
 		moptop.log(Logging.VERBOSITY_TERSE,this.getClass().getName()+":processCommand:Started.");
@@ -161,113 +157,16 @@ public class MULTRUNImplementation extends HardwareImplementation implements JMS
 			return multRunDone;
 		if(testAbort(multRunCommand,multRunDone) == true)
 			return multRunDone;
+		// call multrun setup command
 		moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
 			   ":processCommand:Starting Multrun Setup C layer command threads.");
-		// call multrun setup command
-		try
-		{
-			// start multrun setup command threads - one per c layer
-			cLayerCount = status.getPropertyInteger("moptop.c.count");
-			for(int cLayerIndex = 0; cLayerIndex < cLayerCount; cLayerIndex++)
-			{
-				multrunSetupThreadList[cLayerIndex] = new MultrunSetupCommandThread();
-				multrunSetupThreadList[cLayerIndex].setCLayerIndex(cLayerIndex);
-				moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
-					   ":processCommand:Starting Multrun Setup C layer command thread "+
-					   cLayerIndex+".");
-				multrunSetupThreadList[cLayerIndex].start();
-			}
-			//wait for all multrun command threads to terminate
-			moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
-				   ":processCommand:Waiting for Multrun Setup C layer command threads to terminate.");
-			do
-			{
-				threadFinishedCount = 0;
-				for(int cLayerIndex = 0; cLayerIndex < cLayerCount; cLayerIndex++)
-				{
-					if(multrunSetupThreadList[cLayerIndex].isAlive())
-					{
-						moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
-							   ":processCommand:Multrun Setup C layer command thread "+
-							   cLayerIndex+" still running.");
-					}
-					else
-					{
-						moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
-							   ":processCommand:Multrun Setup C layer command thread "+
-							   cLayerIndex+" has finished.");
-						threadFinishedCount++;
-					}
-					// sleep a bit
-					Thread.sleep(1000);
-				}// end for
-			} while(threadFinishedCount < cLayerCount);
-			moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
-				   ":processCommand:All Multrun Setup C layer command threads have finished.");
-		}
-		catch(Exception e )
-		{
-			moptop.error(this.getClass().getName()+":processCommand:Multrun Setup command thread failed:",
-				     e);
-			multRunDone.setErrorNum(MoptopConstants.MOPTOP_ERROR_CODE_BASE+902);
-			multRunDone.setErrorString(this.getClass().getName()+
-						   ":processCommand:Multrun Setup Command failed:"+e);
-			multRunDone.setSuccessful(false);
+		if(doMultrunSetupCommands(multRunCommand,multRunDone) == false)
 			return multRunDone;
-		}
-		// check to see whether any of the C layer threw an exception.
-		moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
-			   ":processCommand:Check Multrun Setup C layer command thread replies.");
-		multrunNumber = -1;
-		for(int cLayerIndex = 0; cLayerIndex < cLayerCount; cLayerIndex++)
-		{
-			// if we threw an exception, log exception and setup failed multRunDone
-			if(multrunSetupThreadList[cLayerIndex].getException() != null)
-			{
-				moptop.error(this.getClass().getName()+":processCommand:Multrun Setup C Layer "+
-					     cLayerIndex+" returned exception:",
-					     multrunSetupThreadList[cLayerIndex].getException());
-				multRunDone.setErrorNum(MoptopConstants.MOPTOP_ERROR_CODE_BASE+903);
-				multRunDone.setErrorString(this.getClass().getName()+
-							   ":processCommand:Multrun Setup C Layer "+cLayerIndex+
-							   " returned exception:"+
-							   multrunSetupThreadList[cLayerIndex].getException());
-				multRunDone.setSuccessful(false);
-				return multRunDone;
-			}
-			else
-			{
-				// check the multrun number returned by this c layer matches the multrun number
-				// returned by the first C layer.
-				// Otherwise throw an error.
-				if(multrunNumber == -1)
-					multrunNumber = multrunSetupThreadList[cLayerIndex].getMultrunNumber();
-				else
-				{
-					if(multrunSetupThreadList[cLayerIndex].getMultrunNumber() != multrunNumber)
-					{
-						moptop.error(this.getClass().getName()+
-							     ":processCommand:Multrun Setup C Layer "+
-							     cLayerIndex+" returned different multrun number :"+
-							     multrunSetupThreadList[cLayerIndex].getMultrunNumber()+
-							     " to first C layer which returned:"+multrunNumber);
-						multRunDone.setErrorNum(MoptopConstants.MOPTOP_ERROR_CODE_BASE+904);
-						multRunDone.setErrorString(this.getClass().getName()+
-									   ":processCommand:Multrun Setup C Layer "+
-									   cLayerIndex+
-									   " returned different multrun number :"+
-								multrunSetupThreadList[cLayerIndex].getMultrunNumber()+
-									   " to first C layer which returned:"+
-									   multrunNumber);
-						multRunDone.setSuccessful(false);
-						return multRunDone;
-					}
-				}
-			}
-		}// end for on cLayerIndex
+		if(testAbort(multRunCommand,multRunDone) == true)
+			return multRunDone;
+		// call multrun command
 		moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
 			   ":processCommand:Starting MULTRUN C layer command threads.");
-		// call multrun command
 		try
 		{
 			// start multrun command threads - one per c layer
@@ -361,6 +260,188 @@ public class MULTRUNImplementation extends HardwareImplementation implements JMS
 	// return done object.
 		moptop.log(Logging.VERBOSITY_VERY_TERSE,this.getClass().getName()+":processCommand:finished.");
 		return multRunDone;
+	}
+
+	/**
+	 * Call the multrun_setup command on each C layer.
+	 * <ul>
+	 * <li>A thread of class MultrunSetupCommandThread, is instantiated, and started, for each C Layer.
+	 *     Each thread sends the multrun setup command to it's C layer, and then waits for an answer, 
+	 *     and parses the result.
+	 * <li>We enter a loop monitoring the threads, until they have all terminated.
+	 * <li>We check whether any of the C layer threads threw an exception, during execution.
+	 * <li>We look at all the multrun numbers returned by the multrun_setup commands, and find the maximum.
+	 * <li>We loop over the C layers, and check the multrun number returned are all the maximum. If they are not,
+	 *     we call fixMultrunNumber on that C layer.
+	 * </ul>
+	 * @param multRunCommand The instance of the MULTRUN command being implemented.
+	 * @param multRunDone The instance of MULTRUN_DONE. If an error occurs, the error message will appear in this
+	 *        object, to be returned to the client.
+	 * @return The method returns true on success, and false if an error occurs.
+	 * @see MultrunSetupCommandThread
+	 * @see #fixMultrunNumber
+	 */
+	protected boolean doMultrunSetupCommands(MULTRUN multRunCommand,MULTRUN_DONE multRunDone)
+	{
+		MultrunSetupCommandThread multrunSetupThreadList[] =
+			new MultrunSetupCommandThread[MoptopConstants.MOPTOP_MAX_C_LAYER_COUNT];
+		int cLayerCount,threadFinishedCount,maxMultrunNumber;
+		
+		try
+		{
+			// start multrun setup command threads - one per c layer
+			cLayerCount = status.getPropertyInteger("moptop.c.count");
+			for(int cLayerIndex = 0; cLayerIndex < cLayerCount; cLayerIndex++)
+			{
+				multrunSetupThreadList[cLayerIndex] = new MultrunSetupCommandThread();
+				multrunSetupThreadList[cLayerIndex].setCLayerIndex(cLayerIndex);
+				moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
+					   ":doMultrunSetupCommands:Starting Multrun Setup C layer command thread "+
+					   cLayerIndex+".");
+				multrunSetupThreadList[cLayerIndex].start();
+			}
+			//wait for all multrun command threads to terminate
+			moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
+				   ":doMultrunSetupCommands:Waiting for Multrun Setup C layer command threads to terminate.");
+			do
+			{
+				threadFinishedCount = 0;
+				for(int cLayerIndex = 0; cLayerIndex < cLayerCount; cLayerIndex++)
+				{
+					if(multrunSetupThreadList[cLayerIndex].isAlive())
+					{
+						moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
+							   ":doMultrunSetupCommands:Multrun Setup C layer command thread "+
+							   cLayerIndex+" still running.");
+					}
+					else
+					{
+						moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
+							   ":doMultrunSetupCommands:Multrun Setup C layer command thread "+
+							   cLayerIndex+" has finished.");
+						threadFinishedCount++;
+					}
+					// sleep a bit
+					Thread.sleep(1000);
+				}// end for
+			} while(threadFinishedCount < cLayerCount);
+			moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
+				   ":doMultrunSetupCommands:All Multrun Setup C layer command threads have finished.");
+		}
+		catch(Exception e )
+		{
+			moptop.error(this.getClass().getName()+":doMultrunSetupCommands:Multrun Setup command thread failed:",
+				     e);
+			multRunDone.setErrorNum(MoptopConstants.MOPTOP_ERROR_CODE_BASE+902);
+			multRunDone.setErrorString(this.getClass().getName()+
+						   ":doMultrunSetupCommands:Multrun Setup Command failed:"+e);
+			multRunDone.setSuccessful(false);
+			return false;
+		}
+		// check to see whether any of the C layer threw an exception.
+		moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
+			   ":doMultrunSetupCommands:Check Multrun Setup C layer command thread replies.");
+		for(int cLayerIndex = 0; cLayerIndex < cLayerCount; cLayerIndex++)
+		{
+			// if we threw an exception, log exception and setup failed multRunDone
+			if(multrunSetupThreadList[cLayerIndex].getException() != null)
+			{
+				moptop.error(this.getClass().getName()+":doMultrunSetupCommands:Multrun Setup C Layer "+
+					     cLayerIndex+" returned exception:",
+					     multrunSetupThreadList[cLayerIndex].getException());
+				multRunDone.setErrorNum(MoptopConstants.MOPTOP_ERROR_CODE_BASE+903);
+				multRunDone.setErrorString(this.getClass().getName()+
+							   ":doMultrunSetupCommands:Multrun Setup C Layer "+cLayerIndex+
+							   " returned exception:"+
+							   multrunSetupThreadList[cLayerIndex].getException());
+				multRunDone.setSuccessful(false);
+				return false;
+			}
+		}// end for on cLayerIndex
+		moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
+			   ":doMultrunSetupCommands:Check Multrun Setup multrun numbers - find the maximum.");
+		maxMultrunNumber = -1;
+		for(int cLayerIndex = 0; cLayerIndex < cLayerCount; cLayerIndex++)
+		{
+			// We don't need this test as we have already failed the multrun if this is false
+			//if(multrunSetupThreadList[cLayerIndex].getException() == null)
+			//{
+			if(multrunSetupThreadList[cLayerIndex].getMultrunNumber() > maxMultrunNumber)
+				maxMultrunNumber = multrunSetupThreadList[cLayerIndex].getMultrunNumber();
+			//}
+		}
+		moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
+			   ":doMultrunSetupCommands:Check Multrun Setup multrun numbers are all the same ("+
+			   maxMultrunNumber+").");
+		try
+		{
+			for(int cLayerIndex = 0; cLayerIndex < cLayerCount; cLayerIndex++)
+			{		
+				if(multrunSetupThreadList[cLayerIndex].getMultrunNumber() != maxMultrunNumber)
+				{
+					fixMultrunNumber(cLayerIndex,multrunSetupThreadList[cLayerIndex].getMultrunNumber(),
+							 maxMultrunNumber);
+				}
+			}// end for on cLayerIndex
+		}
+		catch(Exception e )
+		{
+			moptop.error(this.getClass().getName()+":doMultrunSetupCommands:fixMultrunNumber failed:",e);
+			multRunDone.setErrorNum(MoptopConstants.MOPTOP_ERROR_CODE_BASE+904);
+			multRunDone.setErrorString(this.getClass().getName()+
+						   ":doMultrunSetupCommands:fixMultrunNumber failed:"+e);
+			multRunDone.setSuccessful(false);
+			return false;
+		}		
+		return true;
+	}
+
+	/**
+	 * This method should only be invoked on a C layer that has returned a multrun number (from multrun_setup)
+	 * that is less than the maximum multrun number returned from any C layer. In this case, we invoke
+	 * multrun_setup for this C layer until it's multrun number is the same as the maximum.
+	 * @param cLayerIndex The C layer, whose multrun number is less than the maximum.
+	 * @param currentMultrunNumber The multrun number returned by this C layer at the start of this method.
+	 * @param targetMultrunNumber The maximum multrun number. 
+	 * @exception Exception Thrown if an error occurs whilst catching up multrun numbers.
+	 * @see MultrunSetupCommandThread
+	 */
+	protected void fixMultrunNumber(int cLayerIndex,int currentMultrunNumber,int targetMultrunNumber) throws Exception
+	{
+		MultrunSetupCommandThread multrunSetupThread = null;
+
+		while(currentMultrunNumber < targetMultrunNumber)
+		{
+			moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
+				   ":fixMultrunNumber:C layer command "+cLayerIndex+
+				   " has multrun number "+currentMultrunNumber+" vs target "+targetMultrunNumber+".");
+			multrunSetupThread = new MultrunSetupCommandThread();
+			multrunSetupThread.setCLayerIndex(cLayerIndex);
+			moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
+				   ":fixMultrunNumber:Starting Multrun Setup C layer command thread "+cLayerIndex+".");
+			multrunSetupThread.start();
+			while (multrunSetupThread.isAlive())
+			{
+				moptop.log(Logging.VERBOSITY_INTERMEDIATE,this.getClass().getName()+
+					   ":fixMultrunNumber:Multrun Setup C layer command thread "+
+					   cLayerIndex+" still running.");
+				// sleep a bit
+				Thread.sleep(1000);
+			} // end while multrunSetupThread is running
+			// If an exception occured, throw it with added information.
+			if(multrunSetupThread.getException() != null)
+			{
+				throw new Exception(this.getClass().getName()+":fixMultrunNumber:Multrun Setup C Layer "+
+						    cLayerIndex+" returned exception:",multrunSetupThread.getException());
+			}
+			if(multrunSetupThread.getMultrunNumber() <= currentMultrunNumber)
+			{
+				throw new Exception(this.getClass().getName()+":fixMultrunNumber:Multrun Setup C Layer "+
+						    cLayerIndex+" did not increment it's multrun number ("+
+						    multrunSetupThread.getMultrunNumber()+" vs "+currentMultrunNumber+").");
+			}
+			currentMultrunNumber = multrunSetupThread.getMultrunNumber();
+		}// end while on currentMultrunNumber
 	}
 	
 	/**
