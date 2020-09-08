@@ -145,6 +145,8 @@ int Moptop_Command_Abort(char *command_string,char **reply_string)
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Dimensions
  * @see ../filter_wheel/cdocs/filter_wheel_config.html#Filter_Wheel_Config_Name_To_Position
  * @see ../filter_wheel/cdocs/filter_wheel_config.html#Filter_Wheel_Command_Move
+ * @see ../pirot/cdocs/pirot_setup.html#PIROT_Setup_Rotator_Run_Velocity
+ * @see ../pirot/cdocs/pirot_setup.html#PIROT_Setup_Trigger_Step_Angle
  */
 int Moptop_Command_Config(char *command_string,char **reply_string)
 {
@@ -431,23 +433,9 @@ int Moptop_Command_Config(char *command_string,char **reply_string)
 			}
 #if MOPTOP_DEBUG > 5
 			Moptop_General_Log("command","moptop_command.c","Moptop_Command_Config",
-					   LOG_VERBOSITY_VERBOSE,"COMMAND","Configuring rotator.");
+					   LOG_VERBOSITY_VERBOSE,"COMMAND",
+					   "Configuring the rotator is now done in multrun_setup.");
 #endif
-			if(!PIROT_Setup_Rotator())
-			{
-				Moptop_General_Error_Number = 537;
-				sprintf(Moptop_General_Error_String,"Moptop_Command_Config:Failed to setup rotator.");
-				Moptop_General_Error("command","moptop_command.c","Moptop_Command_Config",
-						     LOG_VERBOSITY_TERSE,"COMMAND");
-#if MOPTOP_DEBUG > 1
-				Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Config",
-							  LOG_VERBOSITY_TERSE,"COMMAND",
-							  "finished (Failed to setup rotator).");
-#endif
-				if(!Moptop_General_Add_String(reply_string,"1 Failed to setup rotator."))
-					return FALSE;
-				return TRUE;
-			}
 		} /* end if Moptop_Config_Rotator_Is_Enabled */
 		/* set CCD exposure length to match */
 #if MOPTOP_DEBUG > 5

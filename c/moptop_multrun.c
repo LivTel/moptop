@@ -265,8 +265,8 @@ int Moptop_Multrun_Flip_Set(int flip_x,int flip_y)
  * <li>Increment the FITS filename multrun number and return it. We do this before checking whether the 
  *     rotator is in the right start position, so the multrun numbers do not become mismatched across C layers.
  * <li>Increment the FITS filename run number.
- * <li>Check the rotator is in the correct start position using PIROT_Setup_Is_Rotator_At_Start_Position, 
- *     if the rotator is enabled.
+ * <li>If the rotator is enabled, we configure it from values previously cached in the config rotorspeed command,
+ *     by calling PIROT_Setup_Rotator.
  * <li>If the filter wheel is enabled, we get the current filter wheel position using Filter_Wheel_Command_Get_Position.
  * <li>If the filter wheel is enabled, We get the current filter name using Filter_Wheel_Config_Position_To_Name.
  * <li>We get the filter id associated with the filter name (either previously cached or just retrieved) by calling
@@ -295,7 +295,7 @@ int Moptop_Multrun_Flip_Set(int flip_x,int flip_y)
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Next_Run
  * @see ../ccd/cdocs/ccd_temperature.html#CCD_Temperature_Get
  * @see ../ccd/cdocs/ccd_temperature.html#CCD_Temperature_Get_Temperature_Status_String
- * @see ../pirot/cdocs/pirot_setup.html#PIROT_Setup_Is_Rotator_At_Start_Position
+ * @see ../pirot/cdocs/pirot_setup.html#PIROT_Setup_Rotator
  * @see ../filter_wheel/cdocs/filter_wheel_command.html#Filter_Wheel_Command_Get_Position
  * @see ../filter_wheel/cdocs/filter_wheel_config.html#Filter_Wheel_Config_Position_To_Name
  * @see ../filter_wheel/cdocs/filter_wheel_config.html#Filter_Wheel_Config_Name_To_Id
@@ -315,13 +315,15 @@ int Moptop_Multrun_Setup(int *multrun_number)
 	(*multrun_number) = CCD_Fits_Filename_Multrun_Get();
 	/* increment the run number (effectively which rotation we are on) to one */
 	CCD_Fits_Filename_Next_Run();
-	/* if the rotator is enabled, check it is in the right start position */
+	/* if the rotator is enabled, set it up and move it to the right start position 
+	** This picks up the velocity and step angle configured in the config rotorspeed command
+	** (PIROT_Setup_Rotator_Run_Velocity/PIROT_Setup_Trigger_Step_Angle). */
 	if(Moptop_Config_Rotator_Is_Enabled())
 	{
-		if(!PIROT_Setup_Is_Rotator_At_Start_Position())
+		if(!PIROT_Setup_Rotator())
 		{
 			Moptop_General_Error_Number = 605;
-			sprintf(Moptop_General_Error_String,"Moptop_Multrun_Setup: Rotator not at start position.");
+			sprintf(Moptop_General_Error_String,"Moptop_Multrun_Setup: PIROT_Setup_Rotator failed.");
 			return FALSE;
 		}
 	}
