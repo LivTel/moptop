@@ -1,0 +1,2 @@
+# moptop1 is running Java 1.6
+JAVAC_VERSION_OPTIONS		= -source 1.6 -target 1.6

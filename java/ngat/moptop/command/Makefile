@@ -1,4 +1,5 @@
 # Makefile
+include ../Makefile.common
 include ../../../../../Makefile.common
 include	../../../../Makefile.common
 
@@ -29,7 +30,7 @@ top: $(OBJS)
 
 $(BINDIR)/%.class:%.java
 	$(JAVAC) -sourcepath .:$(MOPTOP_SRC_HOME)/java \
-		-classpath $(MOPTOP_BIN_HOME)/java:$(CLASSPATH) $(JAVAC_OPTIONS) -d $(MOPTOP_BIN_HOME)/java $<
+		-classpath $(MOPTOP_BIN_HOME)/java:$(CLASSPATH) $(JAVAC_OPTIONS) $(JAVAC_VERSION_OPTIONS) -d $(MOPTOP_BIN_HOME)/java $<
 
 clean: tidy
 	-$(RM) $(RM_OPTIONS) $(OBJS)
