@@ -16,8 +16,8 @@ ANDOR_LIBDIR	= $(LT_SRC_HOME)/moptop-nogit/andor/andor-sdk3-3.14.30038.0/x86/
 ANDOR_LIBS	= -latcore -latutility
 else
 ifeq ("$(HOSTTYPE)","x86_64-linux") 
-ANDOR_INCDIR	= /usr/local/include/
-ANDOR_LIBDIR	= /usr/local/lib/
+ANDOR_INCDIR	= $(LT_SRC_HOME)/moptop-nogit/andor/andor-sdk3-3.14.30038.0/inc/
+ANDOR_LIBDIR	= $(LT_SRC_HOME)/moptop-nogit/andor/andor-sdk3-3.14.30038.0/x86_64/
 ANDOR_LIBS	= -latcore -latutility
 endif
 endif

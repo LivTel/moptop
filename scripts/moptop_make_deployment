@@ -71,8 +71,11 @@ if ( -r /etc/redhat-release ) then
 # Centos 7
 set bin_file_type = "ELF 64-bit LSB executable"
 else if ( -r /etc/lsb-release )  then
-# Ubuntu 18.04
-    set bin_file_type = "ELF 64-bit LSB shared object"
+# Ubuntu 18.04 (zen)
+#    set bin_file_type = "ELF 64-bit LSB shared object"
+# Ubuntu 18.04.5 (ltdevx64)
+# So on ltdevx64 binaries built under Centos are "ELF 64-bit LSB executable" and binaries built under Ubuntu 18.04 are "ELF 64-bit LSB shared object".
+    set bin_file_type = "ELF 64-bit LSB"
 else
     echo "Unknown release system."
     exit 1
@@ -255,7 +258,7 @@ cd ${deployment_bin_dir}
 foreach dir ( ${dir_list} )
 	echo "C test program directory : ${dir}"
 # get file list
-	find ${dev_bin_dir}/${dir}/* > ${deployment_tmp_dir}/file_list.txt
+	find ${dev_bin_dir}/${dir}/* | ${GREP} -v '\.o' > ${deployment_tmp_dir}/file_list.txt
 	foreach file ( `cat ${deployment_tmp_dir}/file_list.txt` )
 # check file is an executable
 #		set file_type = `file -L ${file}`
