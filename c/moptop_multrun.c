@@ -80,6 +80,9 @@
  *                                        used to configure the CCD camera. Used to populate FITS headers.</dd>
  * <dt>Image_Index</dt> <dd>Which frame in the multrun we are currently working on.</dd>
  * <dt>Image_Count</dt> <dd>The number of FITS images we are expecting to generate in the current multrun.</dd>
+ * <dt>Multrun_Start_Time</dt> <dd>A timestamp taken the first time an exposure was started in the multrun 
+ *                              (actually, just before we start waiting for the next image to arrive, 
+ *                              the timestamp is only approximate). Used for calculating TELAPSE.</dd>
  * <dt>Exposure_Start_Time</dt> <dd>A timestamp taken the last time an exposure was started in the multrun 
  *                              (actually, just before we start waiting for the next image to arrive, 
  *                              the timestamp is only approximate).</dd>
@@ -106,6 +109,7 @@ struct Multrun_Struct
 	double Requested_Exposure_Length;
 	int Image_Index;
 	int Image_Count;
+	struct timespec Multrun_Start_Time;
 	struct timespec Exposure_Start_Time;
 	int Rotation_Number;
 	int Sequence_Number;
@@ -132,6 +136,7 @@ static char rcsid[] = "$Id$";
  * <dt>Requested_Exposure_Length</dt>     <dd>0.0</dd>
  * <dt>Image_Index</dt>                   <dd>0</dd>
  * <dt>Image_Count</dt>                   <dd>0</dd>
+ * <dt>Multrun_Start_Time</dt>            <dd>{0,0}</dd>
  * <dt>Exposure_Start_Time</dt>           <dd>{0,0}</dd>
  * <dt>Rotation_Number</dt>               <dd>0</dd>
  * <dt>Sequence_Number</dt>               <dd>0</dd>
@@ -142,7 +147,7 @@ static char rcsid[] = "$Id$";
  */
 static struct Multrun_Struct Multrun_Data =
 {
-	"",0.0,0.0,-1,"","",0.0,"",0.0,0,0,{0,0},0,0,FALSE,FALSE
+	"",0.0,0.0,-1,"","",0.0,"",0.0,0,0,{0,0},{0,0},0,0,FALSE,FALSE
 };
 
 /**
@@ -903,6 +908,7 @@ double Moptop_Multrun_Rotator_Step_Angle_Get(void)
  * <li>We loop over the Multrun_Data.Image_Count, using Multrun_Data.Image_Index as an index counter (for status reporting):
  *     <ul>
  *     <li>We take a timestamp and store it in Multrun_Data.Exposure_Start_Time.
+ *     <li>If this is the first exposure in the multrun we set Multrun_Data.Multrun_Start_Time to the same timestamp.
  *     <li>We compute the theoretical rotator start angle (within a rotation) and store it in rotator_start_angle.
  *     <li>We compute which rotation we are on and store it in Multrun_Data.Rotation_Number.
  *     <li>We compute the image we are taking within the current rotation and store it in Multrun_Data.Sequence_Number.
@@ -1004,6 +1010,9 @@ static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *fil
 	{
 		/* get exposure start timestamp */
 		clock_gettime(CLOCK_REALTIME,&(Multrun_Data.Exposure_Start_Time));
+		/* If this is the first exposure in the multrun, the exposure start time is also the multrun start time. */
+		if(Multrun_Data.Image_Index == 0)
+			Multrun_Data.Multrun_Start_Time = Multrun_Data.Exposure_Start_Time;
 		rotator_start_angle = fmod(requested_rotator_angle, 360.0);
 		Multrun_Data.Rotation_Number = (Multrun_Data.Image_Index / images_per_cycle) + 1;
 		Multrun_Data.Sequence_Number = (Multrun_Data.Image_Index % images_per_cycle) + 1;
@@ -1147,7 +1156,8 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  * <li>We set the "FILTERI1" FITS keyword value based on the cached filter name in Multrun_Data.Filter_Id.
  * <li>We set the "DATE"/"DATE-OBS"/"UTSTART" and "MJD" keyword values based on the value of Multrun_Data.Exposure_Start_Time.
  * <li>We set the "DATE-END" and "UTEND" keyword values based on the value of exposure_end_time.
- * <li>We set the "TELAPSE" keyword value based on the time elapsed between Multrun_Data.Exposure_Start_Time and exposure_end_time.
+ * <li>We set the "TELAPSE" keyword value based on the time elapsed between 
+ *     Multrun_Data.Multrun_Start_Time and exposure_end_time.
  * <li>We set the "RUNNUM" keyword value to Multrun_Data.Rotation_Number.
  * <li>We set the "EXPNUM" keyword value to Multrun_Data.Sequence_Number.
  * <li>We set the "EXPTOTAL" keyword value to Multrun_Data.Image_Count.
@@ -1286,8 +1296,9 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 	Moptop_Fits_Header_TimeSpec_To_UtStart_String(exposure_end_time,exposure_time_string);
 	if(!Moptop_Fits_Header_String_Add("UTEND",exposure_time_string,"[UTC] End time of obs."))
 		return FALSE;
-	/* update TELAPSE keyword with difference between start and end timestamps */
-	dvalue = fdifftime(exposure_end_time,Multrun_Data.Exposure_Start_Time);
+	/* update TELAPSE keyword with difference between the multrun start timestamp and the 
+	** end timestamp of the current exposure. This means TELAPSE is increasing in each frame of the multrun. */
+	dvalue = fdifftime(exposure_end_time,Multrun_Data.Multrun_Start_Time);
 	if(!Moptop_Fits_Header_Float_Add("TELAPSE",dvalue,"[sec] Total obs. duration"))
 		return FALSE;
 	/* update RUNNUM keyword value with the Multrun_Data.Rotation_Number */
