@@ -20,7 +20,7 @@ endif
 foreach dir ( ${LT_BIN_HOME}/lib/${HOSTTYPE} )
     echo $LD_LIBRARY_PATH | grep $dir > /dev/null
     if ( $status != 0 ) then
-	setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${dir}
+	setenv LD_LIBRARY_PATH ${dir}:${LD_LIBRARY_PATH}
     endif
 end
 
