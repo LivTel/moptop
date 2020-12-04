@@ -41,6 +41,7 @@
 #include "filter_wheel_config.h"
 #include "filter_wheel_general.h"
 
+#include "moptop_bias_dark.h"
 #include "moptop_config.h"
 #include "moptop_fits_header.h"
 #include "moptop_multrun.h"
@@ -759,8 +760,10 @@ int Moptop_Command_Fits_Header(char *command_string,char **reply_string)
  * Handle a command of the form: "multrun <length> <count> <standard>".
  * <ul>
  * <li>The multrun command is parsed to get the exposure length, count and standard (true|false) values.
- * <li>
+ * <li>We call Moptop_Multrun to take the multrun images.
  * <li>The reply string is constructed of the form "0 <filename count> <multrun number> <last FITS filename>".
+ * <li>We log the returned filenames.
+ * <li>We free the returned filenames.
  * </ul>
  * @param command_string The command. This is not changed during this routine.
  * @param reply_string The address of a pointer to allocate and set the reply string.
@@ -769,8 +772,8 @@ int Moptop_Command_Fits_Header(char *command_string,char **reply_string)
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_general.html#Moptop_General_Add_String
- * @see moptop_fits_filename.html#CCD_Fits_Filename_Multrun_Get
  * @see moptop_multrun.html#Moptop_Multrun
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Multrun_Get
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_List_Free
  */
 int Moptop_Command_Multrun(char *command_string,char **reply_string)
@@ -940,6 +943,254 @@ int Moptop_Command_Multrun_Setup(char *command_string,char **reply_string)
 			   "COMMAND","finished.");
 #endif
 	return TRUE;	
+}
+
+/**
+ * Handle a command of the form: "multbias <count>".
+ * <ul>
+ * <li>The multbias command is parsed to get the exposure count value.
+ * <li>We call Moptop_Bias_Dark_MultBias to create the bias frames.
+ * <li>The reply string is constructed of the form "0 <filename count> <multrun number> <last FITS filename>".
+ * <li>We log the returned filenames.
+ * <li>We free the returned filenames.
+ * </ul>
+ * @param command_string The command. This is not changed during this routine.
+ * @param reply_string The address of a pointer to allocate and set the reply string.
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see moptop_general.html#Moptop_General_Log
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
+ * @see moptop_general.html#Moptop_General_Add_String
+ * @see moptop_bias_dark.html#Moptop_Bias_Dark_MultBias
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Multrun_Get
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_List_Free
+ */
+int Moptop_Command_MultBias(char *command_string,char **reply_string)
+{
+	char **filename_list = NULL;
+	char count_string[16];
+	int i,retval,exposure_count,filename_count,multrun_number;
+
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("command","moptop_command.c","Moptop_Command_MultBias",LOG_VERBOSITY_TERSE,
+			   "COMMAND","started.");
+#endif
+	/* parse command */
+	retval = sscanf(command_string,"multbias %d",&exposure_count);
+	if(retval != 1)
+	{
+		Moptop_General_Error_Number = 527;
+		sprintf(Moptop_General_Error_String,"Moptop_Command_MultBias:"
+			"Failed to parse command %s (%d).",command_string,retval);
+		Moptop_General_Error("command","moptop_command.c","Moptop_Command_MultBias",
+				     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("command","moptop_command.c","Moptop_Command_MultBias",
+				       LOG_VERBOSITY_TERSE,"COMMAND","finished (command parse failed).");
+#endif
+		if(!Moptop_General_Add_String(reply_string,"1 Failed to parse multbias command."))
+			return FALSE;
+		return TRUE;
+	}
+	/* do multbias */
+	retval = Moptop_Bias_Dark_MultBias(exposure_count,&filename_list,&filename_count);
+	if(retval == FALSE)
+	{
+		Moptop_General_Error("command","moptop_command.c","Moptop_Command_MultBias",
+				     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("command","moptop_command.c","Moptop_Command_MultBias",
+				   LOG_VERBOSITY_TERSE,"COMMAND","MultBias failed.");
+#endif
+		if(!Moptop_General_Add_String(reply_string,"1 MultBias failed."))
+			return FALSE;
+		return TRUE;
+	}
+	/* success */
+	if(!Moptop_General_Add_String(reply_string,"0 "))
+	{
+		CCD_Fits_Filename_List_Free(&filename_list,&filename_count);
+		return FALSE;
+	}
+	/* add number of FITS images */
+	sprintf(count_string,"%d ",filename_count);
+	if(!Moptop_General_Add_String(reply_string,count_string))
+	{
+		CCD_Fits_Filename_List_Free(&filename_list,&filename_count);
+		return FALSE;
+	}
+	/* get multrun number */
+	multrun_number = CCD_Fits_Filename_Multrun_Get();
+	sprintf(count_string,"%d ",multrun_number);
+	if(!Moptop_General_Add_String(reply_string,count_string))
+	{
+		CCD_Fits_Filename_List_Free(&filename_list,&filename_count);
+		return FALSE;
+	}
+	/* add last filename */
+	if(filename_count > 0)
+	{
+		if(!Moptop_General_Add_String(reply_string,filename_list[filename_count-1]))
+		{
+			CCD_Fits_Filename_List_Free(&filename_list,&filename_count);
+			return FALSE;
+		}
+	}
+	else
+	{
+		if(!Moptop_General_Add_String(reply_string,"none"))
+		{
+			CCD_Fits_Filename_List_Free(&filename_list,&filename_count);
+			return FALSE;
+		}
+	}
+	/* log filenames returned */
+	for(i=0; i < filename_count; i++)
+	{
+#if MOPTOP_DEBUG > 8
+		Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_MultBias",
+					  LOG_VERBOSITY_VERY_VERBOSE,"COMMAND","Filename %d : %s",i,filename_list[i]);
+#endif
+	}
+	if(!CCD_Fits_Filename_List_Free(&filename_list,&filename_count))
+	{
+		Moptop_General_Error_Number = 537;
+		sprintf(Moptop_General_Error_String,"Moptop_Command_MultBias:CCD_Fits_Filename_List_Free failed.");
+		Moptop_General_Error("command","moptop_command.c","Moptop_Command_MultBias",
+				     LOG_VERBOSITY_TERSE,"COMMAND");
+		if(!Moptop_General_Add_String(reply_string,"1 MultBias failed (freeing filename list)."))
+			return FALSE;
+		return TRUE;
+	}
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("command","moptop_command.c","Moptop_Command_MultBias",LOG_VERBOSITY_TERSE,
+			   "COMMAND","finished.");
+#endif
+	return TRUE;
+}
+
+/**
+ * Handle a command of the form: "multdark <exposure length> <count>".
+ * <ul>
+ * <li>The multdark command is parsed to get the exposure length and exposure count value.
+ * <li>We call Moptop_Bias_Dark_MultDark to create the dark frames.
+ * <li>The reply string is constructed of the form "0 <filename count> <multrun number> <last FITS filename>".
+ * <li>We log the returned filenames.
+ * <li>We free the returned filenames.
+ * </ul>
+ * @param command_string The command. This is not changed during this routine.
+ * @param reply_string The address of a pointer to allocate and set the reply string.
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see moptop_bias_dark.html#Moptop_Bias_Dark_MultDark
+ * @see moptop_general.html#Moptop_General_Log
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
+ * @see moptop_general.html#Moptop_General_Add_String
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Multrun_Get
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_List_Free
+ */
+int Moptop_Command_MultDark(char *command_string,char **reply_string)
+{
+	char **filename_list = NULL;
+	char count_string[16];
+	int i,retval,exposure_length,exposure_count,filename_count,multrun_number;
+
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("command","moptop_command.c","Moptop_Command_MultDark",LOG_VERBOSITY_TERSE,
+			   "COMMAND","started.");
+#endif
+	/* parse command */
+	retval = sscanf(command_string,"multdark %d %d",&exposure_length,&exposure_count);
+	if(retval != 2)
+	{
+		Moptop_General_Error_Number = 538;
+		sprintf(Moptop_General_Error_String,"Moptop_Command_MultDark:"
+			"Failed to parse command %s (%d).",command_string,retval);
+		Moptop_General_Error("command","moptop_command.c","Moptop_Command_MultDark",
+				     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("command","moptop_command.c","Moptop_Command_MultDark",
+				       LOG_VERBOSITY_TERSE,"COMMAND","finished (command parse failed).");
+#endif
+		if(!Moptop_General_Add_String(reply_string,"1 Failed to parse multdark command."))
+			return FALSE;
+		return TRUE;
+	}
+	/* do multbias */
+	retval = Moptop_Bias_Dark_MultDark(exposure_length,exposure_count,&filename_list,&filename_count);
+	if(retval == FALSE)
+	{
+		Moptop_General_Error("command","moptop_command.c","Moptop_Command_MultDark",
+				     LOG_VERBOSITY_TERSE,"COMMAND");
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("command","moptop_command.c","Moptop_Command_MultDark",
+				   LOG_VERBOSITY_TERSE,"COMMAND","MultDark failed.");
+#endif
+		if(!Moptop_General_Add_String(reply_string,"1 MultDark failed."))
+			return FALSE;
+		return TRUE;
+	}
+	/* success */
+	if(!Moptop_General_Add_String(reply_string,"0 "))
+	{
+		CCD_Fits_Filename_List_Free(&filename_list,&filename_count);
+		return FALSE;
+	}
+	/* add number of FITS images */
+	sprintf(count_string,"%d ",filename_count);
+	if(!Moptop_General_Add_String(reply_string,count_string))
+	{
+		CCD_Fits_Filename_List_Free(&filename_list,&filename_count);
+		return FALSE;
+	}
+	/* get multrun number */
+	multrun_number = CCD_Fits_Filename_Multrun_Get();
+	sprintf(count_string,"%d ",multrun_number);
+	if(!Moptop_General_Add_String(reply_string,count_string))
+	{
+		CCD_Fits_Filename_List_Free(&filename_list,&filename_count);
+		return FALSE;
+	}
+	/* add last filename */
+	if(filename_count > 0)
+	{
+		if(!Moptop_General_Add_String(reply_string,filename_list[filename_count-1]))
+		{
+			CCD_Fits_Filename_List_Free(&filename_list,&filename_count);
+			return FALSE;
+		}
+	}
+	else
+	{
+		if(!Moptop_General_Add_String(reply_string,"none"))
+		{
+			CCD_Fits_Filename_List_Free(&filename_list,&filename_count);
+			return FALSE;
+		}
+	}
+	/* log filenames returned */
+	for(i=0; i < filename_count; i++)
+	{
+#if MOPTOP_DEBUG > 8
+		Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_MultDark",
+					  LOG_VERBOSITY_VERY_VERBOSE,"COMMAND","Filename %d : %s",i,filename_list[i]);
+#endif
+	}
+	if(!CCD_Fits_Filename_List_Free(&filename_list,&filename_count))
+	{
+		Moptop_General_Error_Number = 544;
+		sprintf(Moptop_General_Error_String,"Moptop_Command_MultDark:CCD_Fits_Filename_List_Free failed.");
+		Moptop_General_Error("command","moptop_command.c","Moptop_Command_MultDark",
+				     LOG_VERBOSITY_TERSE,"COMMAND");
+		if(!Moptop_General_Add_String(reply_string,"1 MultDark failed (freeing filename list)."))
+			return FALSE;
+		return TRUE;
+	}
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("command","moptop_command.c","Moptop_Command_MultDark",LOG_VERBOSITY_TERSE,
+			   "COMMAND","finished.");
+#endif
+	return TRUE;
 }
 
 /**

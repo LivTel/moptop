@@ -178,7 +178,9 @@ int Moptop_Server_Stop(void)
  * @see moptop_command.html#Moptop_Command_Config
  * @see moptop_command.html#Moptop_Command_Fits_Header
  * @see moptop_command.html#Moptop_Command_Multrun
- * @see moptop_command.html#Moptop_Command_Mult_Dark
+ * @see moptop_command.html#Moptop_Command_Multrun_Setup
+ * @see moptop_command.html#Moptop_Command_MultBias
+ * @see moptop_command.html#Moptop_Command_MultDark
  * @see moptop_command.html#Moptop_Command_Status
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
@@ -354,6 +356,8 @@ static void Server_Connection_Callback(Command_Server_Handle_T connection_handle
 			   "\tfitsheader delete <keyword>\n"
 			   "\tfitsheader clear\n"
 			   "\thelp\n"
+			   "\tmultbias <count>\n"
+			   "\tmultdark <length> <count>\n"
 			   "\tmultrun_setup\n"
 			   "\tmultrun <length> <count> <standard>\n"
 			   "\tstatus [name|identification|fits_instrument_code]\n"
@@ -363,6 +367,86 @@ static void Server_Connection_Callback(Command_Server_Handle_T connection_handle
 			   "\tstatus exposure [status|count|length|start_time]\n"
 			   "\tstatus exposure [index|multrun|run|window]\n"
 			   "\tshutdown\n");
+	}
+	else if(strncmp(client_message,"multbias",8) == 0)
+	{
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("server","moptop_server.c","Moptop_Server_Connection_Callback",
+				       LOG_VERBOSITY_VERY_TERSE,"SERVER","multbias detected.");
+#endif
+		/* exposure thread priority */
+		if(!Moptop_General_Thread_Priority_Set_Exposure())
+		{
+			Moptop_General_Error("server","moptop_server.c",
+						 "Moptop_Server_Connection_Callback",
+						 LOG_VERBOSITY_VERY_TERSE,"SERVER");
+		}
+		retval = Moptop_Command_MultBias(client_message,&reply_string);
+		if(retval == TRUE)
+		{
+			retval = Send_Reply(connection_handle,reply_string);
+			if(reply_string != NULL)
+				free(reply_string);
+			if(retval == FALSE)
+			{
+				Moptop_General_Error("server","moptop_server.c",
+							 "Moptop_Server_Connection_Callback",
+							 LOG_VERBOSITY_VERY_TERSE,"SERVER");
+			}
+		}
+		else
+		{
+			Moptop_General_Error("server","moptop_server.c",
+						 "Moptop_Server_Connection_Callback",
+						 LOG_VERBOSITY_VERY_TERSE,"SERVER");
+			retval = Send_Reply(connection_handle, "1 Moptop_Command_MultBias failed.");
+			if(retval == FALSE)
+			{
+				Moptop_General_Error("server","moptop_server.c",
+							 "Moptop_Server_Connection_Callback",
+							 LOG_VERBOSITY_VERY_TERSE,"SERVER");
+			}
+		}
+	}
+	else if(strncmp(client_message,"multdark",8) == 0)
+	{
+#if MOPTOP_DEBUG > 1
+		Moptop_General_Log("server","moptop_server.c","Moptop_Server_Connection_Callback",
+				       LOG_VERBOSITY_VERY_TERSE,"SERVER","multdark detected.");
+#endif
+		/* exposure thread priority */
+		if(!Moptop_General_Thread_Priority_Set_Exposure())
+		{
+			Moptop_General_Error("server","moptop_server.c",
+						 "Moptop_Server_Connection_Callback",
+						 LOG_VERBOSITY_VERY_TERSE,"SERVER");
+		}
+		retval = Moptop_Command_MultDark(client_message,&reply_string);
+		if(retval == TRUE)
+		{
+			retval = Send_Reply(connection_handle,reply_string);
+			if(reply_string != NULL)
+				free(reply_string);
+			if(retval == FALSE)
+			{
+				Moptop_General_Error("server","moptop_server.c",
+							 "Moptop_Server_Connection_Callback",
+							 LOG_VERBOSITY_VERY_TERSE,"SERVER");
+			}
+		}
+		else
+		{
+			Moptop_General_Error("server","moptop_server.c",
+						 "Moptop_Server_Connection_Callback",
+						 LOG_VERBOSITY_VERY_TERSE,"SERVER");
+			retval = Send_Reply(connection_handle, "1 Moptop_Command_MultDark failed.");
+			if(retval == FALSE)
+			{
+				Moptop_General_Error("server","moptop_server.c",
+							 "Moptop_Server_Connection_Callback",
+							 LOG_VERBOSITY_VERY_TERSE,"SERVER");
+			}
+		}
 	}
 	/* note the test for "multrun_setup" must appear before the test for "multrun" in this hanging if,
 	** otherwise we think a  "multrun_setup" command is a "multrun" command. */
