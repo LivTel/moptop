@@ -71,6 +71,13 @@
  */
 #define CCD_COMMAND_CYCLE_MODE_CONTINUOUS                        ("Continuous")
 /**
+ * Value enumeration for CCD_Command_Set_Cycle_Mode, which configures whether the camera will acquire a fixed length 
+ * sequence or a continuous sequence.
+ * This value selects a fixed sequence.
+ * @see #CCD_Command_Set_Cycle_Mode
+ */
+#define CCD_COMMAND_CYCLE_MODE_FIXED                             ("Fixed")
+/**
  * Value enumeration for CCD_Command_Set_AOI_Binning, which configures the readout binning.
  * This value selects 1x1 binning.
  * @see #CCD_Command_Set_AOI_Binning
@@ -223,9 +230,18 @@
  * @param s A string representing the cycle mode e.g. CCD_COMMAND_CYCLE_MODE_CONTINUOUS.
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #CCD_COMMAND_CYCLE_MODE_CONTINUOUS
+ * @see #CCD_COMMAND_CYCLE_MODE_FIXED
  * @see #CCD_Command_Set_Enum_String
  */
 #define CCD_Command_Set_Cycle_Mode(s) CCD_Command_Set_Enum_String("CycleMode",s)
+/**
+ * Configure the number of frames to take when Cycle Mode is set to FIXED.
+ * Uses CCD_Command_Set_Int with feature name "FrameCount".
+ * @param i  An integer, the number of frames to take in the acquisition before stopping.
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see #CCD_Command_Set_Int
+ */
+#define CCD_Command_Set_Frame_Count(i) CCD_Command_Set_Int("FrameCount",i)
 /**
  * Set the readout binning for the Area Of Interest.
  * Uses the CCD_Command_Set_Enum_String with feature name "AOIBinning".
@@ -436,6 +452,7 @@ extern int CCD_Command_Is_Readonly(char *feature_name_string,int *is_readonly);
 extern int CCD_Command_Set_Bool(char *feature_name_string,int value);
 extern int CCD_Command_Set_Enum_String(char *feature_name_string,char *enum_value_string);
 extern int CCD_Command_Set_Float(char *feature_name_string,double value);
+extern int CCD_Command_Set_Int(char *feature_name_string,int value);
 extern int CCD_Command_Queue_Buffer(unsigned char* buffer_ptr,int buffer_length);
 extern int CCD_Command_Wait_Buffer(unsigned char** buffer_ptr,int *buffer_length,unsigned int timeout);
 extern int CCD_Command_Get_Timestamp_From_Metadata(unsigned char* buffer,int buffer_length,long long int *timestamp);
