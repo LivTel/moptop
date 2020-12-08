@@ -159,11 +159,22 @@ int Moptop_Bias_Dark_Flip_Set(int flip_x,int flip_y)
  * <li>We initialise Moptop_Abort to FALSE, and Moptop_In_Progress to TRUE.
  * <li>We check the exposure count is sensible, and initialise BiasDark_Data.Image_Count to it.
  * <li>We queue the image buffers for the acquisitions using CCD_Buffer_Queue_Images.
+ * <li>We set the exposure length to zero using CCD_Exposure_Length_Set.
+ * <li>We reset the cameras internal timestamp clock using CCD_Command_Timestamp_Clock_Reset.
+ * <li>We set the camera to trigger internally using CCD_Command_Set_Trigger_Mode.
+ * <li>We set the camera to continuously take images using CCD_Command_Set_Cycle_Mode to set the cycle mode
+ *     to CCD_COMMAND_CYCLE_MODE_CONTINUOUS.
+ * <li>We set the number of frames to take using CCD_Command_Set_Frame_Count.
+ * <li>We enable the camera for acquisitions using CCD_Command_Acquisition_Start.
  * <li>
  * <li>
  * <li>
  * <li>
  * <li>
+ * <li>We disable the camera for acquisition using CCD_Command_Acquisition_Stop.
+ * <li>We set the camera to trigger from software using CCD_Command_Set_Trigger_Mode.
+ * <li>We flush the camera (and associated queued image buffers) using CCD_Command_Flush.
+ * <li>We set Moptop_In_Progress to FALSE.
  * </ul>
  * @param exposure_count The number of bias frames to take.
  * @param filename_list The address of a list of filenames of FITS images acquired during this set of biases.
@@ -172,6 +183,17 @@ int Moptop_Bias_Dark_Flip_Set(int flip_x,int flip_y)
  * @see #Bias_Dark_Data
  * @see #Bias_Dark_Abort
  * @see #Bias_Dark_In_Progress
+ * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Queue_Images
+ * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_CYCLE_MODE_FIXED
+ * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE_SOFTWARE
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Start
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Stop
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Flush
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Timestamp_Clock_Reset
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Trigger_Mode
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Cycle_Mode
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Frame_Count
+ * @see ../ccd/cdocs/ccd_exposure.html#CCD_Exposure_Length_Set
  */
 int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *filename_count)
 {
@@ -220,7 +242,7 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
 	if(!CCD_Exposure_Length_Set(0))
 	{
 		Bias_Dark_In_Progress = FALSE;
-		Moptop_General_Error_Number = 706;
+		Moptop_General_Error_Number = 719;
 		sprintf(Moptop_General_Error_String,
 			"Moptop_Bias_Dark_MultBias: Failed to set exposure length to zero.");
 		return FALSE;
@@ -242,6 +264,25 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
 		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultBias:Failed to set camera trigger mode to software.");
 		return FALSE;
 	}
+	/* bias and darks need cycle mode to be fixed */
+	if(!CCD_Command_Set_Cycle_Mode(CCD_COMMAND_CYCLE_MODE_FIXED))
+	{
+		Bias_Dark_In_Progress = FALSE;
+		Moptop_General_Error_Number = 720;
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultBias:CCD_Command_Set_Cycle_Mode(%s) failed.",
+			CCD_COMMAND_CYCLE_MODE_FIXED);
+		return FALSE;
+	}
+	/* set frame count to number of images to be acquired */
+	if(!CCD_Command_Set_Frame_Count(Bias_Dark_Data.Image_Count))
+	{
+		Bias_Dark_In_Progress = FALSE;
+		Moptop_General_Error_Number = 721;
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultBias:CCD_Command_Set_Frame_Count(%d) failed.",
+			Bias_Dark_Data.Image_Count);
+		return FALSE;
+	}				     
+
 	/* enable the CCD acquisition */
 	if(!CCD_Command_Acquisition_Start())
 	{
@@ -250,7 +291,36 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
 		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultBias:Failed to start camera acquisition.");
 		return FALSE;
 	}
-	
+
+
+	/* stop CCD acquisition */
+	if(!CCD_Command_Acquisition_Stop())
+	{
+		Bias_Dark_In_Progress = FALSE;
+		CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_SOFTWARE);
+		Moptop_General_Error_Number = 722;
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultBias:Failed to stop camera acquisition.");
+		return FALSE;
+	}
+	/* check camera triggering is still software */
+	if(!CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_SOFTWARE))
+	{
+		Bias_Dark_In_Progress = FALSE;
+		Moptop_General_Error_Number = 723;
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultBias:Failed to set camera trigger mode to software.");
+		return FALSE;
+	}		
+	if(!CCD_Command_Flush())
+	{
+		Bias_Dark_In_Progress = FALSE;
+		Moptop_General_Error_Number = 724;
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultBias:Failed to flush camera.");
+		return FALSE;
+	}	
+	Bias_Dark_In_Progress = FALSE;
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("bias","moptop_bias_dark.c","Moptop_Bias_Dark_MultBias",LOG_VERBOSITY_TERSE,"BIAS","finished.");
+#endif
 	return TRUE;
 }
 
@@ -261,6 +331,13 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
  * <li>We initialise Moptop_Abort to FALSE, and Moptop_In_Progress to TRUE.
  * <li>We check the exposure count is sensible, and initialise BiasDark_Data.Image_Count to it.
  * <li>We queue the image buffers for the acquisitions using CCD_Buffer_Queue_Images.
+ * <li>We set the exposure length to use using CCD_Exposure_Length_Set.
+ * <li>We reset the cameras internal timestamp clock using CCD_Command_Timestamp_Clock_Reset.
+ * <li>We set the camera to trigger internally (from the rotator) using CCD_Command_Set_Trigger_Mode.
+ * <li>We set the camera to continuously take images using CCD_Command_Set_Cycle_Mode to set the cycle mode
+ *     to CCD_COMMAND_CYCLE_MODE_CONTINUOUS.
+ * <li>We set the number of frames to take using CCD_Command_Set_Frame_Count.
+ * <li>We enable the camera for acquisitions using CCD_Command_Acquisition_Start.
  * <li>
  * <li>
  * <li>
@@ -270,6 +347,10 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
  * <li>
  * <li>
  * <li>
+ * <li>We disable the camera for acquisition using CCD_Command_Acquisition_Stop.
+ * <li>We set the camera to trigger from software using CCD_Command_Set_Trigger_Mode.
+ * <li>We flush the camera (and associated queued image buffers) using CCD_Command_Flush.
+ * <li>We set Moptop_In_Progress to FALSE.
  * </ul>
  * @param exposure_count The number of dark frames to take.
  * @param filename_list The address of a list of filenames of FITS images acquired during this set of dark frames.
@@ -278,6 +359,17 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
  * @see #Bias_Dark_Data
  * @see #Bias_Dark_Abort
  * @see #Bias_Dark_In_Progress
+ * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Queue_Images
+ * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_CYCLE_MODE_FIXED
+ * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE_SOFTWARE
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Start
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Stop
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Flush
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Timestamp_Clock_Reset
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Trigger_Mode
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Cycle_Mode
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Frame_Count
+ * @see ../ccd/cdocs/ccd_exposure.html#CCD_Exposure_Length_Set
  */
 int Moptop_Bias_Dark_MultDark(int exposure_length_ms,int exposure_count,
 				     char ***filename_list,int *filename_count)
@@ -321,7 +413,7 @@ int Moptop_Bias_Dark_MultDark(int exposure_length_ms,int exposure_count,
 	{
 		Bias_Dark_In_Progress = FALSE;
 		Moptop_General_Error_Number = 712;
-		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultBias:Failed to queue image buffers.");
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultDark:Failed to queue image buffers.");
 		return FALSE;
 	}
 	/* set exposure length  */
@@ -330,7 +422,7 @@ int Moptop_Bias_Dark_MultDark(int exposure_length_ms,int exposure_count,
 		Bias_Dark_In_Progress = FALSE;
 		Moptop_General_Error_Number = 713;
 		sprintf(Moptop_General_Error_String,
-			"Moptop_Bias_Dark_MultBias: Failed to set exposure length to zero.");
+			"Moptop_Bias_Dark_MultDark: Failed to set exposure length to zero.");
 		return FALSE;
 	}
 	Bias_Dark_Data.Requested_Exposure_Length = (((double)exposure_length_ms)/
@@ -340,7 +432,7 @@ int Moptop_Bias_Dark_MultDark(int exposure_length_ms,int exposure_count,
 	{
 		Bias_Dark_In_Progress = FALSE;
 		Moptop_General_Error_Number = 714;
-		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultBias:Failed to reset camera timestamp clock.");
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultDark:Failed to reset camera timestamp clock.");
 		return FALSE;
 	}
 	/* turn on camera internal triggering */
@@ -348,50 +440,150 @@ int Moptop_Bias_Dark_MultDark(int exposure_length_ms,int exposure_count,
 	{
 		Bias_Dark_In_Progress = FALSE;
 		Moptop_General_Error_Number = 715;
-		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultBias:Failed to set camera trigger mode to software.");
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultDark:Failed to set camera trigger mode to software.");
 		return FALSE;
 	}
+	/* bias and darks need cycle mode to be fixed */
+	if(!CCD_Command_Set_Cycle_Mode(CCD_COMMAND_CYCLE_MODE_FIXED))
+	{
+		Bias_Dark_In_Progress = FALSE;
+		Moptop_General_Error_Number = 725;
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultDark:CCD_Command_Set_Cycle_Mode(%s) failed.",
+			CCD_COMMAND_CYCLE_MODE_FIXED);
+		return FALSE;
+	}
+	/* set frame count to number of images to be acquired */
+	if(!CCD_Command_Set_Frame_Count(Bias_Dark_Data.Image_Count))
+	{
+		Bias_Dark_In_Progress = FALSE;
+		Moptop_General_Error_Number = 726;
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultDark:CCD_Command_Set_Frame_Count(%d) failed.",
+			Bias_Dark_Data.Image_Count);
+		return FALSE;
+	}				     
 	/* enable the CCD acquisition */
 	if(!CCD_Command_Acquisition_Start())
 	{
 		Bias_Dark_In_Progress = FALSE;
 		Moptop_General_Error_Number = 716;
-		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultBias:Failed to start camera acquisition.");
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultDark:Failed to start camera acquisition.");
 		return FALSE;
 	}
+	/* acquire images */
 
+	/* stop CCD acquisition */
+	if(!CCD_Command_Acquisition_Stop())
+	{
+		Bias_Dark_In_Progress = FALSE;
+		CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_SOFTWARE);
+		Moptop_General_Error_Number = 727;
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultDark:Failed to stop camera acquisition.");
+		return FALSE;
+	}
+	/* check camera triggering is still software */
+	if(!CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_SOFTWARE))
+	{
+		Bias_Dark_In_Progress = FALSE;
+		Moptop_General_Error_Number = 728;
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultDark:Failed to set camera trigger mode to software.");
+		return FALSE;
+	}		
+	if(!CCD_Command_Flush())
+	{
+		Bias_Dark_In_Progress = FALSE;
+		Moptop_General_Error_Number = 729;
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultDark:Failed to flush camera.");
+		return FALSE;
+	}
+	Bias_Dark_In_Progress = FALSE;
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log("dark","moptop_bias_dark.c","Moptop_Bias_Dark_MultDark",LOG_VERBOSITY_TERSE,"DARK","finished.");
+#endif
 	return TRUE;
 }
 
+/**
+ * Abort a currently running bias or dark.
+ * <ul>
+ * <li>Sets Bias_Dark_Abort to TRUE.
+ * <li>If Bias_Dark_In_Progress is true:
+ *     <ul>
+ *     <li>Stop camera acquisition using CCD_Command_Acquisition_Stop.
+ *     </ul>
+ * <li>Returns Bias_Dark_In_Progress (i.e. whether there was a bias or dark in progress to be aborted).
+ * </ul>
+ * @return TRUE if there was a bias or dark in progress to be aborted, FALSE otherwise.
+ * @see #Bias_Dark_Abort
+ * @see #Bias_Dark_In_Progress
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Stop
+ */
 int Moptop_Bias_Dark_Abort(void)
 {
-	return TRUE;
+	Bias_Dark_Abort = TRUE;
+	if(Bias_Dark_In_Progress)
+	{
+		/* stop the camera acquisition */
+		if(!CCD_Command_Acquisition_Stop())
+		{
+			Moptop_General_Error_Number = 730;
+			sprintf(Moptop_General_Error_String,
+				"Moptop_Bias_Dark_Abort:Failed to stop camera acquisition.");
+			return FALSE;
+		}
+	}/* end if Bias_Dark_In_Progress */
+	/* allow aborted bias/dark to call CCD_Command_Flush rather than call it here */
+	return Bias_Dark_In_Progress;
 }
 
+/**
+ * Return whether a bias or dark is in progress.
+ * @return TRUE if a bias or dark is in progress, FALSE otherwise.
+ * @see #Bias_Dark_In_Progress
+ */
 int Moptop_Bias_Dark_In_Progress(void)
 {
 	return Bias_Dark_In_Progress;
 }
 
+/**
+ * Return the total number of exposures expected to be generated in the current/last bias/dark.
+ * @return The number of images/frames expected.
+ * @see #Bias_Dark_Data
+ */
 int Moptop_Bias_Dark_Count_Get(void)
 {
-	return 0;
+	return Bias_Dark_Data.Image_Count;
 }
 
-
+/**
+ * Return the exposure length of an individual frame in the bias/dark.
+ * @return The exposure length of an individual frame in milliseconds.
+ * @see #Bias_Dark_Data
+ * @see moptop_general.html#MOPTOP_GENERAL_ONE_SECOND_MS
+ */
 int Moptop_Bias_Dark_Per_Frame_Exposure_Length_Get(void)
 {
-	return 0;
+	return (int)(Bias_Dark_Data.Requested_Exposure_Length*((double)MOPTOP_GENERAL_ONE_SECOND_MS));
 }
 
+/**
+ * Return the multrun number (in the generated FITS filenames) of this bias/dark.
+ * @return The current bias/dark number.
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Multrun_Get
+ */
 int Moptop_Bias_Dark_Multrun_Get(void)
 {
-	return 0;
+	return CCD_Fits_Filename_Multrun_Get();
 }
 
+/**
+ * Return the run number (in the generated FITS filenames) of this bias/dark.
+ * @return The current run number.
+ * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Run_Get
+ */
 int Moptop_Bias_Dark_Run_Get(void)
 {
-	return 0;
+	return CCD_Fits_Filename_Run_Get();
 }
 
 /* ----------------------------------------------------------------------------
@@ -425,7 +617,7 @@ static int Bias_Dark_Setup(void)
 	
 	/* increment the multrun number */
 	CCD_Fits_Filename_Next_Multrun();
-	/* increment the run number (effectively which rotation we are on) to one */
+	/* increment the run number to one */
 	CCD_Fits_Filename_Next_Run();
 	/* get current CCD temperature/status and store it for later */
 	if(!CCD_Temperature_Get(&(Bias_Dark_Data.CCD_Temperature)))
