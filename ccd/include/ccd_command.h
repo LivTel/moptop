@@ -114,6 +114,12 @@
 #define CCD_COMMAND_TRIGGER_MODE_SOFTWARE                        ("Software")
 /**
  * Value enumeration for CCD_Command_Set_Trigger_Mode, which configures the camera trigger mode.
+ * This value selects internal triggering.
+ * @see #CCD_Command_Set_Trigger_Mode
+ */
+#define CCD_COMMAND_TRIGGER_MODE_INTERNAL                        ("Internal")
+/**
+ * Value enumeration for CCD_Command_Set_Trigger_Mode, which configures the camera trigger mode.
  * This value selects external/hardware/edge triggering.
  * @see #CCD_Command_Set_Trigger_Mode
  */
@@ -262,9 +268,10 @@
  * Uses the CCD_Command_Set_Enum_String with feature name "TriggerMode".
  * See possible values in Andor_SDK3_Manual.pdf, P52.
  * @param s A string representing camera trigger mode, one of: CCD_COMMAND_TRIGGER_MODE_SOFTWARE, 
- *          CCD_COMMAND_TRIGGER_MODE_EXTERNAL .
+ *          CCD_COMMAND_TRIGGER_MODE_INTERNAL or CCD_COMMAND_TRIGGER_MODE_EXTERNAL .
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #CCD_COMMAND_TRIGGER_MODE_SOFTWARE
+ * @see #CCD_COMMAND_TRIGGER_MODE_INTERNAL
  * @see #CCD_COMMAND_TRIGGER_MODE_EXTERNAL
  * @see #CCD_Command_Set_Enum_String
  */
