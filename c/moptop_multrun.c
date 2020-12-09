@@ -1170,8 +1170,6 @@ static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *fil
 			return FALSE;
 		}
 	}/* end for on Multrun_Data.Image_Index / Multrun_Data.Image_Count */
-	/* get camera temperature */
-
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("multrun","moptop_multrun.c","Multrun_Acquire_Images",LOG_VERBOSITY_INTERMEDIATE,
 				  "MULTRUN","finished.");
@@ -1610,7 +1608,7 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 	if(!CCD_Fits_Filename_UnLock(filename))
 	{
 		Moptop_General_Error_Number = 639;
-		sprintf(Moptop_General_Error_String,"Multi_Exposure_Save:Failed to unlock '%s'.",filename);
+		sprintf(Moptop_General_Error_String,"Multrun_Write_Fits_Image:Failed to unlock '%s'.",filename);
 		return FALSE;
 	}
 #if MOPTOP_DEBUG > 5
