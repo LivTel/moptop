@@ -3,6 +3,24 @@
 #ifndef CCD_COMMAND_H
 #define CCD_COMMAND_H
 /**
+ * Value enumeration for CCD_Command_Set_Shutter_Mode, this sets the shutter mode
+ * to "Open". 
+ * @see #CCD_Command_Set_Shutter_Mode
+ */
+#define CCD_COMMAND_SHUTTER_MODE_OPEN                           ("Open")
+/**
+ * Value enumeration for CCD_Command_Set_Shutter_Mode, this sets the shutter mode
+ * to "Closed". 
+ * @see #CCD_Command_Set_Shutter_Mode
+ */
+#define CCD_COMMAND_SHUTTER_MODE_CLOSED                         ("Closed")
+/**
+ * Value enumeration for CCD_Command_Set_Shutter_Mode, this sets the shutter mode
+ * to "Auto". 
+ * @see #CCD_Command_Set_Shutter_Mode
+ */
+#define CCD_COMMAND_SHUTTER_MODE_AUTO                           ("Auto")
+/**
  * Value enumeration for CCD_Command_Set_Electronic_Shuttering_Mode, this sets the electronic shuttering mode
  * to "Rolling" (as opposed to "Global"). 
  * @see #CCD_Command_Set_Electronic_Shuttering_Mode
@@ -163,6 +181,18 @@
  * @see #CCD_Command_Set_Bool
  */
 #define CCD_Command_Set_Static_Blemish_Correction(b)  CCD_Command_Set_Bool("StaticBlemishCorrection",b)
+/**
+ * Configure how the shutter is used, one of open, closed or auto. Auto is the default (and used for Multruns),
+ * closed is used for biases and darks.
+ * @param s A string representing the shutter mode to use, one of: CCD_COMMAND_SHUTTER_MODE_OPEN,
+ *        CCD_COMMAND_SHUTTER_MODE_CLOSED, CCD_COMMAND_SHUTTER_MODE_AUTO.
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see #CCD_COMMAND_SHUTTER_MODE_OPEN
+ * @see #CCD_COMMAND_SHUTTER_MODE_CLOSED
+ * @see #CCD_COMMAND_SHUTTER_MODE_AUTO
+ * @see #CCD_Command_Set_Enum_String
+ */
+#define CCD_Command_Set_Shutter_Mode(s)               CCD_Command_Set_Enum_String("ShutterMode",s)
 /**
  * Turns on/off the rolling shutter global clear readout mode, 
  * using CCD_Command_Set_Bool with feature name "RollingShutterGlobalClear".
