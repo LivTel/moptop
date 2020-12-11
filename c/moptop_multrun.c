@@ -627,8 +627,8 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 			CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_SOFTWARE);
 			PIROT_Command_TRO(FALSE);
 			Moptop_General_Error_Number = 607;
-			sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to move rotator to end position %.2f.",
-				rotator_end_position);
+			sprintf(Moptop_General_Error_String,
+				"Moptop_Multrun:Failed to move rotator to end position %.2f.",rotator_end_position);
 			return FALSE;
 		}
 	}/* end if rotator enabled */
@@ -705,7 +705,7 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
  *     </ul>
  * <li>Returns Multrun_In_Progress (i.e. whether there was a multrun in progress to be aborted).
  * </ul>
- * @return TRUE if there was a multrun in progress to be aborted, FALSE otherwise.
+ * @return The routine returns TRUE if the multrun was aborted, FALSE otherwise.
  * @see #Moptop_Abort
  * @see #Multrun_In_Progress
  * @see moptop_config.html#Moptop_Config_Rotator_Is_Enabled
@@ -739,7 +739,7 @@ int Moptop_Multrun_Abort(void)
 		}
 	}/* end if Multrun_In_Progress */
 	/* allow aborted multrun to call CCD_Command_Flush rather than call it here */
-	return Multrun_In_Progress;
+	return TRUE;
 }
 
 /**
@@ -775,7 +775,7 @@ int Moptop_Multrun_Per_Frame_Exposure_Length_Get(void)
 
 /**
  * Return the exposure start time timestamp of the last exposure in the multrun.
- * @param exposure_start_time The address of a timespec structure to fill with the  start time timestamp.
+ * @param exposure_start_time The address of a timespec structure to fill with the start time timestamp.
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #Multrun_Data
  */
