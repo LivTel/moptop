@@ -80,6 +80,12 @@ static int Command_Parse_Date(char *time_string,int *time_secs);
 ** ---------------------------------------------------------------------------- */
 /**
  * Handle a command of the form: "abort".
+ * <ul>
+ * <li>We abort any running multrun's by calling Moptop_Multrun_Abort.
+ * <li>We abort any running bias/dark commands's by calling Moptop_Bias_Dark_Abort.
+ * <li>We check the returned values from the aborts to see if they failed, ang log/return an error is this is the case.
+ * <li>Otherwise we set the reply_string to a successful message.
+ * </ul>
  * @param command_string The command. This is not changed during this routine.
  * @param reply_string The address of a pointer to allocate and set the reply string.
  * @return The routine returns TRUE on success and FALSE on failure.
@@ -87,30 +93,43 @@ static int Command_Parse_Date(char *time_string,int *time_secs);
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_general.html#Moptop_General_Add_String
- * @see ../ccd/cdocs/ccd_exposure.html#CCD_Exposure_Abort
+ * @see moptop_multrun.html#Moptop_Multrun_Abort
+ * @see moptop_bias_dark.html#Moptop_Bias_Dark_Abort
  */
 int Moptop_Command_Abort(char *command_string,char **reply_string)
 {
+	int multrun_abort_retval, bias_dark_abort_retval;
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("command","moptop_command.c","Moptop_Command_Abort",LOG_VERBOSITY_TERSE,
 			   "COMMAND","started.");
 #endif
-	/* diddly check filter wheel moving and abort ? */
-	/* diddly check rotator is moving and abort? */
 	/* abort multrun */
-	if(!Moptop_Multrun_Abort())
+#if MOPTOP_DEBUG > 5
+	Moptop_General_Log("command","moptop_command.c","Moptop_Command_Abort",LOG_VERBOSITY_INTERMEDIATE,
+			   "COMMAND","Aborting multrun.");
+#endif
+	multrun_abort_retval = Moptop_Multrun_Abort();
+#if MOPTOP_DEBUG > 5
+	Moptop_General_Log("command","moptop_command.c","Moptop_Command_Abort",LOG_VERBOSITY_INTERMEDIATE,
+			   "COMMAND","Aborting bias/dark.");
+#endif
+	/* abort bias/dark */
+	bias_dark_abort_retval = Moptop_Bias_Dark_Abort();
+	/* check to see if there were problems with the aborts */
+	if((multrun_abort_retval == FALSE)||(bias_dark_abort_retval == FALSE))
 	{
 		Moptop_General_Error("command","moptop_command.c","Moptop_Command_Abort",
 				     LOG_VERBOSITY_TERSE,"COMMAND");
 #if MOPTOP_DEBUG > 1
-		Moptop_General_Log("command","moptop_command.c","Moptop_Command_Abort",
-				       LOG_VERBOSITY_TERSE,"COMMAND","Failed to abort multrun command.");
+		Moptop_General_Log_Format("command","moptop_command.c","Moptop_Command_Abort",
+					  LOG_VERBOSITY_TERSE,"COMMAND","Failed to abort multrun (%d) or bias/dark (%d) command.",
+					  multrun_abort_retval,bias_dark_abort_retval);
 #endif
-		if(!Moptop_General_Add_String(reply_string,"1 Failed to abort multrun command."))
+		if(!Moptop_General_Add_String(reply_string,"1 Failed to abort multrun/bias/dark command."))
 			return FALSE;
 		return TRUE;
 	}
-	if(!Moptop_General_Add_String(reply_string,"0 Multrun aborted."))
+	if(!Moptop_General_Add_String(reply_string,"0 Multrun/Bias/Dark aborted."))
 		return FALSE;
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("command","moptop_command.c","Moptop_Command_Abort",LOG_VERBOSITY_TERSE,
@@ -1201,7 +1220,7 @@ int Moptop_Command_MultDark(char *command_string,char **reply_string)
  * <li>status rotator [position|speed|status]
  * <li>status exposure [status|count|length|start_time]
  * <li>status exposure [index|multrun|run|window]
- * <li>status [name|identification|fits_instrument_code]
+ * <li>status fits_instrument_code
  * </ul>
  * <ul>
  * <li>The status command is parsed to retrieve the subsystem (1st parameter).
@@ -1211,6 +1230,13 @@ int Moptop_Command_MultDark(char *command_string,char **reply_string)
  * @param command_string The command. This is not changed during this routine.
  * @param reply_string The address of a pointer to allocate and set the reply string.
  * @return The routine returns TRUE on success and FALSE on failure.
+ * @see moptop_bias_dark.html#Moptop_Bias_Dark_In_Progress
+ * @see moptop_bias_dark.html#Moptop_Bias_Dark_Count_Get
+ * @see moptop_bias_dark.html#Moptop_Bias_Dark_Per_Frame_Exposure_Length_Get
+ * @see moptop_bias_dark.html#Moptop_Bias_Dark_Exposure_Start_Time_Get
+ * @see moptop_bias_dark.html#Moptop_Bias_Dark_Exposure_Index_Get
+ * @see moptop_bias_dark.html#Moptop_Bias_Dark_Multrun_Get
+ * @see moptop_bias_dark.html#Moptop_Bias_Dark_Run_Get
  * @see moptop_general.html#Moptop_General_Log
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
@@ -1276,49 +1302,68 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 	/* parse subsystem */
 	if(strncmp(subsystem_string,"exposure",8) == 0)
 	{
-
 		if(strncmp(command_string+command_string_index,"status",6)==0)
 		{
-			ivalue = Moptop_Multrun_In_Progress();
-			if(ivalue == TRUE)
+			if(Moptop_Multrun_In_Progress()||Moptop_Bias_Dark_In_Progress())
 				strcat(return_string,"true");
 			else
 				strcat(return_string,"false");
 		}
 		else if(strncmp(command_string+command_string_index,"count",5)==0)
 		{
-			ivalue = Moptop_Multrun_Count_Get();
+			if(Moptop_Bias_Dark_In_Progress())
+				ivalue = Moptop_Bias_Dark_Count_Get();
+			else
+				ivalue = Moptop_Multrun_Count_Get();
 			sprintf(return_string+strlen(return_string),"%d",ivalue);
 		}
 		else if(strncmp(command_string+command_string_index,"length",6)==0)
 		{
-			ivalue = Moptop_Multrun_Per_Frame_Exposure_Length_Get();
+			if(Moptop_Bias_Dark_In_Progress())
+				ivalue = Moptop_Bias_Dark_Per_Frame_Exposure_Length_Get();
+			else
+				ivalue = Moptop_Multrun_Per_Frame_Exposure_Length_Get();
 			sprintf(return_string+strlen(return_string),"%d",ivalue);
 		}
 		else if(strncmp(command_string+command_string_index,"start_time",10)==0)
 		{
-			Moptop_Multrun_Exposure_Start_Time_Get(&status_time);
+			if(Moptop_Bias_Dark_In_Progress())
+				Moptop_Bias_Dark_Exposure_Start_Time_Get(&status_time);
+			else
+				Moptop_Multrun_Exposure_Start_Time_Get(&status_time);
 			Moptop_General_Get_Time_String(status_time,time_string,31);
 			sprintf(return_string+strlen(return_string),"%s",time_string);
 		}
 		else if(strncmp(command_string+command_string_index,"index",5)==0)
 		{
-			ivalue = Moptop_Multrun_Exposure_Index_Get();
+			if(Moptop_Bias_Dark_In_Progress())
+				ivalue = Moptop_Bias_Dark_Exposure_Index_Get();
+			else
+				ivalue = Moptop_Multrun_Exposure_Index_Get();
 			sprintf(return_string+strlen(return_string),"%d",ivalue);
 		}
 		else if(strncmp(command_string+command_string_index,"multrun",7)==0)
 		{
-			ivalue = Moptop_Multrun_Multrun_Get();
+			if(Moptop_Bias_Dark_In_Progress())
+				ivalue = Moptop_Bias_Dark_Multrun_Get();
+			else
+				ivalue = Moptop_Multrun_Multrun_Get();
 			sprintf(return_string+strlen(return_string),"%d",ivalue);
 		}
 		else if(strncmp(command_string+command_string_index,"run",3)==0)
 		{
-			ivalue = Moptop_Multrun_Run_Get();
+			if(Moptop_Bias_Dark_In_Progress())
+				ivalue = Moptop_Bias_Dark_Run_Get();
+			else
+				ivalue = Moptop_Multrun_Run_Get();
 			sprintf(return_string+strlen(return_string),"%d",ivalue);
 		}
 		else if(strncmp(command_string+command_string_index,"window",6)==0)
 		{
-			ivalue = Moptop_Multrun_Window_Get();
+			if(Moptop_Bias_Dark_In_Progress())
+				ivalue = 0; /* bias/darks do not use windows */
+			else
+				ivalue = Moptop_Multrun_Window_Get();
 			sprintf(return_string+strlen(return_string),"%d",ivalue);
 		}
 		else
@@ -1437,52 +1482,6 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 		}
 		sprintf(return_string+strlen(return_string),"%c",instrument_code);
 	}
-	/*
-	else if(strncmp(subsystem_string,"identification",14) == 0)
-	{
-		if(!CCD_Setup_Get_Cached_Camera_Identification(camera_index,head_model_name,&serial_number))
-		{
-			Moptop_General_Error_Number = 540;
-			sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
-				"Failed to get camera identification.");
-			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Status",
-					     LOG_VERBOSITY_TERSE,"COMMAND");
-#if MOPTOP_DEBUG > 1
-			Moptop_General_Log("command","moptop_command.c","Moptop_Command_Status",
-					   LOG_VERBOSITY_TERSE,"COMMAND","Failed to get camera identification.");
-#endif
-			if(!Moptop_General_Add_String(reply_string,"1 Failed to get camera identification."))
-				return FALSE;
-			return TRUE;
-		}
-		sprintf(return_string+strlen(return_string),"%s %d",head_model_name,serial_number);
-	}
-	*/
-	/*
-	else if(strncmp(subsystem_string,"name",4) == 0)
-	{
-		sprintf(key_string,"ccd.name");
-		if(!Moptop_Config_Get_String(key_string,&camera_name_string))
-		{
-			Moptop_General_Error_Number = 548;
-			sprintf(Moptop_General_Error_String,
-				"Moptop_Startup_CCD:Failed to get camera name for Andor camera index %d.",
-				camera_index);
-			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Status",
-					     LOG_VERBOSITY_TERSE,"COMMAND");
-#if MOPTOP_DEBUG > 1
-			Moptop_General_Log("command","moptop_command.c","Moptop_Command_Status",
-					   LOG_VERBOSITY_TERSE,"COMMAND","finished (failed to get camera name).");
-#endif
-			if(!Moptop_General_Add_String(reply_string,"1 Failed to get camera name."))
-				return FALSE;
-			return FALSE;
-		}
-		sprintf(return_string+strlen(return_string),"%s",camera_name_string);
-		if(camera_name_string != NULL)
-			free(camera_name_string);
-	}
-	*/
 	else if(strncmp(subsystem_string,"rotator",7) == 0)
 	{
 		if(strncmp(command_string+command_string_index,"position",8)==0)
@@ -1573,7 +1572,7 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 		/* check subcommand */
 		if(strncmp(get_set_string,"get",3)==0)
 		{
-			if(Moptop_Multrun_In_Progress() == FALSE)
+			if((Moptop_Multrun_In_Progress() == FALSE)&&(Moptop_Bias_Dark_In_Progress() == FALSE))
 			{
 				if(!CCD_Temperature_Get(&temperature))
 				{
@@ -1601,7 +1600,7 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 		}
 		else if(strncmp(get_set_string,"status",6)==0)
 		{
-			if(Moptop_Multrun_In_Progress() == FALSE)
+			if((Moptop_Multrun_In_Progress() == FALSE)&&(Moptop_Bias_Dark_In_Progress() == FALSE))
 			{
 				if(!CCD_Temperature_Get_Temperature_Status_String(temperature_status_string,31))
 				{
