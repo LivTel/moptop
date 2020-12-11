@@ -400,6 +400,7 @@ int Moptop_Multrun_Setup(int *multrun_number)
  *     We stop short on the last exposure to avoid an extra trigger/frame.
  * <li>We queue the image buffers for the acquisitions using CCD_Buffer_Queue_Images.
  * <li>We reset the cameras internal timestamp clock using CCD_Command_Timestamp_Clock_Reset.
+ * <li>We set the camera shutter to open and close automatially using CCD_Command_Set_Shutter_Mode.
  * <li>We set the camera to trigger externally (from the rotator) using CCD_Command_Set_Trigger_Mode.
  * <li>We set the camera to continuously take images using CCD_Command_Set_Cycle_Mode to set the cycle mode
  *     to CCD_COMMAND_CYCLE_MODE_CONTINUOUS.
@@ -442,12 +443,14 @@ int Moptop_Multrun_Setup(int *multrun_number)
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Step_Angle_Get
  * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Queue_Images
  * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_CYCLE_MODE_CONTINUOUS
+ * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_SHUTTER_MODE_AUTO
  * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE_EXTERNAL
  * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE_SOFTWARE
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Start
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Stop
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Flush
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Timestamp_Clock_Reset
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Shutter_Mode
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Trigger_Mode
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Cycle_Mode
  * @see ../pirot/cdocs/pirot_command.html#PIROT_Command_TRO
@@ -565,6 +568,14 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to reset camera timestamp clock.");
 		return FALSE;
 	}
+	/* set shutter mode to auto */
+	if(!CCD_Command_Set_Shutter_Mode(CCD_COMMAND_SHUTTER_MODE_AUTO))
+	{
+		Multrun_In_Progress = FALSE;
+		Moptop_General_Error_Number = 653;
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to set camera shutter mode to auto.");
+		return FALSE;
+	}	
 	/* turn on camera external triggering */
 	if(!CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_EXTERNAL))
 	{
