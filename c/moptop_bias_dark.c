@@ -351,7 +351,8 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
 	}	
 	Bias_Dark_In_Progress = FALSE;
 #if MOPTOP_DEBUG > 1
-	Moptop_General_Log("bias","moptop_bias_dark.c","Moptop_Bias_Dark_MultBias",LOG_VERBOSITY_TERSE,"BIAS","finished.");
+	Moptop_General_Log("bias","moptop_bias_dark.c","Moptop_Bias_Dark_MultBias",LOG_VERBOSITY_TERSE,"BIAS",
+			   "finished.");
 #endif
 	return TRUE;
 }
@@ -559,7 +560,7 @@ int Moptop_Bias_Dark_MultDark(int exposure_length_ms,int exposure_count,
  *     </ul>
  * <li>Returns Bias_Dark_In_Progress (i.e. whether there was a bias or dark in progress to be aborted).
  * </ul>
- * @return TRUE if there was a bias or dark in progress to be aborted, FALSE otherwise.
+ * @return The routine returns TRUE if the bias or dark was aborted, FALSE otherwise.
  * @see #Bias_Dark_Abort
  * @see #Bias_Dark_In_Progress
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Stop
@@ -579,7 +580,7 @@ int Moptop_Bias_Dark_Abort(void)
 		}
 	}/* end if Bias_Dark_In_Progress */
 	/* allow aborted bias/dark to call CCD_Command_Flush rather than call it here */
-	return Bias_Dark_In_Progress;
+	return TRUE;
 }
 
 /**
@@ -611,6 +612,35 @@ int Moptop_Bias_Dark_Count_Get(void)
 int Moptop_Bias_Dark_Per_Frame_Exposure_Length_Get(void)
 {
 	return (int)(Bias_Dark_Data.Requested_Exposure_Length*((double)MOPTOP_GENERAL_ONE_SECOND_MS));
+}
+
+/**
+ * Return the exposure start time timestamp of the last exposure in the bias/dark multrun.
+ * @param exposure_start_time The address of a timespec structure to fill with the start time timestamp.
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see #Bias_Dark_Data
+ */
+int Moptop_Bias_Dark_Exposure_Start_Time_Get(struct timespec *exposure_start_time)
+{
+	if(exposure_start_time == NULL)
+	{
+		Moptop_General_Error_Number = 752;
+		sprintf(Moptop_General_Error_String,
+			"Moptop_Bias_Dark_Exposure_Start_Time_Get:exposure_start_time was NULL.");
+		return FALSE;
+	}
+	(*exposure_start_time) = Bias_Dark_Data.Exposure_Start_Time;
+	return TRUE;
+}
+
+/**
+ * Return which exposure in the bias/dark multrun we are on.
+ * @return The exposure index in the bias/dark multrun.
+ * @see #Multrun_Data
+ */
+int Moptop_Bias_Dark_Exposure_Index_Get(void)
+{
+	return Bias_Dark_Data.Image_Index;
 }
 
 /**

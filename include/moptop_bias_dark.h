@@ -12,6 +12,8 @@ extern int Moptop_Bias_Dark_Flip_Set(int flip_x,int flip_y);
 extern int Moptop_Bias_Dark_In_Progress(void);
 extern int Moptop_Bias_Dark_Count_Get(void);
 extern int Moptop_Bias_Dark_Per_Frame_Exposure_Length_Get(void);
+extern int Moptop_Bias_Dark_Exposure_Start_Time_Get(struct timespec *exposure_start_time);
+extern int Moptop_Bias_Dark_Exposure_Index_Get(void);
 extern int Moptop_Bias_Dark_Multrun_Get(void);
 extern int Moptop_Bias_Dark_Run_Get(void);
 
