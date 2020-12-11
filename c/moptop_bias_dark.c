@@ -165,6 +165,7 @@ int Moptop_Bias_Dark_Flip_Set(int flip_x,int flip_y)
  * <li>We queue the image buffers for the acquisitions using CCD_Buffer_Queue_Images.
  * <li>We set the exposure length to zero using CCD_Exposure_Length_Set.
  * <li>We reset the cameras internal timestamp clock using CCD_Command_Timestamp_Clock_Reset.
+ * <li>We set the camera shutter to stay closed using CCD_Command_Set_Shutter_Mode.
  * <li>We set the camera to trigger internally using CCD_Command_Set_Trigger_Mode.
  * <li>We set the camera to continuously take images using CCD_Command_Set_Cycle_Mode to set the cycle mode
  *     to CCD_COMMAND_CYCLE_MODE_CONTINUOUS.
@@ -187,12 +188,14 @@ int Moptop_Bias_Dark_Flip_Set(int flip_x,int flip_y)
  * @see #Bias_Dark_Acquire_Images
  * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Queue_Images
  * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_CYCLE_MODE_FIXED
+ * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_SHUTTER_MODE_CLOSED
  * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE_INTERNAL
  * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE_SOFTWARE
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Start
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Stop
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Flush
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Timestamp_Clock_Reset
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Shutter_Mode
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Trigger_Mode
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Cycle_Mode
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Frame_Count
@@ -264,6 +267,15 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
 		Bias_Dark_In_Progress = FALSE;
 		Moptop_General_Error_Number = 706;
 		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultBias:Failed to reset camera timestamp clock.");
+		return FALSE;
+	}
+	/* set shutter mode to close */
+	if(!CCD_Command_Set_Shutter_Mode(CCD_COMMAND_SHUTTER_MODE_CLOSED))
+	{
+		Bias_Dark_In_Progress = FALSE;
+		Moptop_General_Error_Number = 751;
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultBias:"
+			"Failed to set camera shutter mode to closed.");
 		return FALSE;
 	}
 	/* turn on camera internal triggering */
