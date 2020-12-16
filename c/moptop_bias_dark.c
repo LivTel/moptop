@@ -162,8 +162,10 @@ int Moptop_Bias_Dark_Flip_Set(int flip_x,int flip_y)
  * <li>We initialise Moptop_Abort to FALSE, and Moptop_In_Progress to TRUE.
  * <li>We check the exposure count is sensible, and initialise BiasDark_Data.Image_Count to it.
  * <li>We call Bias_Dark_Setup to do some common setup tasks.
+ * <li>We call CCD_Command_Get_Exposure_Time_Min to get the minimum exposure length the camera will allow. We
+ *     use this as the exposure length for the bias frames.
  * <li>We queue the image buffers for the acquisitions using CCD_Buffer_Queue_Images.
- * <li>We set the exposure length to zero using CCD_Exposure_Length_Set.
+ * <li>We set the exposure length to the minimum exposure length the camera will allow using CCD_Exposure_Length_Set.
  * <li>We reset the cameras internal timestamp clock using CCD_Command_Timestamp_Clock_Reset.
  * <li>We set the camera shutter to stay closed using CCD_Command_Set_Shutter_Mode.
  * <li>We set the camera to trigger internally using CCD_Command_Set_Trigger_Mode.
@@ -186,6 +188,7 @@ int Moptop_Bias_Dark_Flip_Set(int flip_x,int flip_y)
  * @see #Bias_Dark_In_Progress
  * @see #Bias_Dark_Setup
  * @see #Bias_Dark_Acquire_Images
+ * @see moptop_general.html#MOPTOP_GENERAL_ONE_SECOND_MS
  * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Queue_Images
  * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_CYCLE_MODE_FIXED
  * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_SHUTTER_MODE_CLOSED
@@ -194,6 +197,7 @@ int Moptop_Bias_Dark_Flip_Set(int flip_x,int flip_y)
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Start
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Stop
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Flush
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Exposure_Time_Min
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Timestamp_Clock_Reset
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Shutter_Mode
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Trigger_Mode
@@ -203,6 +207,9 @@ int Moptop_Bias_Dark_Flip_Set(int flip_x,int flip_y)
  */
 int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *filename_count)
 {
+	double minimum_exposure_length_s;
+	int bias_exposure_length_ms;
+	
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("bias","moptop_bias_dark.c","Moptop_Bias_Dark_MultBias",LOG_VERBOSITY_TERSE,"BIAS",
 				  "(exposure_count = %d,filename_list = %p,filename_count = %p) started.",
@@ -243,6 +250,18 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
 		/* error message already set by Bias_Dark_Setup. */
 		return FALSE;
 	}
+	/* get the minimum exposure length for this camera, in decimal seconds */
+	if(!CCD_Command_Get_Exposure_Time_Min(&minimum_exposure_length_s))
+	{
+		Bias_Dark_In_Progress = FALSE;
+		Moptop_General_Error_Number = 753;
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultBias:Failed to get minimum exposure length.");
+		return FALSE;
+	}
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("bias","moptop_bias_dark.c","Moptop_Bias_Dark_MultBias",LOG_VERBOSITY_INTERMEDIATE,
+				  "BIAS","Minumum camera exposure length is %.3f seconds.",minimum_exposure_length_s);
+#endif
 	/* setup CCD_Buffer for image acquisition */
 	if(!CCD_Buffer_Queue_Images(Bias_Dark_Data.Image_Count))
 	{
@@ -251,16 +270,23 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
 		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultBias:Failed to queue image buffers.");
 		return FALSE;
 	}
-	/* set exposure length to zero */
-	if(!CCD_Exposure_Length_Set(0))
+	/* set exposure length to smallest allowed, in milliseconds */
+	bias_exposure_length_ms = (int)(minimum_exposure_length_s*((double)MOPTOP_GENERAL_ONE_SECOND_MS));
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("bias","moptop_bias_dark.c","Moptop_Bias_Dark_MultBias",LOG_VERBOSITY_INTERMEDIATE,
+				  "BIAS","Attempting to set bias exposure length to %d ms.",bias_exposure_length_ms);
+#endif
+	if(!CCD_Exposure_Length_Set(bias_exposure_length_ms))
 	{
 		Bias_Dark_In_Progress = FALSE;
 		Moptop_General_Error_Number = 719;
 		sprintf(Moptop_General_Error_String,
-			"Moptop_Bias_Dark_MultBias: Failed to set exposure length to zero.");
+			"Moptop_Bias_Dark_MultBias: Failed to set bias exposure length to %d ms.",
+			bias_exposure_length_ms);
 		return FALSE;
 	}
-	Bias_Dark_Data.Requested_Exposure_Length = 0.0f;
+	Bias_Dark_Data.Requested_Exposure_Length = (((double)bias_exposure_length_ms)/
+						    ((double)MOPTOP_GENERAL_ONE_SECOND_MS));
 	/* reset internal clock timestamp */
 	if(!CCD_Command_Timestamp_Clock_Reset())
 	{
@@ -365,6 +391,9 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
  * <li>We check the exposure count is sensible, and initialise BiasDark_Data.Image_Count to it.
  * <li>We call Bias_Dark_Setup to do some common setup tasks.
  * <li>We queue the image buffers for the acquisitions using CCD_Buffer_Queue_Images.
+ * <li>We check the requested exposure length is legal by calling CCD_Command_Get_Exposure_Time_Min and
+ *     CCD_Command_Get_Exposure_Time_Max to get the allowed exposure lengths from the camera, and then
+ *     comparing exposure_length_ms to them (after converting to ms).
  * <li>We set the exposure length to use using CCD_Exposure_Length_Set.
  * <li>We reset the cameras internal timestamp clock using CCD_Command_Timestamp_Clock_Reset.
  * <li>We set the camera to trigger internally (from the rotator) using CCD_Command_Set_Trigger_Mode.
@@ -387,6 +416,7 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
  * @see #Bias_Dark_In_Progress
  * @see #Bias_Dark_Setup
  * @see #Bias_Dark_Acquire_Images
+ * @see moptop_general.html#MOPTOP_GENERAL_ONE_SECOND_MS
  * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Queue_Images
  * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_CYCLE_MODE_FIXED
  * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE_INTERNAL
@@ -394,6 +424,8 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Start
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Stop
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Flush
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Exposure_Time_Min
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Exposure_Time_Max
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Timestamp_Clock_Reset
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Trigger_Mode
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Cycle_Mode
@@ -404,6 +436,9 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
 int Moptop_Bias_Dark_MultDark(int exposure_length_ms,int exposure_count,
 				     char ***filename_list,int *filename_count)
 {
+	double minimum_exposure_length_s,maximum_exposure_length_s;
+	int minimum_exposure_length_ms, maximum_exposure_length_ms;
+	
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("dark","moptop_bias_dark.c","Moptop_Bias_Dark_MultDark",LOG_VERBOSITY_TERSE,"DARK",
 				  "(exposure_length_ms = %d,exposure_count = %d,"
@@ -453,13 +488,50 @@ int Moptop_Bias_Dark_MultDark(int exposure_length_ms,int exposure_count,
 		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultDark:Failed to queue image buffers.");
 		return FALSE;
 	}
+	/* check exposure length is legal */
+	/* get minimum exposure length the camera allows, in seconds */
+	if(!CCD_Command_Get_Exposure_Time_Min(&minimum_exposure_length_s))
+	{
+		Bias_Dark_In_Progress = FALSE;
+		Moptop_General_Error_Number = 754;
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultDark:Failed to get minimum exposure length.");
+		return FALSE;
+	}
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("bias","moptop_bias_dark.c","Moptop_Bias_Dark_MultBias",LOG_VERBOSITY_INTERMEDIATE,
+				  "BIAS","Minumum camera exposure length is %.3f seconds.",minimum_exposure_length_s);
+#endif
+	/* get maximum exposure length the camera allows, in seconds */
+	if(!CCD_Command_Get_Exposure_Time_Max(&maximum_exposure_length_s))
+	{
+		Bias_Dark_In_Progress = FALSE;
+		Moptop_General_Error_Number = 755;
+		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultDark:Failed to get maximum exposure length.");
+		return FALSE;
+	}
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("bias","moptop_bias_dark.c","Moptop_Bias_Dark_MultBias",LOG_VERBOSITY_INTERMEDIATE,
+				  "BIAS","Maxumum camera exposure length is %.3f seconds.",maximum_exposure_length_s);
+#endif
+	/* convert minimum/maximum exposure lengths to milliseconds */
+	minimum_exposure_length_ms = (int)(minimum_exposure_length_s*((double)MOPTOP_GENERAL_ONE_SECOND_MS));
+	maximum_exposure_length_ms = (int)(maximum_exposure_length_s*((double)MOPTOP_GENERAL_ONE_SECOND_MS));
+	if((exposure_length_ms < minimum_exposure_length_ms)||(exposure_length_ms > maximum_exposure_length_ms))
+	{
+		Bias_Dark_In_Progress = FALSE;
+		Moptop_General_Error_Number = 756;
+		sprintf(Moptop_General_Error_String,
+			"Moptop_Bias_Dark_MultDark: Requested exposure length %d ms out of allowed range (%d,%d).",
+			exposure_length_ms,minimum_exposure_length_ms,maximum_exposure_length_ms);
+		return FALSE;
+	}
 	/* set exposure length  */
 	if(!CCD_Exposure_Length_Set(exposure_length_ms))
 	{
 		Bias_Dark_In_Progress = FALSE;
 		Moptop_General_Error_Number = 713;
 		sprintf(Moptop_General_Error_String,
-			"Moptop_Bias_Dark_MultDark: Failed to set exposure length to zero.");
+			"Moptop_Bias_Dark_MultDark: Failed to set exposure length to %d ms.",exposure_length_ms);
 		return FALSE;
 	}
 	Bias_Dark_Data.Requested_Exposure_Length = (((double)exposure_length_ms)/
@@ -670,7 +742,6 @@ int Moptop_Bias_Dark_Run_Get(void)
  * Setup routine for doing bias/darks.
  * <ul>
  * <li>Increment the multrun number (CCD_Fits_Filename_Next_Multrun).
- * <li>Increment the run number to one (CCD_Fits_Filename_Next_Run). 
  * <li>Set the current CCD temperature and CCD temperature status and store them in Bias_Dark_Data 
  *     (for later inclusion in the FITS headers).
  * <li>Set the image data flipping (Moptop_Bias_Dark_Flip_Set) from the relevant config 
@@ -684,7 +755,6 @@ int Moptop_Bias_Dark_Run_Get(void)
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Next_Multrun
- * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Next_Run
  * @see ../ccd/cdocs/ccd_temperature.html#CCD_Temperature_Get
  * @see ../ccd/cdocs/ccd_temperature.html#CCD_Temperature_Get_Temperature_Status_String
  */
@@ -694,8 +764,6 @@ static int Bias_Dark_Setup(void)
 	
 	/* increment the multrun number */
 	CCD_Fits_Filename_Next_Multrun();
-	/* increment the run number to one */
-	CCD_Fits_Filename_Next_Run();
 	/* get current CCD temperature/status and store it for later */
 	if(!CCD_Temperature_Get(&(Bias_Dark_Data.CCD_Temperature)))
 	{
@@ -991,6 +1059,7 @@ static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expo
  * @see moptop_fits_header.html#Moptop_Fits_Header_TimeSpec_To_UtStart_String
  * @see moptop_fits_header.html#Moptop_Fits_Header_TimeSpec_To_Mjd
  * @see moptop_general.html#fdifftime
+ * @see moptop_general.html#MOPTOP_GENERAL_ONE_SECOND_MS
  * @see moptop_general.html#MOPTOP_GENERAL_ONE_METRE_MICROMETRE
  * @see moptop_general.html#Moptop_General_Log
  * @see moptop_general.html#Moptop_General_Log_Format
