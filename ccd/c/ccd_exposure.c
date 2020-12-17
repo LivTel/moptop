@@ -165,6 +165,7 @@ int CCD_Exposure_Length_Set(int exposure_length_ms)
 {
 	double exposure_length_s;
 
+	Exposure_Error_Number = 0;
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Set: Started.");
 #endif /* LOGGING */
@@ -200,6 +201,7 @@ int CCD_Exposure_Length_Get(int *exposure_length_ms)
 {
 	double exposure_length_s;
 
+	Exposure_Error_Number = 0;
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Get: Started.");
 #endif /* LOGGING */
