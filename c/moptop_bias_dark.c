@@ -847,7 +847,7 @@ static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposur
 	int image_buffer_length;
 	
 #if MOPTOP_DEBUG > 1
-	Moptop_General_Log_Format("bias_dark","moptop_bias_dark.c","Bias_Dark_Acquire_Images",
+	Moptop_General_Log_Format("biasdark","moptop_bias_dark.c","Bias_Dark_Acquire_Images",
 				  LOG_VERBOSITY_INTERMEDIATE,"BIASDARK",
 				  "started with image count %d, exposure_type = %d.",Bias_Dark_Data.Image_Count,
 				  exposure_type);
