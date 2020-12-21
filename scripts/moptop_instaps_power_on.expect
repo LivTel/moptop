@@ -39,5 +39,5 @@ expect "Enter 'YES' to continue or <ENTER> to cancel :"
 send -- "YES\r"
 expect "Press <ENTER> to continue..."
 send -- "\r"
-expect "State        : OFF"
+expect "State        : ON"
 #interact ++ return
