@@ -153,7 +153,7 @@ int CCD_Exposure_Trigger_Mode_Is_External(void)
 
 /**
  * Set the requested exposure length. The actual exposure length may be changed by the Andor library.
- * @param exposure_length_ms The exposure length in milliseconds.
+ * @param exposure_length_s The exposure length as a double in seconds.
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #Exposure_Error_Number
  * @see #Exposure_Error_String
@@ -161,24 +161,21 @@ int CCD_Exposure_Trigger_Mode_Is_External(void)
  * @see ccd_general.html#CCD_GENERAL_ONE_SECOND_MS 
  * @see ccd_general.html#CCD_General_Log_Format
  */
-int CCD_Exposure_Length_Set(int exposure_length_ms)
+int CCD_Exposure_Length_Set(double exposure_length_s)
 {
-	double exposure_length_s;
-
 	Exposure_Error_Number = 0;
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Set: Started.");
 #endif /* LOGGING */
-	exposure_length_s = ((double)exposure_length_ms)/((double)CCD_GENERAL_ONE_SECOND_MS);
 #if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Set: Exposure length %d ms is %.3f s.",
-			       exposure_length_ms,exposure_length_s);
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Set: Exposure length set to %.6f s.",
+			       exposure_length_s);
 #endif /* LOGGING */
 	if(!CCD_Command_Set_Exposure_Time(exposure_length_s))
 	{
 		Exposure_Error_Number = 4;
 		sprintf(Exposure_Error_String,
-			"CCD_Exposure_Length_Set: CCD_Command_Set_Exposure_Time(%.3f) failed.",exposure_length_s);
+			"CCD_Exposure_Length_Set: CCD_Command_Set_Exposure_Time(%.6f) failed.",exposure_length_s);
 		return FALSE;
 	}
 #if LOGGING > 0

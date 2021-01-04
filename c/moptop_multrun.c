@@ -170,12 +170,13 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 ** 		external functions 
 ** ---------------------------------------------------------------------------- */
 /**
- * Routine to set the exposure length to be used for the Multrun. This is the exposure length _per-frame_, i.e. it depends
- * on the rotorspeed, and leads to allow enough time to readout and save each image before the rotator triggers the
- * start of the next exposure.
+ * Routine to set the exposure length to be used for the Multrun. This is the exposure length _per-frame_, 
+ * i.e. it depends on the rotorspeed, and leads to allow enough time to readout and save each image 
+ * before the rotator triggers the start of the next exposure.
  * <ul>
  * <li>The camera exposure length is set using CCD_Exposure_Length_Set.
- * <li>The requested exposure length is stored in Multrun_Data.Requested_Exposure_Length (for later use in FITS headers).
+ * <li>The requested exposure length is stored in Multrun_Data.Requested_Exposure_Length 
+ *     (for later use in FITS headers).
  * </ul>
  * @param exposure_length_s The exposure length to use for each frame, in seconds.
  * @return The routine returns TRUE on success and FALSE on failure.
@@ -188,9 +189,8 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 int Moptop_Multrun_Exposure_Length_Set(double exposure_length_s)
 {
 	/* configure the CCD camera exposure length 
-	** Note this might be modified by the Andor library. 
-	** Note CCD_Exposure_Length_Set requires the exposure length to be in milliseconds. */
-	if(!CCD_Exposure_Length_Set(exposure_length_s*MOPTOP_GENERAL_ONE_SECOND_MS))
+	** Note this might be modified by the Andor library. */
+	if(!CCD_Exposure_Length_Set(exposure_length_s))
 	{
 		Moptop_General_Error_Number = 640;
 		sprintf(Moptop_General_Error_String,

@@ -208,7 +208,6 @@ int Moptop_Bias_Dark_Flip_Set(int flip_x,int flip_y)
 int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *filename_count)
 {
 	double minimum_exposure_length_s;
-	int bias_exposure_length_ms;
 	
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("bias","moptop_bias_dark.c","Moptop_Bias_Dark_MultBias",LOG_VERBOSITY_TERSE,"BIAS",
@@ -260,7 +259,7 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
 	}
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("bias","moptop_bias_dark.c","Moptop_Bias_Dark_MultBias",LOG_VERBOSITY_INTERMEDIATE,
-				  "BIAS","Minumum camera exposure length is %.3f seconds.",minimum_exposure_length_s);
+				  "BIAS","Minumum camera exposure length is %.6f seconds.",minimum_exposure_length_s);
 #endif
 	/* setup CCD_Buffer for image acquisition */
 	if(!CCD_Buffer_Queue_Images(Bias_Dark_Data.Image_Count))
@@ -270,23 +269,20 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
 		sprintf(Moptop_General_Error_String,"Moptop_Bias_Dark_MultBias:Failed to queue image buffers.");
 		return FALSE;
 	}
-	/* set exposure length to smallest allowed, in milliseconds */
-	bias_exposure_length_ms = (int)(minimum_exposure_length_s*((double)MOPTOP_GENERAL_ONE_SECOND_MS));
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("bias","moptop_bias_dark.c","Moptop_Bias_Dark_MultBias",LOG_VERBOSITY_INTERMEDIATE,
-				  "BIAS","Attempting to set bias exposure length to %d ms.",bias_exposure_length_ms);
+				  "BIAS","Attempting to set bias exposure length to %.6f s.",minimum_exposure_length_s);
 #endif
-	if(!CCD_Exposure_Length_Set(bias_exposure_length_ms))
+	if(!CCD_Exposure_Length_Set(minimum_exposure_length_s))
 	{
 		Bias_Dark_In_Progress = FALSE;
 		Moptop_General_Error_Number = 719;
 		sprintf(Moptop_General_Error_String,
-			"Moptop_Bias_Dark_MultBias: Failed to set bias exposure length to %d ms.",
-			bias_exposure_length_ms);
+			"Moptop_Bias_Dark_MultBias: Failed to set bias exposure length to %.6f s.",
+			minimum_exposure_length_s);
 		return FALSE;
 	}
-	Bias_Dark_Data.Requested_Exposure_Length = (((double)bias_exposure_length_ms)/
-						    ((double)MOPTOP_GENERAL_ONE_SECOND_MS));
+	Bias_Dark_Data.Requested_Exposure_Length = minimum_exposure_length_s;
 	/* reset internal clock timestamp */
 	if(!CCD_Command_Timestamp_Clock_Reset())
 	{
@@ -436,8 +432,7 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
 int Moptop_Bias_Dark_MultDark(int exposure_length_ms,int exposure_count,
 				     char ***filename_list,int *filename_count)
 {
-	double minimum_exposure_length_s,maximum_exposure_length_s;
-	int minimum_exposure_length_ms, maximum_exposure_length_ms;
+	double minimum_exposure_length_s,maximum_exposure_length_s,exposure_length_s;
 	
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("dark","moptop_bias_dark.c","Moptop_Bias_Dark_MultDark",LOG_VERBOSITY_TERSE,"DARK",
@@ -513,29 +508,27 @@ int Moptop_Bias_Dark_MultDark(int exposure_length_ms,int exposure_count,
 	Moptop_General_Log_Format("bias","moptop_bias_dark.c","Moptop_Bias_Dark_MultBias",LOG_VERBOSITY_INTERMEDIATE,
 				  "BIAS","Maxumum camera exposure length is %.3f seconds.",maximum_exposure_length_s);
 #endif
-	/* convert minimum/maximum exposure lengths to milliseconds */
-	minimum_exposure_length_ms = (int)(minimum_exposure_length_s*((double)MOPTOP_GENERAL_ONE_SECOND_MS));
-	maximum_exposure_length_ms = (int)(maximum_exposure_length_s*((double)MOPTOP_GENERAL_ONE_SECOND_MS));
-	if((exposure_length_ms < minimum_exposure_length_ms)||(exposure_length_ms > maximum_exposure_length_ms))
+	/* convert exposure length to seconds */
+	exposure_length_s = ((double)exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS);
+	if((exposure_length_s < minimum_exposure_length_s)||(exposure_length_s > maximum_exposure_length_s))
 	{
 		Bias_Dark_In_Progress = FALSE;
 		Moptop_General_Error_Number = 756;
 		sprintf(Moptop_General_Error_String,
-			"Moptop_Bias_Dark_MultDark: Requested exposure length %d ms out of allowed range (%d,%d).",
-			exposure_length_ms,minimum_exposure_length_ms,maximum_exposure_length_ms);
+			"Moptop_Bias_Dark_MultDark: Requested exposure length %.6f s out of allowed range (%.6f,%.6f).",
+			exposure_length_s,minimum_exposure_length_s,maximum_exposure_length_s);
 		return FALSE;
 	}
 	/* set exposure length  */
-	if(!CCD_Exposure_Length_Set(exposure_length_ms))
+	if(!CCD_Exposure_Length_Set(exposure_length_s))
 	{
 		Bias_Dark_In_Progress = FALSE;
 		Moptop_General_Error_Number = 713;
 		sprintf(Moptop_General_Error_String,
-			"Moptop_Bias_Dark_MultDark: Failed to set exposure length to %d ms.",exposure_length_ms);
+			"Moptop_Bias_Dark_MultDark: Failed to set exposure length to %.6f s.",exposure_length_s);
 		return FALSE;
 	}
-	Bias_Dark_Data.Requested_Exposure_Length = (((double)exposure_length_ms)/
-						    ((double)MOPTOP_GENERAL_ONE_SECOND_MS));
+	Bias_Dark_Data.Requested_Exposure_Length = exposure_length_s;
 	/* reset internal clock timestamp */
 	if(!CCD_Command_Timestamp_Clock_Reset())
 	{
