@@ -49,7 +49,7 @@ DOCFLAGS 		= -static
 
 EXE_SRCS		= moptop_main.c
 OBJ_SRCS		= moptop_general.c moptop_config.c moptop_server.c moptop_fits_header.c moptop_command.c \
-			  moptop_multrun.c
+			  moptop_multrun.c moptop_bias_dark.c
 
 SRCS			= $(EXE_SRCS) $(OBJ_SRCS)
 HEADERS			= $(OBJ_SRCS:%.c=$(INCDIR)/%.h)

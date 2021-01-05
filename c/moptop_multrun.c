@@ -166,19 +166,17 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 				    long long int camera_ticks,double requested_rotator_angle,double rotator_start_angle,
 				    double rotator_end_angle,double rotator_difference,
 				    unsigned char *image_buffer,int image_buffer_length,char *filename);
-static void Multrun_Flip_X(int ncols,int nrows,unsigned short *exposure_data);
-static void Multrun_Flip_Y(int ncols,int nrows,unsigned short *exposure_data);
-
 /* ----------------------------------------------------------------------------
 ** 		external functions 
 ** ---------------------------------------------------------------------------- */
 /**
- * Routine to set the exposure length to be used for the Multrun. This is the exposure length _per-frame_, i.e. it depends
- * on the rotorspeed, and leads to allow enough time to readout and save each image before the rotator triggers the
- * start of the next exposure.
+ * Routine to set the exposure length to be used for the Multrun. This is the exposure length _per-frame_, 
+ * i.e. it depends on the rotorspeed, and leads to allow enough time to readout and save each image 
+ * before the rotator triggers the start of the next exposure.
  * <ul>
  * <li>The camera exposure length is set using CCD_Exposure_Length_Set.
- * <li>The requested exposure length is stored in Multrun_Data.Requested_Exposure_Length (for later use in FITS headers).
+ * <li>The requested exposure length is stored in Multrun_Data.Requested_Exposure_Length 
+ *     (for later use in FITS headers).
  * </ul>
  * @param exposure_length_s The exposure length to use for each frame, in seconds.
  * @return The routine returns TRUE on success and FALSE on failure.
@@ -191,9 +189,8 @@ static void Multrun_Flip_Y(int ncols,int nrows,unsigned short *exposure_data);
 int Moptop_Multrun_Exposure_Length_Set(double exposure_length_s)
 {
 	/* configure the CCD camera exposure length 
-	** Note this might be modified by the Andor library. 
-	** Note CCD_Exposure_Length_Set requires the exposure length to be in milliseconds. */
-	if(!CCD_Exposure_Length_Set(exposure_length_s*MOPTOP_GENERAL_ONE_SECOND_MS))
+	** Note this might be modified by the Andor library. */
+	if(!CCD_Exposure_Length_Set(exposure_length_s))
 	{
 		Moptop_General_Error_Number = 640;
 		sprintf(Moptop_General_Error_String,
@@ -403,7 +400,10 @@ int Moptop_Multrun_Setup(int *multrun_number)
  *     We stop short on the last exposure to avoid an extra trigger/frame.
  * <li>We queue the image buffers for the acquisitions using CCD_Buffer_Queue_Images.
  * <li>We reset the cameras internal timestamp clock using CCD_Command_Timestamp_Clock_Reset.
+ * <li>We set the camera shutter to open and close automatially using CCD_Command_Set_Shutter_Mode.
  * <li>We set the camera to trigger externally (from the rotator) using CCD_Command_Set_Trigger_Mode.
+ * <li>We set the camera to continuously take images using CCD_Command_Set_Cycle_Mode to set the cycle mode
+ *     to CCD_COMMAND_CYCLE_MODE_CONTINUOUS.
  * <li>We enable the camera for acquisitions using CCD_Command_Acquisition_Start.
  * <li>If the rotator is enabled (Moptop_Config_Rotator_Is_Enabled):
  *     <ul>
@@ -433,7 +433,7 @@ int Moptop_Multrun_Setup(int *multrun_number)
  * @see #Moptop_Data
  * @see #Moptop_Abort
  * @see #Multrun_In_Progress
- * @see # Multrun_Acquire_Images
+ * @see #Multrun_Acquire_Images
  * @see moptop_general.html#Moptop_General_Log
  * @see moptop_general.html#Moptop_General_Log_Format
  * @see moptop_general.html#Moptop_General_Error_Number
@@ -442,13 +442,17 @@ int Moptop_Multrun_Setup(int *multrun_number)
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Run_Velocity_Get
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Step_Angle_Get
  * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Queue_Images
+ * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_CYCLE_MODE_CONTINUOUS
+ * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_SHUTTER_MODE_AUTO
  * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE_EXTERNAL
  * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE_SOFTWARE
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Start
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Stop
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Flush
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Timestamp_Clock_Reset
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Shutter_Mode
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Trigger_Mode
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Cycle_Mode
  * @see ../pirot/cdocs/pirot_command.html#PIROT_Command_TRO
  * @see ../pirot/cdocs/pirot_command.html#PIROT_Command_MOV
  * @see ../pirot/cdocs/pirot_setup.html#PIROT_SETUP_ROTATOR_TOLERANCE
@@ -564,6 +568,14 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to reset camera timestamp clock.");
 		return FALSE;
 	}
+	/* set shutter mode to auto */
+	if(!CCD_Command_Set_Shutter_Mode(CCD_COMMAND_SHUTTER_MODE_AUTO))
+	{
+		Multrun_In_Progress = FALSE;
+		Moptop_General_Error_Number = 653;
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to set camera shutter mode to auto.");
+		return FALSE;
+	}	
 	/* turn on camera external triggering */
 	if(!CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_EXTERNAL))
 	{
@@ -571,7 +583,16 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 		Moptop_General_Error_Number = 644;
 		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to set camera trigger mode to external.");
 		return FALSE;
-	}		
+	}
+	/* Multruns need cycle mode to be continuous */
+	if(!CCD_Command_Set_Cycle_Mode(CCD_COMMAND_CYCLE_MODE_CONTINUOUS))
+	{
+		Multrun_In_Progress = FALSE;
+		Moptop_General_Error_Number = 652;
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun:CCD_Command_Set_Cycle_Mode(%s) failed.",
+			CCD_COMMAND_CYCLE_MODE_CONTINUOUS);
+		return FALSE;
+	}
 	/* enable the CCD acquisition */
 	if(!CCD_Command_Acquisition_Start())
 	{
@@ -606,8 +627,8 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 			CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_SOFTWARE);
 			PIROT_Command_TRO(FALSE);
 			Moptop_General_Error_Number = 607;
-			sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to move rotator to end position %.2f.",
-				rotator_end_position);
+			sprintf(Moptop_General_Error_String,
+				"Moptop_Multrun:Failed to move rotator to end position %.2f.",rotator_end_position);
 			return FALSE;
 		}
 	}/* end if rotator enabled */
@@ -684,7 +705,7 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
  *     </ul>
  * <li>Returns Multrun_In_Progress (i.e. whether there was a multrun in progress to be aborted).
  * </ul>
- * @return TRUE if there was a multrun in progress to be aborted, FALSE otherwise.
+ * @return The routine returns TRUE if the multrun was aborted, FALSE otherwise.
  * @see #Moptop_Abort
  * @see #Multrun_In_Progress
  * @see moptop_config.html#Moptop_Config_Rotator_Is_Enabled
@@ -718,7 +739,7 @@ int Moptop_Multrun_Abort(void)
 		}
 	}/* end if Multrun_In_Progress */
 	/* allow aborted multrun to call CCD_Command_Flush rather than call it here */
-	return Multrun_In_Progress;
+	return TRUE;
 }
 
 /**
@@ -754,7 +775,7 @@ int Moptop_Multrun_Per_Frame_Exposure_Length_Get(void)
 
 /**
  * Return the exposure start time timestamp of the last exposure in the multrun.
- * @param exposure_start_time The address of a timespec structure to fill with the  start time timestamp.
+ * @param exposure_start_time The address of a timespec structure to fill with the start time timestamp.
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #Multrun_Data
  */
@@ -894,6 +915,87 @@ double Moptop_Multrun_Rotator_Step_Angle_Get(void)
 {
 	return Multrun_Data.Rotator_Step_Angle;
 }
+
+/**
+ * Flip the image data in the X direction.
+ * @param ncols The number of columns on the CCD.
+ * @param nrows The number of rows on the CCD.
+ * @param exposure_data The image data received from the CCD, as an unsigned short. 
+ *        The data in this array is flipped in the X direction.
+ * @see moptop_general.html#Moptop_General_Log
+ * @see moptop_general.html#Moptop_General_Log_Format
+ */
+void Moptop_Multrun_Flip_X(int ncols,int nrows,unsigned short *exposure_data)
+{
+	int x,y;
+	unsigned short int tempval;
+
+#if MOPTOP_DEBUG > 5
+	Moptop_General_Log_Format("multrun","moptop_multrun.c","Moptop_Multrun_Flip_X",LOG_VERBOSITY_INTERMEDIATE,"MULTRUN",
+				  "Started flipping image of size (%d,%d) in X.",ncols,nrows);
+#endif
+	/* for each row */
+	for(y=0;y<nrows;y++)
+	{
+		/* for the first half of the columns.
+		** Note the middle column will be missed, this is OK as it
+		** does not need to be flipped if it is in the middle */
+		for(x=0;x<(ncols/2);x++)
+		{
+			/* Copy exposure_data[x,y] to tempval */
+			tempval = *(exposure_data+(y*ncols)+x);
+			/* Copy exposure_data[ncols-(x+1),y] to exposure_data[x,y] */
+			*(exposure_data+(y*ncols)+x) = *(exposure_data+(y*ncols)+(ncols-(x+1)));
+			/* Copy tempval = exposure_data[ncols-(x+1),y] */
+			*(exposure_data+(y*ncols)+(ncols-(x+1))) = tempval;
+		}
+	}
+#if MOPTOP_DEBUG > 5
+	Moptop_General_Log("multrun","moptop_multrun.c","Moptop_Multrun_Flip_X",LOG_VERBOSITY_INTERMEDIATE,"MULTRUN",
+			   "Finished.");
+#endif
+}
+
+/**
+ * Flip the image data in the Y direction.
+ * @param ncols The number of columns on the CCD.
+ * @param nrows The number of rows on the CCD.
+ * @param exposure_data The image data received from the CCD, as an unsigned short. 
+ *        The data in this array is flipped in the Y direction.
+ * @see moptop_general.html#Moptop_General_Log
+ * @see moptop_general.html#Moptop_General_Log_Format
+ */
+void Moptop_Multrun_Flip_Y(int ncols,int nrows,unsigned short *exposure_data)
+{
+	int x,y;
+	unsigned short int tempval;
+
+#if MOPTOP_DEBUG > 5
+	Moptop_General_Log_Format("multrun","moptop_multrun.c","Moptop_Multrun_Flip_Y",LOG_VERBOSITY_INTERMEDIATE,"MULTRUN",
+				  "Started flipping image of size (%d,%d) in Y.",ncols,nrows);
+#endif
+	/* for the first half of the rows.
+	** Note the middle row will be missed, this is OK as it
+	** does not need to be flipped if it is in the middle */
+	for(y=0;y<(nrows/2);y++)
+	{
+		/* for each column */
+		for(x=0;x<ncols;x++)
+		{
+			/* Copy exposure_data[x,y] to tempval */
+			tempval = *(exposure_data+(y*ncols)+x);
+			/* Copy exposure_data[x,nrows-(y+1)] to exposure_data[x,y] */
+			*(exposure_data+(y*ncols)+x) = *(exposure_data+(((nrows-(y+1))*ncols)+x));
+			/* Copy tempval = exposure_data[x,nrows-(y+1)] */
+			*(exposure_data+(((nrows-(y+1))*ncols)+x)) = tempval;
+		}
+	}
+#if MOPTOP_DEBUG > 5
+	Moptop_General_Log("multrun","moptop_multrun.c","Moptop_Multrun_Flip_Y",LOG_VERBOSITY_INTERMEDIATE,"MULTRUN",
+			   "Finished.");
+#endif
+}
+
 /* ----------------------------------------------------------------------------
 ** 		external functions 
 ** ---------------------------------------------------------------------------- */
@@ -1079,8 +1181,6 @@ static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *fil
 			return FALSE;
 		}
 	}/* end for on Multrun_Data.Image_Index / Multrun_Data.Image_Count */
-	/* get camera temperature */
-
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("multrun","moptop_multrun.c","Multrun_Acquire_Images",LOG_VERBOSITY_INTERMEDIATE,
 				  "MULTRUN","finished.");
@@ -1186,8 +1286,8 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  * <li>We create an empty image of the correct dimensions using fits_create_img.
  * <li>We write the FITS headers to the FITS image using CCD_Fits_Header_Write_To_Fits.
  * <li>We check the computed binned image size is not larger than the image_buffer_length.
- * <li>If Multrun_Data.Flip_X is TRUE, we call Multrun_Flip_X to flip the image data in the X direction.
- * <li>If Multrun_Data.Flip_Y is TRUE, we call Multrun_Flip_Y to flip the image data in the Y direction.
+ * <li>If Multrun_Data.Flip_X is TRUE, we call Moptop_Multrun_Flip_X to flip the image data in the X direction.
+ * <li>If Multrun_Data.Flip_Y is TRUE, we call Moptop_Multrun_Flip_Y to flip the image data in the Y direction.
  * <li>We write the image data to the FITS image using fits_write_img.
  * <li>If the binning value is not 1, we retrieve the current CCDSCALE value, scale it by the binning, and update the FITS
  *     keyword value.
@@ -1212,8 +1312,8 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  * @param filename A string containing the FITS filename to write the data into.
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #Multrun_Data
- * @see #Multrun_Flip_X
- * @see #Multrun_Flip_Y
+ * @see #Moptop_Multrun_Flip_X
+ * @see #Moptop_Multrun_Flip_Y
  * @see moptop_fits_header.html#Moptop_Fits_Header_String_Add
  * @see moptop_fits_header.html#Moptop_Fits_Header_Integer_Add
  * @see moptop_fits_header.html#Moptop_Fits_Header_Long_Long_Integer_Add
@@ -1451,9 +1551,9 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 	}
 	/* check and flip images if configured to do so */
 	if(Multrun_Data.Flip_X)
-		Multrun_Flip_X(ncols_binned,nrows_binned,(unsigned short *)image_buffer);
+		Moptop_Multrun_Flip_X(ncols_binned,nrows_binned,(unsigned short *)image_buffer);
 	if(Multrun_Data.Flip_Y)
-		Multrun_Flip_Y(ncols_binned,nrows_binned,(unsigned short *)image_buffer);
+		Moptop_Multrun_Flip_Y(ncols_binned,nrows_binned,(unsigned short *)image_buffer);
 	/* write the data */
 	retval = fits_write_img(fp,TUSHORT,1,ncols_binned*nrows_binned,image_buffer,&status);
 	if(retval)
@@ -1519,7 +1619,7 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 	if(!CCD_Fits_Filename_UnLock(filename))
 	{
 		Moptop_General_Error_Number = 639;
-		sprintf(Moptop_General_Error_String,"Multi_Exposure_Save:Failed to unlock '%s'.",filename);
+		sprintf(Moptop_General_Error_String,"Multrun_Write_Fits_Image:Failed to unlock '%s'.",filename);
 		return FALSE;
 	}
 #if MOPTOP_DEBUG > 5
@@ -1529,81 +1629,4 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 	return TRUE;
 }
 
-/**
- * Flip the image data in the X direction.
- * @param ncols The number of columns on the CCD.
- * @param nrows The number of rows on the CCD.
- * @param exposure_data The image data received from the CCD, as an unsigned short. 
- *        The data in this array is flipped in the X direction.
- * @see moptop_general.html#Moptop_General_Log
- * @see moptop_general.html#Moptop_General_Log_Format
- */
-static void Multrun_Flip_X(int ncols,int nrows,unsigned short *exposure_data)
-{
-	int x,y;
-	unsigned short int tempval;
-
-#if MOPTOP_DEBUG > 5
-	Moptop_General_Log_Format("multrun","moptop_multrun.c","Multrun_Flip_X",LOG_VERBOSITY_INTERMEDIATE,"MULTRUN",
-				  "Started flipping image of size (%d,%d) in X.",ncols,nrows);
-#endif
-	/* for each row */
-	for(y=0;y<nrows;y++)
-	{
-		/* for the first half of the columns.
-		** Note the middle column will be missed, this is OK as it
-		** does not need to be flipped if it is in the middle */
-		for(x=0;x<(ncols/2);x++)
-		{
-			/* Copy exposure_data[x,y] to tempval */
-			tempval = *(exposure_data+(y*ncols)+x);
-			/* Copy exposure_data[ncols-(x+1),y] to exposure_data[x,y] */
-			*(exposure_data+(y*ncols)+x) = *(exposure_data+(y*ncols)+(ncols-(x+1)));
-			/* Copy tempval = exposure_data[ncols-(x+1),y] */
-			*(exposure_data+(y*ncols)+(ncols-(x+1))) = tempval;
-		}
-	}
-#if MOPTOP_DEBUG > 5
-	Moptop_General_Log("multrun","moptop_multrun.c","Multrun_Flip_X",LOG_VERBOSITY_INTERMEDIATE,"MULTRUN","Finished.");
-#endif
-}
-
-/**
- * Flip the image data in the Y direction.
- * @param ncols The number of columns on the CCD.
- * @param nrows The number of rows on the CCD.
- * @param exposure_data The image data received from the CCD, as an unsigned short. 
- *        The data in this array is flipped in the Y direction.
- * @see moptop_general.html#Moptop_General_Log
- * @see moptop_general.html#Moptop_General_Log_Format
- */
-static void Multrun_Flip_Y(int ncols,int nrows,unsigned short *exposure_data)
-{
-	int x,y;
-	unsigned short int tempval;
-
-#if MOPTOP_DEBUG > 5
-	Moptop_General_Log_Format("multrun","moptop_multrun.c","Multrun_Flip_Y",LOG_VERBOSITY_INTERMEDIATE,"MULTRUN",
-				  "Started flipping image of size (%d,%d) in Y.",ncols,nrows);
-#endif
-	/* for the first half of the rows.
-	** Note the middle row will be missed, this is OK as it
-	** does not need to be flipped if it is in the middle */
-	for(y=0;y<(nrows/2);y++)
-	{
-		/* for each column */
-		for(x=0;x<ncols;x++)
-		{
-			/* Copy exposure_data[x,y] to tempval */
-			tempval = *(exposure_data+(y*ncols)+x);
-			/* Copy exposure_data[x,nrows-(y+1)] to exposure_data[x,y] */
-			*(exposure_data+(y*ncols)+x) = *(exposure_data+(((nrows-(y+1))*ncols)+x));
-			/* Copy tempval = exposure_data[x,nrows-(y+1)] */
-			*(exposure_data+(((nrows-(y+1))*ncols)+x)) = tempval;
-		}
-	}
-#if MOPTOP_DEBUG > 5
-	Moptop_General_Log("multrun","moptop_multrun.c","Multrun_Flip_Y",LOG_VERBOSITY_INTERMEDIATE,"MULTRUN","Finished.");
-#endif
-}
 

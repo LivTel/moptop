@@ -29,4 +29,9 @@ extern void Moptop_Multrun_Rotator_Speed_Get(char *rotator_speed);
 extern double Moptop_Multrun_Rotator_Run_Velocity_Get(void);
 extern double Moptop_Multrun_Rotator_Step_Angle_Get(void);
 
+/* helper routines for saving FITS images */
+extern void Moptop_Multrun_Flip_X(int ncols,int nrows,unsigned short *exposure_data);
+extern void Moptop_Multrun_Flip_Y(int ncols,int nrows,unsigned short *exposure_data);
+
+
 #endif

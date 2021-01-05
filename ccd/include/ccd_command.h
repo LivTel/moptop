@@ -3,6 +3,24 @@
 #ifndef CCD_COMMAND_H
 #define CCD_COMMAND_H
 /**
+ * Value enumeration for CCD_Command_Set_Shutter_Mode, this sets the shutter mode
+ * to "Open". 
+ * @see #CCD_Command_Set_Shutter_Mode
+ */
+#define CCD_COMMAND_SHUTTER_MODE_OPEN                           ("Open")
+/**
+ * Value enumeration for CCD_Command_Set_Shutter_Mode, this sets the shutter mode
+ * to "Closed". 
+ * @see #CCD_Command_Set_Shutter_Mode
+ */
+#define CCD_COMMAND_SHUTTER_MODE_CLOSED                         ("Closed")
+/**
+ * Value enumeration for CCD_Command_Set_Shutter_Mode, this sets the shutter mode
+ * to "Auto". 
+ * @see #CCD_Command_Set_Shutter_Mode
+ */
+#define CCD_COMMAND_SHUTTER_MODE_AUTO                           ("Auto")
+/**
  * Value enumeration for CCD_Command_Set_Electronic_Shuttering_Mode, this sets the electronic shuttering mode
  * to "Rolling" (as opposed to "Global"). 
  * @see #CCD_Command_Set_Electronic_Shuttering_Mode
@@ -71,6 +89,13 @@
  */
 #define CCD_COMMAND_CYCLE_MODE_CONTINUOUS                        ("Continuous")
 /**
+ * Value enumeration for CCD_Command_Set_Cycle_Mode, which configures whether the camera will acquire a fixed length 
+ * sequence or a continuous sequence.
+ * This value selects a fixed sequence.
+ * @see #CCD_Command_Set_Cycle_Mode
+ */
+#define CCD_COMMAND_CYCLE_MODE_FIXED                             ("Fixed")
+/**
  * Value enumeration for CCD_Command_Set_AOI_Binning, which configures the readout binning.
  * This value selects 1x1 binning.
  * @see #CCD_Command_Set_AOI_Binning
@@ -105,6 +130,12 @@
  * @see #CCD_Command_Set_Trigger_Mode
  */
 #define CCD_COMMAND_TRIGGER_MODE_SOFTWARE                        ("Software")
+/**
+ * Value enumeration for CCD_Command_Set_Trigger_Mode, which configures the camera trigger mode.
+ * This value selects internal triggering.
+ * @see #CCD_Command_Set_Trigger_Mode
+ */
+#define CCD_COMMAND_TRIGGER_MODE_INTERNAL                        ("Internal")
 /**
  * Value enumeration for CCD_Command_Set_Trigger_Mode, which configures the camera trigger mode.
  * This value selects external/hardware/edge triggering.
@@ -150,6 +181,18 @@
  * @see #CCD_Command_Set_Bool
  */
 #define CCD_Command_Set_Static_Blemish_Correction(b)  CCD_Command_Set_Bool("StaticBlemishCorrection",b)
+/**
+ * Configure how the shutter is used, one of open, closed or auto. Auto is the default (and used for Multruns),
+ * closed is used for biases and darks.
+ * @param s A string representing the shutter mode to use, one of: CCD_COMMAND_SHUTTER_MODE_OPEN,
+ *        CCD_COMMAND_SHUTTER_MODE_CLOSED, CCD_COMMAND_SHUTTER_MODE_AUTO.
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see #CCD_COMMAND_SHUTTER_MODE_OPEN
+ * @see #CCD_COMMAND_SHUTTER_MODE_CLOSED
+ * @see #CCD_COMMAND_SHUTTER_MODE_AUTO
+ * @see #CCD_Command_Set_Enum_String
+ */
+#define CCD_Command_Set_Shutter_Mode(s)               CCD_Command_Set_Enum_String("ShutterMode",s)
 /**
  * Turns on/off the rolling shutter global clear readout mode, 
  * using CCD_Command_Set_Bool with feature name "RollingShutterGlobalClear".
@@ -223,9 +266,18 @@
  * @param s A string representing the cycle mode e.g. CCD_COMMAND_CYCLE_MODE_CONTINUOUS.
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #CCD_COMMAND_CYCLE_MODE_CONTINUOUS
+ * @see #CCD_COMMAND_CYCLE_MODE_FIXED
  * @see #CCD_Command_Set_Enum_String
  */
 #define CCD_Command_Set_Cycle_Mode(s) CCD_Command_Set_Enum_String("CycleMode",s)
+/**
+ * Configure the number of frames to take when Cycle Mode is set to FIXED.
+ * Uses CCD_Command_Set_Int with feature name "FrameCount".
+ * @param i  An integer, the number of frames to take in the acquisition before stopping.
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see #CCD_Command_Set_Int
+ */
+#define CCD_Command_Set_Frame_Count(i) CCD_Command_Set_Int("FrameCount",i)
 /**
  * Set the readout binning for the Area Of Interest.
  * Uses the CCD_Command_Set_Enum_String with feature name "AOIBinning".
@@ -246,9 +298,10 @@
  * Uses the CCD_Command_Set_Enum_String with feature name "TriggerMode".
  * See possible values in Andor_SDK3_Manual.pdf, P52.
  * @param s A string representing camera trigger mode, one of: CCD_COMMAND_TRIGGER_MODE_SOFTWARE, 
- *          CCD_COMMAND_TRIGGER_MODE_EXTERNAL .
+ *          CCD_COMMAND_TRIGGER_MODE_INTERNAL or CCD_COMMAND_TRIGGER_MODE_EXTERNAL .
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #CCD_COMMAND_TRIGGER_MODE_SOFTWARE
+ * @see #CCD_COMMAND_TRIGGER_MODE_INTERNAL
  * @see #CCD_COMMAND_TRIGGER_MODE_EXTERNAL
  * @see #CCD_Command_Set_Enum_String
  */
@@ -436,6 +489,7 @@ extern int CCD_Command_Is_Readonly(char *feature_name_string,int *is_readonly);
 extern int CCD_Command_Set_Bool(char *feature_name_string,int value);
 extern int CCD_Command_Set_Enum_String(char *feature_name_string,char *enum_value_string);
 extern int CCD_Command_Set_Float(char *feature_name_string,double value);
+extern int CCD_Command_Set_Int(char *feature_name_string,int value);
 extern int CCD_Command_Queue_Buffer(unsigned char* buffer_ptr,int buffer_length);
 extern int CCD_Command_Wait_Buffer(unsigned char** buffer_ptr,int *buffer_length,unsigned int timeout);
 extern int CCD_Command_Get_Timestamp_From_Metadata(unsigned char* buffer,int buffer_length,long long int *timestamp);

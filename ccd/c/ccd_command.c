@@ -1844,6 +1844,90 @@ int CCD_Command_Set_Float(char *feature_name_string,double value)
 }
 
 /**
+ * Set the integer value of the specified feature_name_string.
+ * @param feature_name_string The name of the feature to set, as a normal string. The routine will fail if
+ *        the string is longer than COMMAND_MAX_FEATURE_NAME_LENGTH, which is used to allocate space
+ *        for the wide character version of this string passed into the Andor API.
+ * @param value The integer value to set the feature_name to.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #COMMAND_MAX_FEATURE_NAME_LENGTH
+ * @see #Command_Data
+ * @see #Command_Get_Andor_Error_String
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see #Command_MBS_To_WCS_String
+ * @see ccd_general.html#CCD_GENERAL_ONE_SECOND_MS
+ * @see ccd_general.html#CCD_GENERAL_ONE_MILLISECOND_NS
+ * @see ccd_general.html#CCD_GENERAL_ONE_SECOND_NS
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Set_Int(char *feature_name_string,int value)
+{
+	struct timespec sleep_time;
+	AT_WC feature_name_wide_string[COMMAND_MAX_FEATURE_NAME_LENGTH+1];
+	int retval,retry_index;
+
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Set_Int: Started.");
+#endif /* LOGGING */
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Set_Int: Set %s to %d.",feature_name_string,value);
+#endif /* LOGGING */
+	/* convert feature name to a wide character string, suitable for the Andor API */
+	if(!Command_MBS_To_WCS_String(feature_name_string,feature_name_wide_string,COMMAND_MAX_FEATURE_NAME_LENGTH+1))
+		return FALSE;
+	/* initialse loop variables */
+	retry_index = 0;
+	/* AT_SUCCESS is 0, so this initialises retval to something other than AT_SUCCESS, currently -1 */
+	retval = AT_SUCCESS-1; 
+	while((retval != AT_SUCCESS)&&(retry_index < Command_Data.Retry_Count))
+	{
+#if LOGGING > 0
+		CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+				       "CCD_Command_Set_Int: Calling AT_SetInt(camera handle = %d,"
+				       "feature name = '%s', value = %d), attempt %d.",
+				       Command_Data.Handle,feature_name_string,value,(retry_index+1));
+#endif /* LOGGING */
+		retval = AT_SetInt(Command_Data.Handle,feature_name_wide_string,value);
+		if(retval != AT_SUCCESS)
+		{
+			Command_Error_Number = 61;
+			sprintf(Command_Error_String,"CCD_Command_Set_Int: AT_SetInt(camera handle = %d,"
+				"feature name = '%s', value = %d) attempt %d, failed (%d) : %s.",
+				Command_Data.Handle,feature_name_string,value,(retry_index+1),retval,
+				Command_Get_Andor_Error_String(retval));
+			/* don't fail here, just retry. Log the error though. */
+			CCD_General_Error();
+			/* also sleep for a time before retrying */
+			sleep_time.tv_sec = Command_Data.Retry_Sleep_Time_Ms/CCD_GENERAL_ONE_SECOND_MS;
+			sleep_time.tv_nsec = (Command_Data.Retry_Sleep_Time_Ms*CCD_GENERAL_ONE_MILLISECOND_NS)%
+				CCD_GENERAL_ONE_SECOND_NS;
+			nanosleep(&sleep_time,&sleep_time);
+		}/* end if retval was not a success */
+		retry_index ++;
+	}/* end while */
+	/* if we retried too many times without success, give up and return an error */
+	if(retry_index >= Command_Data.Retry_Count)
+	{
+		Command_Error_Number = 62;
+		sprintf(Command_Error_String,"CCD_Command_Set_Int: AT_SetInt(camera handle = %d,"
+			"feature name = '%s', value = %d) failed (%d) : %s after %d attempts.",
+			Command_Data.Handle,feature_name_string,value,retval,Command_Get_Andor_Error_String(retval),
+			retry_index);
+		return FALSE;
+	}
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Set_Int: AT_SetInt(camera handle = %d,"
+			       "feature name = '%s', value = %d) succeeded after %d attempts.",
+			       Command_Data.Handle,feature_name_string,value,retry_index);
+#endif /* LOGGING */
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Set_Int: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
  * Routine to pass the specified buffer into the Andor libraries queue of buffers to put image data into.
  * @param buffer_ptr A pointer to the image buffer to add to the queue. 
  *        The buffer's start address has to be aligned to an 8-byte boundary according to the Andor SDK manual.

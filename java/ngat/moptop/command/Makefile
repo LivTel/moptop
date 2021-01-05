@@ -8,7 +8,8 @@ BINDIR 		= $(MOPTOP_BIN_HOME)/java/$(PACKAGEDIR)
 SRCS 		= Command.java BooleanReplyCommand.java DoubleReplyCommand.java IntegerReplyCommand.java \
 		AbortCommand.java ConfigFilterCommand.java ConfigBinCommand.java ConfigRotorspeedCommand.java \
 		FitsHeaderAddCommand.java FitsHeaderClearCommand.java FitsHeaderDeleteCommand.java \
-		MultrunSetupCommand.java MultrunCommand.java ShutdownCommand.java \
+		MultbiasCommand.java MultdarkCommand.java MultrunSetupCommand.java MultrunCommand.java \
+		ShutdownCommand.java \
 		StatusExposureCountCommand.java StatusExposureIndexCommand.java \
 		StatusExposureLengthCommand.java StatusExposureStartTimeCommand.java\
 		StatusExposureMultrunCommand.java StatusExposureRunCommand.java StatusExposureStatusCommand.java \

@@ -104,6 +104,54 @@ public class HardwareImplementation extends CommandImplementation implements JMS
 	}
 
 	/**
+	 * This routine tries to move the mirror fold to a certain location, by issuing a MOVE_FOLD command
+	 * to the ISS. The position to move the fold to is specified by the moptop property file.
+	 * If an error occurs the done objects field's are set accordingly.
+	 * @param command The command being implemented that made this call to the ISS. This is used
+	 * 	for error logging.
+	 * @param done A COMMAND_DONE subclass specific to the command being implemented. If an
+	 * 	error occurs the relevant fields are filled in with the error.
+	 * @return The routine returns a boolean to indicate whether the operation was completed
+	 *  	successfully.
+	 * @see MoptopStatus#getPropertyInteger
+	 * @see Moptop#sendISSCommand
+	 */
+	public boolean moveFoldToDark(COMMAND command,COMMAND_DONE done)
+	{
+		INST_TO_ISS_DONE instToISSDone = null;
+		MOVE_FOLD moveFold = null;
+		int mirrorFoldPosition = 0;
+
+		moveFold = new MOVE_FOLD(command.getId());
+		try
+		{
+			mirrorFoldPosition = status.getPropertyInteger("moptop.dark.mirror_fold_position");
+		}
+		catch(NumberFormatException e)
+		{
+			mirrorFoldPosition = 0;
+			moptop.error(this.getClass().getName()+":moveFoldToDark:"+
+				command.getClass().getName(),e);
+			done.setErrorNum(MoptopConstants.MOPTOP_ERROR_CODE_BASE+1204);
+			done.setErrorString("moveFold:"+e);
+			done.setSuccessful(false);
+			return false;
+		}
+		moveFold.setMirror_position(mirrorFoldPosition);
+		instToISSDone = moptop.sendISSCommand(moveFold,serverConnectionThread);
+		if(instToISSDone.getSuccessful() == false)
+		{
+			moptop.error(this.getClass().getName()+":moveFoldToDark:"+
+				command.getClass().getName()+":"+instToISSDone.getErrorString());
+			done.setErrorNum(MoptopConstants.MOPTOP_ERROR_CODE_BASE+1208);
+			done.setErrorString(instToISSDone.getErrorString());
+			done.setSuccessful(false);		
+			return false;
+		}
+		return true;
+	}
+
+	/**
 	 * This routine clears the current set of FITS headers. 
 	 */
 	public void clearFitsHeaders()
