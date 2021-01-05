@@ -15,7 +15,7 @@ import ngat.util.logging.*;
 /**
  * This class provides some common hardware related routines to move folds, and FITS
  * interface routines needed by many command implementations
- * @version $Revision: 1.1 $
+ * @version $Revision$
  */
 public class HardwareImplementation extends CommandImplementation implements JMSCommandImplementation
 {
