@@ -843,6 +843,18 @@ static int Moptop_Startup_Filter_Wheel(void)
 	/* free allocated data */
 	if(device_name != NULL)
 		free(device_name);
+	/* fault 2668. The filter wheel is failing and on startup ends up in position 8 which is impossible.
+	** Try driving the filter wheel to a known position after opening a connection to it. */
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Startup_Filter_Wheel",LOG_VERBOSITY_TERSE,"STARTUP",
+				  "Moving filter wheel to a known position(1).");
+#endif
+	if(!Filter_Wheel_Command_Move(1))
+	{
+		Moptop_General_Error_Number = 26;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_Filter_Wheel:Filter_Wheel_Command_Move(1) failed.");
+		return FALSE;
+	}		
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log("main","moptop_main.c","Moptop_Startup_Filter_Wheel",LOG_VERBOSITY_TERSE,"STARTUP",
 			   "Finished.");
