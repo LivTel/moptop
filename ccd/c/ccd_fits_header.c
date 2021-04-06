@@ -14,6 +14,7 @@
  * This hash define is needed before including source files give us POSIX.4/IEEE1003.1b-1993 prototypes.
  */
 #define _POSIX_C_SOURCE 199309L
+#include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -138,6 +139,7 @@ struct Fits_Header_Struct Fits_Header;
 
 /* internal functions */
 static int Fits_Header_Add_Card(struct Fits_Header_Card_Struct card);
+static void Fits_Header_Uppercase(char *string);
 
 /* ----------------------------------------------------------------------------
 ** 		external functions 
@@ -191,18 +193,21 @@ int CCD_Fits_Header_Clear(void)
 /**
  * Routine to delete the specified keyword from the FITS header. 
  * The list is not reallocated, CCD_Fits_Header_Free will eventually free the allocated memory.
- * The routine fails (returns FALSE) if a card with the specified keyword is NOT in the list.
+ * The routine fails (returns FALSE) if a card with the specified keyword (uppercased) is NOT in the list.
  * @param keyword The keyword of the FITS header card to remove from the list.
  * @return The routine returns TRUE on success, and FALSE on failure. On failure, Fits_Header_Error_Number
  *         and Fits_Header_Error_String should be filled in with suitable values.
  * @see ccd_general.html#CCD_General_Log
  * @see ccd_general.html#CCD_General_Log_Format
+ * @see #FITS_HEADER_KEYWORD_STRING_LENGTH
  * @see #Fits_Header_Error_Number
  * @see #Fits_Header_Error_String
  * @see #Fits_Header
+ * @see #Fits_Header_Uppercase
  */
 int CCD_Fits_Header_Delete(char *keyword)
 {
+	char uppercase_keyword[FITS_HEADER_KEYWORD_STRING_LENGTH];
 	int found_index,index,done;
 
 #if LOGGING > 1
@@ -215,12 +220,22 @@ int CCD_Fits_Header_Delete(char *keyword)
 		sprintf(Fits_Header_Error_String,"CCD_Fits_Header_Delete:Keyword is NULL.");
 		return FALSE;
 	}
+	if(strlen(keyword) > (FITS_HEADER_KEYWORD_STRING_LENGTH-1))
+	{
+		Fits_Header_Error_Number = 3;
+		sprintf(Fits_Header_Error_String,"CCD_Fits_Header_Delete:Keyword '%s' is too long (%ld vs %d).",
+			keyword,strlen(keyword),FITS_HEADER_KEYWORD_STRING_LENGTH);
+		return FALSE;
+	}
+	/* uppercase keyword */
+	strcpy(uppercase_keyword,keyword);
+	Fits_Header_Uppercase(uppercase_keyword);
 	/* find keyword in header */
 	found_index = 0;
 	done  = FALSE;
 	while((found_index < Fits_Header.Card_Count) && (done == FALSE))
 	{
-		if(strcmp(Fits_Header.Card_List[found_index].Keyword,keyword) == 0)
+		if(strcmp(Fits_Header.Card_List[found_index].Keyword,uppercase_keyword) == 0)
 		{
 			done = TRUE;
 		}
@@ -232,7 +247,7 @@ int CCD_Fits_Header_Delete(char *keyword)
 	{
 		Fits_Header_Error_Number = 5;
 		sprintf(Fits_Header_Error_String,"CCD_Fits_Header_Delete:"
-			"Failed to find Keyword '%s' in header of %d cards.",keyword,Fits_Header.Card_Count);
+			"Failed to find Keyword '%s' in header of %d cards.",uppercase_keyword,Fits_Header.Card_Count);
 		return FALSE;
 	}
 	/* if we found a card with this keyword, delete it. 
@@ -764,9 +779,11 @@ void CCD_Fits_Header_Error_String(char *error_string)
 ** ---------------------------------------------------------------------------- */
 /**
  * Routine to add a card to the list. If the keyword already exists, that card will be updated with the new value,
- * otherwise a new card will be allocated (if necessary) and added to the list.
+ * otherwise a new card will be allocated (if necessary) and added to the list. The keyword is converted to all
+ * uppercase. This matches the way CFITSIO handles keywords so we don't get a lower-case version of the same keyword
+ * with a different value overwriting the upprcase one.
  * @param card The new card to add to the list. 
- *             If the keyword already exists, that card will be updated with the new value,
+ *             If the (uppercase) keyword already exists, that card will be updated with the new value,
  *             otherwise a new card will be allocated (if necessary) and added to the list.
  * @return The routine returns TRUE on success, and FALSE on failure. On failure, Fits_Header_Error_Number
  *         and Fits_Header_Error_String should be filled in with suitable values.
@@ -775,13 +792,17 @@ void CCD_Fits_Header_Error_String(char *error_string)
  * @see #Fits_Header_Error_Number
  * @see #Fits_Header_Error_String
  * @see #Fits_Header
+ * @see #Fits_Header_Uppercase
  */
 static int Fits_Header_Add_Card(struct Fits_Header_Card_Struct card)
 {
 	int index,done;
+
 #if LOGGING > 1
 	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"Fits_Header_Add_Card: Started.");
 #endif
+	/* uppercase keyword */
+	Fits_Header_Uppercase(card.Keyword);
 	index = 0;
 	done  = FALSE;
 	while((index < Fits_Header.Card_Count) && (done == FALSE))
@@ -840,4 +861,18 @@ static int Fits_Header_Add_Card(struct Fits_Header_Card_Struct card)
 #endif
 	return TRUE;
 
+}
+
+/**
+ * Routine to uppercase the specified string.
+ * @param string The string to uppercase.
+ */
+static void Fits_Header_Uppercase(char *string)
+{
+	int i;
+	
+	for(i = 0;i < strlen(string); i++)
+	{
+		string[i] = toupper(string[i]);
+	}
 }
