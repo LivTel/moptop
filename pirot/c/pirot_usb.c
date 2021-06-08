@@ -82,7 +82,8 @@ static struct USB_Struct USB_Data = {DEFAULT_CONNECTION_COUNT,-1};
 int PIROT_USB_Open(char *device_name,int baud_rate)
 {
 	int connection_count;
-
+	
+	USB_Error_Number = 0;
 	if(device_name == NULL)
 	{
 		USB_Error_Number = 1;
@@ -134,6 +135,9 @@ int PIROT_USB_Open(char *device_name,int baud_rate)
 			connection_count,USB_Data.Id);
 		return FALSE;
 	}
+	/* At this point the connection has opened OK, so we reset the error number
+	** so the error is not-reported continually */
+	USB_Error_Number = 0;
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_VERBOSE,"PIROT_USB_Open(%s,%d): Connection returned ID %d.",
 			 device_name,baud_rate,USB_Data.Id);
@@ -161,6 +165,7 @@ int PIROT_USB_Open(char *device_name,int baud_rate)
  */
 int PIROT_USB_Close(void)
 {
+	USB_Error_Number = 0;
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"PIROT_USB_Close: Started.");
 #endif /* LOGGING */

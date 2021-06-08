@@ -83,6 +83,7 @@ int PIROT_Command(char *command_string)
         int retval,pi_error_num;
 	char pi_error_string[STRING_LENGTH];
 
+	Command_Error_Number = 0;
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command: Started.");
 #endif /* LOGGING */
@@ -161,6 +162,7 @@ int PIROT_Command_CTO(enum PIROT_COMMAND_CTO_PARAMETER_ENUM trigger_parameter,do
         int retval,pi_error_num;
 	char pi_error_string[STRING_LENGTH];
 
+	Command_Error_Number = 0;
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_CTO(trigger_parameter=%d,value=%.2f): Started.",
 			 trigger_parameter,value);
@@ -233,6 +235,7 @@ int PIROT_Command_FRF(void)
         int retval,pi_error_num;
 	char pi_error_string[STRING_LENGTH];
 
+	Command_Error_Number = 0;
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_FRF(): Started.");
 #endif /* LOGGING */
@@ -293,6 +296,7 @@ int PIROT_Command_MOV(double position)
         int retval,pi_error_num;
 	char pi_error_string[STRING_LENGTH];
 
+	Command_Error_Number = 0;
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_MOV(position=%.2f): Started.",position);
 #endif /* LOGGING */
@@ -360,6 +364,7 @@ int PIROT_Command_SVO(int enable)
         int retval,pi_error_num;
 	char pi_error_string[STRING_LENGTH];
 
+	Command_Error_Number = 0;
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_SVO(enable=%d): Started.",enable);
 #endif /* LOGGING */
@@ -427,6 +432,7 @@ int PIROT_Command_TRO(int enable)
         int retval,pi_error_num;
 	char pi_error_string[STRING_LENGTH];
 
+	Command_Error_Number = 0;
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_TRO(enable=%d): Started.",enable);
 #endif /* LOGGING */
@@ -497,6 +503,7 @@ int PIROT_Command_VEL(double velocity)
         int retval,pi_error_num;
 	char pi_error_string[STRING_LENGTH];
 
+	Command_Error_Number = 0;
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_VEL(velocity=%.2f): Started.",velocity);
 #endif /* LOGGING */
@@ -567,6 +574,7 @@ int PIROT_Command_Query_ERR(int *error_number)
         int retval,pi_error_num;
 	char pi_error_string[STRING_LENGTH];
 
+	Command_Error_Number = 0;
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"PIROT_Command_Query_ERR: Started.");
 #endif /* LOGGING */
@@ -639,6 +647,7 @@ int PIROT_Command_Query_ONT(int *on_target)
         int retval,pi_error_num;
 	char pi_error_string[STRING_LENGTH];
 
+	Command_Error_Number = 0;
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"PIROT_Command_Query_ONT: Started.");
 #endif /* LOGGING */
@@ -709,6 +718,7 @@ int PIROT_Command_Query_POS(double *position)
         int retval,pi_error_num;
 	char pi_error_string[STRING_LENGTH];
 
+	Command_Error_Number = 0;
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"PIROT_Command_Query_POS: Started.");
 #endif /* LOGGING */
@@ -778,6 +788,7 @@ int PIROT_Command_Get_PI_Library_Error(int *pi_error_num,char *pi_error_string,i
 {
 	int retval; 
 
+	Command_Error_Number = 0;
 	if(pi_error_num == NULL)
 	{
 		Command_Error_Number = 6;
@@ -818,6 +829,7 @@ int PIROT_Command_STP(void)
         int retval,pi_error_num;
 	char pi_error_string[STRING_LENGTH];
 
+	Command_Error_Number = 0;
 #if LOGGING > 0
 	PIROT_Log_Format(LOG_VERBOSITY_TERSE,"PIROT_Command_STP: Started.");
 #endif /* LOGGING */

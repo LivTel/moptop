@@ -426,6 +426,7 @@ int PIROT_Setup_Is_Rotator_At_Start_Position(void)
 	double current_position;
 	int on_target;
 	
+	Setup_Error_Number = 0;
 	/* check we are on target i.e. not moving */
 	if(!PIROT_Command_Query_ONT(&on_target))
 	{
