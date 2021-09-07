@@ -76,9 +76,15 @@ public class ABORTImplementation extends CommandImplementation implements JMSCom
 	 * <ul>
 	 * <li>We call getCLayerConfig to get information about the C Layers we have to send the command to.
 	 * <li>For each C layer, we send an abort command using sendAbortCommand.
+	 * <li>We get the current command thread using status.getCurrentThread.
+	 * <li>If the current thread is non-null, we call setAbortProcessCommand to tell the thread it is 
+	 *     being aborted. When the command implemented in the running thread next calls 'testAbort' this will
+	 *     inform the command it has been aborted.
 	 * </ul>
 	 * @param command The abort command.
 	 * @return An object of class ABORT_DONE is returned.
+	 * @see MoptopStatus#getCurrentThread
+	 * @see MoptopTCPServerConnectionThread#setAbortProcessCommand
 	 * @see #sendAbortCommand
 	 * @see #cLayerCount
 	 * @see #cLayerHostnameList
@@ -87,8 +93,8 @@ public class ABORTImplementation extends CommandImplementation implements JMSCom
 	 */
 	public COMMAND_DONE processCommand(COMMAND command)
 	{
-		ngat.message.INST_DP.ABORT dprtAbort = new ngat.message.INST_DP.ABORT(command.getId());
 		ABORT_DONE abortDone = new ABORT_DONE(command.getId());
+		MoptopTCPServerConnectionThread thread = null;
 		String cLayerHostname = null;
 		int cLayerPortNumber;
 
@@ -113,6 +119,11 @@ public class ABORTImplementation extends CommandImplementation implements JMSCom
 			abortDone.setSuccessful(false);
 			return abortDone;
 		}
+	// tell the thread itself to abort at a suitable point
+		moptop.log(Logging.VERBOSITY_TERSE,this.getClass().getName()+":processCommand:Tell thread to abort.");
+		thread = (MoptopTCPServerConnectionThread)status.getCurrentThread();
+		if(thread != null)
+			thread.setAbortProcessCommand();
 	// return done object.
 		moptop.log(Logging.VERBOSITY_VERY_TERSE,"Command:"+command.getClass().getName()+
 			  ":Abort command completed.");
