@@ -1,6 +1,7 @@
 Source code for the Moptop polarimeter.
 
-- ccd Library to control the Andor CCDs, wraps the Andor SDK.
+- ccd-andor Library to control the Andor CCDs, wraps the Andor SDK.
+- ccd-pco Library to control the PCO CMOS detectors, wraps the PCO SDK.
 - filter_wheel Starlight Express filter wheel control library
 - java This contains the source code for the robotic layer, which receives commands from the LT
        robotic control system.
