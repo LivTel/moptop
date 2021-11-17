@@ -1,0 +1,18 @@
+# $Header$
+
+CCD_HOME	= ccd-pco
+CCD_SRC_HOME	= $(MOPTOP_SRC_HOME)/$(CCD_HOME)
+CCD_BIN_HOME	= $(MOPTOP_BIN_HOME)/$(CCD_HOME)
+CCD_DOC_HOME	= $(MOPTOP_DOC_HOME)/$(CCD_HOME)
+
+CCD_LIBNAME	= $(MOPTOP_HOME)_$(CCD_HOME)
+#
+# PCO SDK
+#
+PCO_CFLAGS	= -I$(LT_SRC_HOME)/moptop-nogit/pco/pco_camera_1_1_19/pco_usb_pl/pco_classes \
+		  -I$(LT_SRC_HOME)/moptop-nogit/pco/pco_camera_1_1_19/pco_common/pco_classes/ \
+		  -I$(LT_SRC_HOME)/moptop-nogit/pco/pco_camera_1_1_19/pco_common/ \
+		  -I$(LT_SRC_HOME)/moptop-nogit/pco/pco_camera_1_1_19/pco_common/pco_include/
+
+PCO_LIBDIR	= $(LT_SRC_HOME)/moptop-nogit/pco/pco_camera_1_1_19/pco_usb_pl/lib/
+PCO_LDFLAGS	= -L$(PCO_LIBDIR) -lpcocam_usb -lusb-1.0 -pthread
