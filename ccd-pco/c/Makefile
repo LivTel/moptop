@@ -19,20 +19,21 @@ CFLAGS 		= -g -I$(INCDIR) $(PCO_CFLAGS) $(FITSCFLAGS) $(LOGGING_CFLAGS) $(MUTEX_
 LDFLAGS		= $(PCO_LDFLAGS) $(CFITSIOLIB)
 DOCFLAGS 	= -static
 
-SRCS 		= ccd_general.c ccd_command.c ccd_setup.c ccd_temperature.c ccd_buffer.c ccd_exposure.c \
-		ccd_fits_filename.c ccd_fits_header.c
-HEADERS		= $(SRCS:%.c=$(INCDIR)/%.h)
-OBJS 		= $(SRCS:%.c=$(BINDIR)/%.o)
-DOCS 		= $(SRCS:%.c=$(DOCSDIR)/%.html)
+SRCS 		= ccd_general.cpp ccd_fits_filename.cpp ccd_fits_header.cpp ccd_command.cpp ccd_setup.cpp \
+		ccd_temperature.cpp ccd_buffer.cpp ccd_exposure.cpp
+
+HEADERS		= $(SRCS:%.cpp=$(INCDIR)/%.h)
+OBJS 		= $(SRCS:%.cpp=$(BINDIR)/%.o)
+DOCS 		= $(SRCS:%.cpp=$(DOCSDIR)/%.html)
 
 top: shared docs
 
 shared: $(LT_LIB_HOME)/lib$(CCD_LIBNAME).so
 $(LT_LIB_HOME)/lib$(CCD_LIBNAME).so: $(OBJS)
-	$(CC) $(CCSHAREDFLAG) $(LDFLAGS) $(OBJS) -o $@
+	g++ $(CCSHAREDFLAG) $(LDFLAGS) $(OBJS) -o $@
 
-$(BINDIR)/%.o: %.c
-	$(CC) -c $(CFLAGS) $< -o $@  
+$(BINDIR)/%.o: %.cpp
+	g++ -c $(CFLAGS) $< -o $@  
 
 docs: $(DOCS)
 

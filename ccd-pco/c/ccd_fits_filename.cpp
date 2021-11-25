@@ -15,9 +15,9 @@
  */
 #define _POSIX_C_SOURCE 199309L
 /**
- * Define this to enable scandir and alphasort in 'dirent.h', which are BSD 4.3 prototypes.
+ * Define this to enable scandir and alphasort in 'dirent.h', which are BSD 4.3 prototypes. (was _BSD_SOURCE).
  */
-#define _BSD_SOURCE 1
+#define _DEFAULT_SOURCE 1
 
 #include <errno.h>
 #include <stdio.h>
@@ -111,7 +111,7 @@ static int fexist(char *filename);
  * @see ccd_general.html#CCD_GENERAL_ERROR_STRING_LENGTH
  * @see ccd_general.html#CCD_General_Log
  */
-int CCD_Fits_Filename_Initialise(char instrument_code,char *data_dir)
+int CCD_Fits_Filename_Initialise(char instrument_code,const char *data_dir)
 {
 	struct dirent **name_list = NULL;
 	int name_list_count,i,retval,date_number,multrun_number,fully_parsed;
@@ -345,7 +345,7 @@ int CCD_Fits_Filename_Get_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure
 				   enum CCD_FITS_FILENAME_PIPELINE_FLAG pipeline_flag,
 				   char *filename,int filename_length)
 {
-	char tmp_buff[256];
+	char tmp_buff[1100];
 	char exposure_type_string[7] = {'a','b','d','e','f','s','w'};
 
 	if(filename == NULL)
@@ -368,8 +368,8 @@ int CCD_Fits_Filename_Get_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure
 			pipeline_flag);
 		return FALSE;
 	}
-	/* check data dir is not too long : 256 is length of tmp_buff, 37 is approx length of filename itself */
-	if(strlen(Fits_Filename_Data.Data_Dir) > (256-37))
+	/* check data dir is not too long : 1100 is length of tmp_buff, 37 is approx length of filename itself */
+	if(strlen(Fits_Filename_Data.Data_Dir) > (1100-37))
 	{
 		Fits_Filename_Error_Number = 8;
 		sprintf(Fits_Filename_Error_String,"CCD_Fits_Filename_Get_Filename:Data Dir too long (%lu).",

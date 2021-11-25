@@ -9,6 +9,11 @@
  */
 #define CCD_SETUP_BINNING_IS_VALID(b) ((b==1)||(b==2))
 
+/*  the following 3 lines are needed to support C++ compilers */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern int CCD_Setup_Startup(void);
 extern int CCD_Setup_Shutdown(void);
 extern int CCD_Setup_Dimensions(int bin);
@@ -26,5 +31,9 @@ extern int CCD_Setup_Get_Image_Size_Bytes(void);
 extern int CCD_Setup_Get_Error_Number(void);
 extern void CCD_Setup_Error(void);
 extern void CCD_Setup_Error_String(char *error_string);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

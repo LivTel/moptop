@@ -56,6 +56,11 @@
 #define fdifftime(t1, t0) (((double)(((t1).tv_sec)-((t0).tv_sec))+(double)(((t1).tv_nsec)-((t0).tv_nsec))/CCD_GENERAL_ONE_SECOND_NS))
 #endif
 
+/*  the following 3 lines are needed to support C++ compilers */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* external functions */
 extern int CCD_General_Is_Error(void);
 extern void CCD_General_Error(void);
@@ -63,13 +68,17 @@ extern void CCD_General_Error_To_String(char *error_string);
 extern int CCD_General_Get_Error_Number(void);
 extern void CCD_General_Get_Current_Time_String(char *time_string,int string_length);
 
-extern void CCD_General_Log_Format(int level,char *format,...);
-extern void CCD_General_Log(int level,char *string);
-extern void CCD_General_Set_Log_Handler_Function(void (*log_fn)(int level,char *string));
-extern void CCD_General_Set_Log_Filter_Function(int (*filter_fn)(int level,char *string));
-extern void CCD_General_Log_Handler_Stdout(int level,char *string);
+extern void CCD_General_Log_Format(int level,const char *format,...);
+extern void CCD_General_Log(int level,const char *string);
+extern void CCD_General_Set_Log_Handler_Function(void (*log_fn)(int level,const char *string));
+extern void CCD_General_Set_Log_Filter_Function(int (*filter_fn)(int level,const char *string));
+extern void CCD_General_Log_Handler_Stdout(int level,const char *string);
 extern void CCD_General_Set_Log_Filter_Level(int level);
-extern int CCD_General_Log_Filter_Level_Absolute(int level,char *string);
-extern int CCD_General_Log_Filter_Level_Bitwise(int level,char *string);
+extern int CCD_General_Log_Filter_Level_Absolute(int level,const char *string);
+extern int CCD_General_Log_Filter_Level_Bitwise(int level,const char *string);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

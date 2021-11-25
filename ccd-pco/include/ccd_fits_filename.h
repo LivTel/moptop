@@ -66,7 +66,12 @@ enum CCD_FITS_FILENAME_PIPELINE_FLAG
  */
 #define CCD_FITS_FILENAME_DEFAULT_INSTRUMENT_CODE1 ('2')
 
-extern int CCD_Fits_Filename_Initialise(char instrument_code,char *data_dir);
+/*  the following 3 lines are needed to support C++ compilers */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern int CCD_Fits_Filename_Initialise(char instrument_code,const char *data_dir);
 extern int CCD_Fits_Filename_Next_Multrun(void);
 extern int CCD_Fits_Filename_Next_Run(void);
 extern int CCD_Fits_Filename_Next_Window(void);
@@ -83,5 +88,9 @@ extern int CCD_Fits_Filename_UnLock(char *filename);
 extern int CCD_Fits_Filename_Get_Error_Number(void);
 extern void CCD_Fits_Filename_Error(void);
 extern void CCD_Fits_Filename_Error_String(char *error_string);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

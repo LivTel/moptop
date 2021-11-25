@@ -37,8 +37,9 @@
 
 /* data types */
 /**
- * Data type holding local data to ccd_command. This consists of the following:
+ * Data type holding local data to ccd_setup. This consists of the following:
  * <dl>
+ * <dt>Camera_Board</dt> <dd>The board parameter passed to Open_Cam, to determine which camera to connect to.</dd>
  * <dt>Binning</dt> <dd>The readout binning, stored as an integer. Can be one of 1,2,3,4,8. </dd>
  * <dt>Serial_Number</dt> <dd>A character string containing the serial number retrieved from the camera head, 
  *                            of length SETUP_ENUM_VALUE_STRING_LENGTH. 
@@ -67,6 +68,7 @@
  */
 struct Setup_Struct
 {
+	int Camera_Board;
 	int Binning;
 	char Serial_Number[SETUP_ENUM_VALUE_STRING_LENGTH];
 	char Firmware_Version[SETUP_ENUM_VALUE_STRING_LENGTH];
@@ -88,6 +90,7 @@ static char rcsid[] = "$Id$";
 /**
  * The instance of Setup_Struct that contains local data for this module. This is initialised as follows:
  * <dl>
+ * <dt>Camera_Board</dt> <dd>0</dd>
  * <dt>Binning</dt> <dd>1</dd>
  * <dt>Serial_Number</dt> <dd>""</dd>
  * <dt>Firmware_Version</dt> <dd>""</dd>
@@ -103,7 +106,7 @@ static char rcsid[] = "$Id$";
  */
 static struct Setup_Struct Setup_Data = 
 {
-	1,"","",-1,-1,0.0,0.0,0,0,0L,0
+	0,1,"","",-1,-1,0.0,0.0,0,0,0L,0
 };
 
 /**
@@ -126,6 +129,8 @@ static char Setup_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * <ul>
  * <li>We initialise the libraries used using CCD_Command_Initialise.
  * <li>We open a connection to the CCD camera using CCD_Command_Open.
+ * <li>We set the PCO camera to use the current time by calling CCD_Command_Set_Camera_To_Current_Time.
+ * <li>diddly
  * <li>We turn on sensor cooling using CCD_Command_Set_Sensor_Cooling.
  * <li>We retrieve and store the camera's serial number using CCD_Command_Get_Serial_Number to store the returned string
  *     in Setup_Data.Serial_Number.
@@ -152,6 +157,7 @@ static char Setup_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * @see #Setup_Data
  * @see ccd_command.html#CCD_Command_Initialise
  * @see ccd_command.html#CCD_Command_Open
+ * @see ccd_command.html#CCD_Command_Set_Camera_To_Current_Time
  * @see ccd_command.html#CCD_Command_Set_Sensor_Cooling
  * @see ccd_command.html#CCD_Command_Get_Serial_Number
  * @see ccd_command.html#CCD_Command_Get_Firmware_Version
@@ -180,13 +186,21 @@ int CCD_Setup_Startup(void)
 		return FALSE;
 	}
 	/* open a connection to the CCD camera */
-	if(!CCD_Command_Open())
+	if(!CCD_Command_Open(Setup_Data.Camera_Board))
 	{
 		Setup_Error_Number = 3;
-		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Open failed.");
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Open(%d) failed.",Setup_Data.Camera_Board);
 		return FALSE;
 	}
 	/* initial configuration of the camera */
+	/* set camera to use current time */
+	if(!CCD_Command_Set_Camera_To_Current_Time())
+	{
+		Setup_Error_Number = 4;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_Camera_To_Current_Time failed.");
+		return FALSE;
+	}
+	
 	/* turn cooling on */
 	/*
 	if(!CCD_Command_Set_Sensor_Cooling(TRUE))

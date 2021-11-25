@@ -81,6 +81,9 @@ static char Temperature_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  */
 int CCD_Temperature_Get(double *sensor_temperature)
 {
+	int valid_sensor_temp,valid_psu_temp,camera_temp,psu_temp;
+	double sensor_temp;
+	
 	Temperature_Error_Number = 0;
 	if(sensor_temperature == NULL)
 	{
@@ -88,14 +91,22 @@ int CCD_Temperature_Get(double *sensor_temperature)
 		sprintf(Temperature_Error_String,"CCD_Temperature_Get: sensor_temperature was NULL.");
 		return FALSE;
 	}
-	if(!CCD_Command_Get_Sensor_Temperature(sensor_temperature))
+	if(!CCD_Command_Get_Temperature(&valid_sensor_temp,&sensor_temp,&camera_temp,&valid_psu_temp,&psu_temp))
 	{
 		Temperature_Error_Number = 2;
-		sprintf(Temperature_Error_String,"CCD_Temperature_Get: CCD_Command_Get_Sensor_Temperature failed.");
+		sprintf(Temperature_Error_String,"CCD_Temperature_Get: CCD_Command_Get_Temperature failed.");
 		return FALSE;
 	}
+	if(valid_sensor_temp == FALSE)
+	{
+		Temperature_Error_Number = 4;
+		sprintf(Temperature_Error_String,
+			"CCD_Temperature_Get: CCD_Command_Get_Temperature did not return a valid sensor temperature.");
+		return FALSE;
+	}
+	(*sensor_temperature) = sensor_temp;
 	/* update cached copy */
-	Temperature_Data.Cached_Temperature = (*sensor_temperature);
+	Temperature_Data.Cached_Temperature = sensor_temp;
 	clock_gettime(CLOCK_REALTIME,&(Temperature_Data.Cached_Temperature_Date_Stamp));
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Temperature_Get: Temperature = %.3f C.",(*sensor_temperature));
@@ -127,7 +138,11 @@ int CCD_Temperature_Get_Temperature_Status_String(char *status_string,int string
 			"CCD_Temperature_Get_Temperature_Status_String: status_string was NULL.");
 		return FALSE;
 	}
-	
+	/* diddly check string_length */
+	strcpy(status_string,"UNKNOWN");
+	/* update cached copy */
+	strcpy(Temperature_Data.Cached_Temperature_Status_String,"UNKNOWN");
+	clock_gettime(CLOCK_REALTIME,&(Temperature_Data.Cached_Temperature_Status_String_Date_Stamp));
 	return TRUE;
 }
 

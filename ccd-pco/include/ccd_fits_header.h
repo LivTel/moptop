@@ -6,6 +6,11 @@
 /* for fitsfile declaration */
 #include "fitsio.h"
 
+/*  the following 3 lines are needed to support C++ compilers */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern int CCD_Fits_Header_Initialise(void);
 extern int CCD_Fits_Header_Clear(void);
 extern int CCD_Fits_Header_Delete(char *keyword);
@@ -21,4 +26,9 @@ extern int CCD_Fits_Header_Write_To_Fits(fitsfile *fits_fp);
 extern int CCD_Fits_Header_Get_Error_Number(void);
 extern void CCD_Fits_Header_Error(void);
 extern void CCD_Fits_Header_Error_String(char *error_string);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif
