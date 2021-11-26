@@ -153,7 +153,7 @@ int CCD_Buffer_Initialise(void)
 #endif /* LOGGING */
 	for(i=0; i < BUFFER_COUNT; i++)
 	{
-		Buffer_Data.Image_Buffer_List[i] = malloc(Buffer_Data.Image_Size_Bytes* sizeof(int));
+		Buffer_Data.Image_Buffer_List[i] = (int *)malloc(Buffer_Data.Image_Size_Bytes* sizeof(int));
 		/*Buffer_Data.Image_Buffer_List[i] = aligned_alloc(16,Buffer_Data.Image_Size_Bytes);*/
 		/* or
 		** unaligned_buffer = malloc(Buffer_Data.Image_Size_Bytes+8);

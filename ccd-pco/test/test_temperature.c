@@ -16,14 +16,22 @@
 #include "ccd_setup.h"
 #include "ccd_temperature.h"
 
+/* hash defines */
 /**
  * Length of some of the strings used in this program.
  */
 #define STRING_LENGTH        (256)
+
+/* variables */
 /**
  * Verbosity log level : initialised to LOG_VERBOSITY_VERY_VERBOSE.
  */
 static int Log_Level = LOG_VERBOSITY_VERY_VERBOSE;
+
+/* functions */
+static int Parse_Arguments(int argc, char *argv[]);
+static void Help(void);
+
 /* ------------------------------------------------------------------
 **          External functions 
 ** ------------------------------------------------------------------ */
@@ -65,7 +73,7 @@ int main(int argc, char *argv[])
 	int index;
 
 	/* parse arguments */
-	fprintf(stdout,"test_temperature_control : Parsing Arguments.\n");
+	fprintf(stdout,"test_temperature : Parsing Arguments.\n");
 	if(!Parse_Arguments(argc,argv))
 		return 1;
 	CCD_General_Set_Log_Filter_Level(Log_Level);
@@ -158,6 +166,6 @@ static void Help(void)
 {
 	fprintf(stdout,"Test Temperature Control:Help.\n");
 	fprintf(stdout,"This program tests status retrieval of the sensor temperature.\n");
-	fprintf(stdout,"test_temperature_control [-help][-l[og_level <0..5>].\n");
+	fprintf(stdout,"test_temperature [-help][-l[og_level <0..5>].\n");
 }
 
