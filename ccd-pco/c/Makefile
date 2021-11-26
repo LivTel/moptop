@@ -26,7 +26,8 @@ HEADERS		= $(SRCS:%.cpp=$(INCDIR)/%.h)
 OBJS 		= $(SRCS:%.cpp=$(BINDIR)/%.o)
 DOCS 		= $(SRCS:%.cpp=$(DOCSDIR)/%.html)
 
-top: shared docs
+top: shared
+#docs
 
 shared: $(LT_LIB_HOME)/lib$(CCD_LIBNAME).so
 $(LT_LIB_HOME)/lib$(CCD_LIBNAME).so: $(OBJS)

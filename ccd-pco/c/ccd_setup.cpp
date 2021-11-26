@@ -130,6 +130,11 @@ static char Setup_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * <li>We initialise the libraries used using CCD_Command_Initialise.
  * <li>We open a connection to the CCD camera using CCD_Command_Open.
  * <li>We set the PCO camera to use the current time by calling CCD_Command_Set_Camera_To_Current_Time.
+ * <li>We stop any ongoing image acquisitions by calling CCD_Command_Set_Recording_State(FALSE).
+ * <li>We reset the camera to a known state by calling CCD_Command_Reset_Settings.
+ * <li>We set the camera timestamps to be binary and ASCII using CCD_Command_Set_Timestamp_Mode(2).
+ * <li>We set the camera exposure and delay timebase to milliseconds using CCD_Command_Set_Timebase(2,2).
+ * <li>We set an initial delay and exposure time by calling CCD_Command_Set_Delay_Exposure_Time(0,50);
  * <li>diddly
  * <li>We turn on sensor cooling using CCD_Command_Set_Sensor_Cooling.
  * <li>We retrieve and store the camera's serial number using CCD_Command_Get_Serial_Number to store the returned string
@@ -158,21 +163,16 @@ static char Setup_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * @see ccd_command.html#CCD_Command_Initialise
  * @see ccd_command.html#CCD_Command_Open
  * @see ccd_command.html#CCD_Command_Set_Camera_To_Current_Time
- * @see ccd_command.html#CCD_Command_Set_Sensor_Cooling
- * @see ccd_command.html#CCD_Command_Get_Serial_Number
- * @see ccd_command.html#CCD_Command_Get_Firmware_Version
- * @see ccd_command.html#CCD_Command_Get_Bytes_Per_Pixel
- * @see ccd_command.html#CCD_Command_Get_Pixel_Width
- * @see ccd_command.html#CCD_Command_Get_Pixel_Height
- * @see ccd_command.html#CCD_Command_Get_Sensor_Width
- * @see ccd_command.html#CCD_Command_Get_Sensor_Height
- * @see ccd_command.html#CCD_Command_Get_Timestamp_Clock_Frequency
- * @see ccd_command.html#CCD_Command_Get_Image_Size_Bytes
+ * @see ccd_command.html#CCD_Command_Set_Recording_State
+ * @see ccd_command.html#CCD_Command_Reset_Settings
+ * @see ccd_command.html#CCD_Command_Set_Timestamp_Mode
+ * @see ccd_command.html#CCD_Command_Set_Timebase
  * @see ccd_general.html#CCD_General_Log_Format
+ * @see ccd_general.html#CCD_General_Log
  */
 int CCD_Setup_Startup(void)
 {
-	double dvalue;
+	int adc_count;
 
 	Setup_Error_Number = 0;
 #if LOGGING > 0
@@ -200,12 +200,84 @@ int CCD_Setup_Startup(void)
 		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_Camera_To_Current_Time failed.");
 		return FALSE;
 	}
-	
+	/* stop any ongoing exposures */
+	if(!CCD_Command_Set_Recording_State(FALSE))
+	{
+		Setup_Error_Number = 5;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_Recording_State(FALSE) failed.");
+		return FALSE;
+	}
+	/* reset camera to a known state */
+	if(!CCD_Command_Reset_Settings())
+	{
+		Setup_Error_Number = 6;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Reset_Settings failed.");
+		return FALSE;
+	}
+	/* set timestamps to be binary and ASCII */
+	if(!CCD_Command_Set_Timestamp_Mode(2))
+	{
+		Setup_Error_Number = 7;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_Timestamp_Mode(2) failed.");
+		return FALSE;
+	}
+	/* set exposure and delay timebase to milliseconds */
+	if(!CCD_Command_Set_Timebase(2,2))
+	{
+		Setup_Error_Number = 8;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_Timebase(2,2) failed.");
+		return FALSE;
+	}
+	/* set an initial delay and exposure time */
+	if(!CCD_Command_Set_Delay_Exposure_Time(0,50))
+	{
+		Setup_Error_Number = 9;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_Delay_Exposure_Time(0,50) failed.");
+		return FALSE;
+	}
+	/* get the number of adc's supported by the camera */
+	if(!CCD_Command_Description_Get_Num_ADCs(&adc_count))
+	{
+		Setup_Error_Number = 10;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Description_Get_Num_ADCs failed.");
+		return FALSE;
+	}
+	if(adc_count > 1)
+	{
+		if(!CCD_Command_Set_ADC_Operation(2))
+		{
+			Setup_Error_Number = 11;
+			sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_ADC_Operation(2) failed.");
+			return FALSE;
+		}
+	}
+	if(!CCD_Command_Set_Bit_Alignment(0x0001)) /* 0x001 = LSB */
+	{
+		Setup_Error_Number = 12;
+		sprintf(Setup_Error_String,
+			"CCD_Setup_Startup: CCD_Command_Set_Bit_Alignment(BIT_ALIGNMENT_LSB) failed.");
+		return FALSE;
+	}
+	if(!CCD_Command_Set_Noise_Filter_Mode(0x0000)) /* 0x0000 = off */
+	{
+		Setup_Error_Number = 13;
+		sprintf(Setup_Error_String,
+			"CCD_Setup_Startup: CCD_Command_Set_Noise_Filter_Mode(0x000) failed.");
+		return FALSE;
+	}
+	/* prepare camera for taking data */
+	if(!CCD_Command_Arm_Camera())
+	{
+		Setup_Error_Number = 14;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Arm_Camera failed.");
+		return FALSE;
+	}
+		
 	/* turn cooling on */
 	/*
 	if(!CCD_Command_Set_Sensor_Cooling(TRUE))
 	{
-		Setup_Error_Number = 5;
+		Setup_Error_Number = ;
 		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_Sensor_Cooling(TRUE) failed.");
 		return FALSE;
 	}

@@ -37,6 +37,7 @@
  * <dt>PCO_Logger</dt> <dd>The instance of CPco_Log used to receive logging from the PCO library.</dd>
  * <dt>Camera_Board</dt> <dd>The board number passed to Open_Cam.</dd>
  * <dt>Grabber_Timeout</dt> <dd>The timeout for grabbing images, in milliseconds.</dd>
+ * <dt>Description</dt> <dd>The camera description returned from PCO_GetCameraDescriptor.</dd>
  * </dl>
  * @see #SETUP_ENUM_VALUE_STRING_LENGTH
  */
@@ -47,6 +48,7 @@ struct Command_Struct
 	CPco_Log* PCO_Logger;
 	int Camera_Board;
 	int Grabber_Timeout;
+	SC2_Camera_Description_Response Description;
 };
 
 /* internal variables */
@@ -62,12 +64,13 @@ static char rcsid[] = "$Id$";
  * <dt>PCO_Logger</dt> <dd>NULL</dd>
  * <dt>Camera_Board</dt> <dd>0</dd>
  * <dt>Grabber_Timeout</dt> <dd>10000</dd>
+ * <dt>Description</dt> <dd>{}</dd>
  * </dl>
  * @see #Command_Struct
  */
 static struct Command_Struct Command_Data = 
 {
-	NULL,NULL,NULL,0,10000
+	NULL,NULL,NULL,0,10000,{}
 };
 
 /**
@@ -159,6 +162,15 @@ int CCD_Command_Finalise(void)
 
 /**
  * Open a connection to the PCO camera and get a camera handle.
+ * <ul>
+ * <li>We check the Camera CPco_com_usb instance has been created.
+ * <li>We set Command_Data.Camera_Board to the board parameter.
+ * <li>We call the Camera's Open_Cam method with the board parameter to open a connection to the board.
+ * <li>We construct an instance of CPco_grab_usb attached to the opened camera and assign it to Command_Data.Grabber.
+ * <li>We set the Grabber's log instance to Command_Data.PCO_Logger.
+ * <li>We set the Grabber's timeout to Command_Data.Grabber_Timeout.
+ * <li>We get the camera's description by calling PCO_GetCameraDescriptor and store it in Command_Data.Description.
+ * </ul>
  * @param board Which camera to connect to.
  * @return The routine returns TRUE on success and FALSE if it fails.
  * @see #Command_Data
@@ -191,8 +203,9 @@ int CCD_Command_Open(int board)
 	if(pco_err != PCO_NOERROR)
 	{
 		Command_Error_Number = 4;
-		sprintf(Command_Error_String,"CCD_Command_Open:Camera Open_Cam(board=%d) failed.",
-			Command_Data.Camera_Board);
+		sprintf(Command_Error_String,
+			"CCD_Command_Open:Camera Open_Cam(board=%d) failed with PCO error code 0x%x.",
+			Command_Data.Camera_Board,pco_err);
 		return FALSE;
 	}
 	/* create grabber for opened camera */
@@ -211,6 +224,17 @@ int CCD_Command_Open(int board)
 #endif /* LOGGING */
 	Command_Data.Grabber->SetLog(Command_Data.PCO_Logger);
 	Command_Data.Grabber->Set_Grabber_Timeout(Command_Data.Grabber_Timeout);
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Open: Getting camera description.");
+#endif /* LOGGING */
+	pco_err = Command_Data.Camera->PCO_GetCameraDescriptor(&(Command_Data.Description));
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 25;
+		sprintf(Command_Error_String,
+			"CCD_Command_Open:Camera PCO_GetCameraDescriptor failed with PCO error code 0x%x.",pco_err);
+		return FALSE;
+	}
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Open: Finished.");
 #endif /* LOGGING */
@@ -244,7 +268,44 @@ int CCD_Command_Close(void)
 }
 
 /**
+ * Prepare the camera to start taking data. All previous ettings are validated and the internal settings of the camera
+ * updated.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Arm_Camera(void)
+{
+	DWORD pco_err;
+
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Arm_Camera: Started.");
+#endif /* LOGGING */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 35;
+		sprintf(Command_Error_String,"CCD_Command_Arm_Camera:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Camera->PCO_ArmCamera();
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 36;
+		sprintf(Command_Error_String,"CCD_Command_Arm_Camera:"
+			"Camera PCO_ArmCamera failed with PCO error code 0x%x.",pco_err);
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Arm_Camera: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
  * Set the camera's time to the current time.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
@@ -252,6 +313,8 @@ int CCD_Command_Close(void)
  */
 int CCD_Command_Set_Camera_To_Current_Time(void)
 {
+	DWORD pco_err;
+
 #if LOGGING > 9
 	CCD_General_Log(LOG_VERBOSITY_VERY_VERBOSE,"CCD_Command_Set_Camera_To_Current_Time: Started.");
 #endif /* LOGGING */
@@ -262,9 +325,366 @@ int CCD_Command_Set_Camera_To_Current_Time(void)
 			"CCD_Command_Set_Camera_To_Current_Time:Camera CPco_com_usb instance not created.");
 		return FALSE;
 	}
-	Command_Data.Camera->PCO_SetCameraToCurrentTime();
-#if LOGGING > 9
+	pco_err = Command_Data.Camera->PCO_SetCameraToCurrentTime();
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 13;
+		sprintf(Command_Error_String,"CCD_Command_Set_Camera_To_Current_Time:"
+			"Camera PCO_SetCameraToCurrentTime failed with PCO error code 0x%x.",pco_err);
+		return FALSE;
+	}
+#if LOGGING > 5
 	CCD_General_Log(LOG_VERBOSITY_VERY_VERBOSE,"CCD_Command_Set_Camera_To_Current_Time: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Set the camera's recording state to either TRUE (1) or FALSE (0). This allows the camera to start
+ * collecting data (exposures).
+ * @param rec_state An integer/boolean, set to TRUE (1) to start recording data and FALSE (0) to stop recording data.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Set_Recording_State(int rec_state)
+{
+	DWORD pco_err;
+
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Set_Recording_State(%d): Started.",rec_state);
+#endif /* LOGGING */
+	if(!CCD_GENERAL_IS_BOOLEAN(rec_state))
+	{
+		Command_Error_Number = 10;
+		sprintf(Command_Error_String,
+			"CCD_Command_Set_Recording_State:Illegal value for rec_state parameter (%d).",rec_state);
+		return FALSE;
+	}
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 11;
+		sprintf(Command_Error_String,
+			"CCD_Command_Set_Recording_State:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Camera->PCO_SetRecordingState(rec_state);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 12;
+		sprintf(Command_Error_String,"CCD_Command_Set_Recording_State:"
+			"Camera PCO_SetRecordingState(%d) failed with PCO error code 0x%x.",
+			rec_state,pco_err);
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERY_VERBOSE,"CCD_Command_Set_Camera_To_Current_Time: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Reset the cameras settings to a known (default) state.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see ccd_general.html#CCD_General_Log
+ */
+int CCD_Command_Reset_Settings(void)
+{
+	DWORD pco_err;
+
+#if LOGGING > 9
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Reset_Settings: Started.");
+#endif /* LOGGING */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 14;
+		sprintf(Command_Error_String,"CCD_Command_Reset_Settings:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Camera->PCO_ResetSettingsToDefault();
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 15;
+		sprintf(Command_Error_String,"CCD_Command_Reset_Settings:"
+			"Camera PCO_ResetSettingsToDefault failed with PCO error code 0x%x.",pco_err);
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Reset_Settings: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Set how the camera records timestamps. 
+ * @param mode An integer: 0x0 (off), 0x1 (binary), 0x2 (binary+ASCII), 0x3 (ASCII).
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Set_Timestamp_Mode(int mode)
+{
+	DWORD pco_err;
+
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Timestamp_Mode(%d): Started.",mode);
+#endif /* LOGGING */
+	if((mode < 0)||(mode > 3))
+	{
+		Command_Error_Number = 16;
+		sprintf(Command_Error_String,
+			"CCD_Command_Set_Timestamp_Mode:Illegal value for mode parameter (%d).",mode);
+		return FALSE;
+	}
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 17;
+		sprintf(Command_Error_String,
+			"CCD_Command_Set_Timestamp_Mode:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Camera->PCO_SetTimestampMode(mode);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 18;
+		sprintf(Command_Error_String,"CCD_Command_Set_Timestamp_Mode:"
+			"Camera PCO_SetTimestampMode(%d) failed with PCO error code 0x%x.",
+			mode,pco_err);
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Timestamp_Mode: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Set the units used for delays and exposures.
+ * @param delay_timebase An integer, used to set the units used for delays: 0x0 (ns), 0x1 (us), 0x2 (ms).
+ * @param exposure_timebase An integer, used to set the units used for exposures: 0x0 (ns), 0x1 (us), 0x2 (ms).
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Set_Timebase(int delay_timebase,int exposure_timebase)
+{
+	WORD exp_timebase,del_timebase;
+	DWORD pco_err;
+
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Timebase(delay=%d,exposure=%d): Started.",
+			       delay_timebase,exposure_timebase);
+#endif /* LOGGING */
+	if((delay_timebase < 0)||(delay_timebase > 2))
+	{
+		Command_Error_Number = 19;
+		sprintf(Command_Error_String,
+			"CCD_Command_Set_Timebase:Illegal value for delay_timebase parameter (%d).",delay_timebase);
+		return FALSE;
+	}
+	if((exposure_timebase < 0)||(exposure_timebase > 2))
+	{
+		Command_Error_Number = 20;
+		sprintf(Command_Error_String,
+			"CCD_Command_Set_Timebase:Illegal value for exposure_timebase parameter (%d).",
+			exposure_timebase);
+		return FALSE;
+	}
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 21;
+		sprintf(Command_Error_String,
+			"CCD_Command_Set_Timebase:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	del_timebase = delay_timebase;
+	exp_timebase = exposure_timebase;
+	pco_err = Command_Data.Camera->PCO_SetTimebase(del_timebase,exp_timebase);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 22;
+		sprintf(Command_Error_String,"CCD_Command_Set_Timebase:"
+			"Camera PCO_SetTimebase(%d,%d) failed with PCO error code 0x%x.",
+			del_timebase,exp_timebase,pco_err);
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Timebase: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Set the delay and exposure time.
+ * @param delay_time An integer, used to set the delay, in units previously specified by CCD_Command_Set_Timebase.
+ * @param exposure_time An integer, used to set the exposure length, 
+ *        in units previously specified by CCD_Command_Set_Timebase.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see #CCD_Command_Set_Timebase
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Set_Delay_Exposure_Time(int delay_time,int exposure_time)
+{
+	DWORD exp_time_dw,delay_time_dw;
+	DWORD pco_err;
+
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+			       "CCD_Command_Set_Delay_Exposure_Time(delay=%d,exposure=%d): Started.",
+			       delay_time,exposure_time);
+#endif /* LOGGING */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 23;
+		sprintf(Command_Error_String,
+			"CCD_Command_Set_Delay_Exposure_Time:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	delay_time_dw = delay_time;
+	exp_time_dw = exposure_time;
+	pco_err = Command_Data.Camera->PCO_SetDelayExposure(delay_time_dw,exp_time_dw);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 24;
+		sprintf(Command_Error_String,"CCD_Command_Set_Delay_Exposure_Time:"
+			"Camera PCO_SetDelayExposure(%d,%d) failed with PCO error code 0x%x.",
+			delay_time_dw,exp_time_dw,pco_err);
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Set_Delay_Exposure_Time: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Set the number of analogue to digital converters used.
+ * @param num_adcs An integer: either 0x1 or 0x2, the number of ADCs to use. 2 is faster, 1 is more linear.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Set_ADC_Operation(int num_adcs)
+{
+	DWORD pco_err;
+
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_ADC_Operation(%d): Started.",num_adcs);
+#endif /* LOGGING */
+	if((num_adcs < 1)||(num_adcs > 2))
+	{
+		Command_Error_Number = 26;
+		sprintf(Command_Error_String,
+			"CCD_Command_Set_ADC_Operation:Illegal value for num_adcs parameter (%d).",num_adcs);
+		return FALSE;
+	}
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 27;
+		sprintf(Command_Error_String,
+			"CCD_Command_Set_ADC_Operation:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Camera->PCO_SetADCOperation(num_adcs);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 28;
+		sprintf(Command_Error_String,"CCD_Command_Set_ADC_Operation:"
+			"Camera PCO_SetADCOperation(%d) failed with PCO error code 0x%x.",
+			num_adcs,pco_err);
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_ADC_Operation: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Set the bit alignment used for the output image data.
+ * @param bit_alignment An integer: 0x0 (MSB) or 0x1 (LSB).
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Set_Bit_Alignment(int bit_alignment)
+{
+	DWORD pco_err;
+
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Bit_Alignment(%d): Started.",bit_alignment);
+#endif /* LOGGING */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 31;
+		sprintf(Command_Error_String,
+			"CCD_Command_Set_Bit_Alignment:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Camera->PCO_SetBitAlignment(bit_alignment);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 32;
+		sprintf(Command_Error_String,"CCD_Command_Set_Bit_Alignment:"
+			"Camera PCO_SetBitAlignment(%d) failed with PCO error code 0x%x.",
+			bit_alignment,pco_err);
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Bit_Alignment: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Set what image corrects the camera performs.
+ * @param mode An integer: 0x0000 (off), 0x0001 (noise filter on), 0x0101 (noise filter on + hot pixel correction).
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Set_Noise_Filter_Mode(int mode)
+{
+	DWORD pco_err;
+
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Noise_Filter_Mode(%d): Started.",mode);
+#endif /* LOGGING */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 33;
+		sprintf(Command_Error_String,
+			"CCD_Command_Set_Noise_Filter_Mode:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Camera->PCO_SetNoiseFilterMode(mode);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 34;
+		sprintf(Command_Error_String,"CCD_Command_Set_Noise_Filter_Mode:"
+			"Camera PCO_SetNoiseFilterMode(%d) failed with PCO error code 0x%x.",mode,pco_err);
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Noise_Filter_Mode: Finished.");
 #endif /* LOGGING */
 	return TRUE;
 }
@@ -358,6 +778,47 @@ int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *
 #endif /* LOGGING */
 	return TRUE;
 }
+
+/**
+ * Get the number of analogue to digital convertors inside the camera, as returned from it's description
+ * (retrieved from the camera head when opening a connection to the camera, and stored in Command_Data.Description).
+ * @param adc_count The address of an integer to store the numbers of analogue to digital convertors inside the camera.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see ccd_general.html#CCD_General_Log
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Description_Get_Num_ADCs(int *adc_count)
+{
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Description_Get_Num_ADCs: Started.");
+#endif /* LOGGING */
+	if(adc_count == NULL)
+	{
+		Command_Error_Number = 29;
+		sprintf(Command_Error_String,
+			"CCD_Command_Description_Get_Num_ADCs:adc_count was NULL.");
+		return FALSE;
+	}
+	/* check camera instance has been created, if so open should have been called,
+	** and the Description field retrieved from the camera head. */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 30;
+		sprintf(Command_Error_String,
+			"CCD_Command_Description_Get_Num_ADCs:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	(*adc_count) = Command_Data.Description.wNumADCsDESC;
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Description_Get_Num_ADCs returned %d ADCs.",
+			       (*adc_count));
+#endif /* LOGGING */
+	return TRUE;
+}
+
 
 /**
  * Get the size of the image in bytes.
