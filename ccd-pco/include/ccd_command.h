@@ -14,6 +14,7 @@ extern int CCD_Command_Finalise(void);
 extern int CCD_Command_Open(int board);
 extern int CCD_Command_Close(void);
 	extern int CCD_Command_Arm_Camera(void);
+	extern int CCD_Command_Grabber_Post_Arm(void);
 	extern int CCD_Command_Set_Camera_To_Current_Time(void);
 	extern int CCD_Command_Set_Recording_State(int rec_state);
 	extern int CCD_Command_Reset_Settings(void);
@@ -23,6 +24,7 @@ extern int CCD_Command_Close(void);
 	extern int CCD_Command_Set_ADC_Operation(int num_adcs);
 	extern int CCD_Command_Set_Bit_Alignment(int bit_alignment);
 	extern int CCD_Command_Set_Noise_Filter_Mode(int mode);
+	extern int CCD_Command_Set_Trigger_Mode(int mode);
 	extern int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *camera_temp,
 					       int *valid_psu_temp,int *psu_temp);
 	extern int CCD_Command_Description_Get_Num_ADCs(int *adc_count);

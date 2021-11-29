@@ -1,4 +1,4 @@
-/* ccd_command.c
+/* ccd_command.cpp
 ** Moptop PCO CCD library
 */
 /**
@@ -299,6 +299,43 @@ int CCD_Command_Arm_Camera(void)
 	}
 #if LOGGING > 5
 	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Arm_Camera: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Prepare the camera to start taking data. All previous ettings are validated and the internal settings of the camera
+ * updated.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Grabber_Post_Arm(void)
+{
+	DWORD pco_err;
+
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Grabber_Post_Arm: Started.");
+#endif /* LOGGING */
+	if(Command_Data.Grabber == NULL)
+	{
+		Command_Error_Number = 37;
+		sprintf(Command_Error_String,
+			"CCD_Command_Grabber_Post_Arm:Grabber CPco_grab_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Grabber->PostArm();
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 38;
+		sprintf(Command_Error_String,"CCD_Command_Grabber_Post_Arm:"
+			"Grabber PostArm failed with PCO error code 0x%x.",pco_err);
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Grabber_Post_Arm: Finished.");
 #endif /* LOGGING */
 	return TRUE;
 }
@@ -685,6 +722,44 @@ int CCD_Command_Set_Noise_Filter_Mode(int mode)
 	}
 #if LOGGING > 5
 	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Noise_Filter_Mode: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Set how camera exposures are triggered
+ * @param mode An integer: 0x0 (software/auto sequence), 0x2 (external exposure start and software trigger), 
+ *             0x3 (external exposure control).
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Set_Trigger_Mode(int mode)
+{
+	DWORD pco_err;
+
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Trigger_Mode(%d): Started.",mode);
+#endif /* LOGGING */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 39;
+		sprintf(Command_Error_String,
+			"CCD_Command_Set_Trigger_Mode:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Camera->PCO_SetTriggerMode(mode);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 40;
+		sprintf(Command_Error_String,"CCD_Command_Set_Trigger_Mode:"
+			"Camera PCO_SetTriggerMode(%d) failed with PCO error code 0x%x.",mode,pco_err);
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Trigger_Mode: Finished.");
 #endif /* LOGGING */
 	return TRUE;
 }

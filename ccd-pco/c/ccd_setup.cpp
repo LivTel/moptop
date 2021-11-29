@@ -1,4 +1,4 @@
-/* ccd_setup.c
+/* ccd_setup.cpp
 ** Moptop PCO CCD library
 ** $Header$
 */
@@ -135,26 +135,12 @@ static char Setup_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * <li>We set the camera timestamps to be binary and ASCII using CCD_Command_Set_Timestamp_Mode(2).
  * <li>We set the camera exposure and delay timebase to milliseconds using CCD_Command_Set_Timebase(2,2).
  * <li>We set an initial delay and exposure time by calling CCD_Command_Set_Delay_Exposure_Time(0,50);
- * <li>diddly
- * <li>We turn on sensor cooling using CCD_Command_Set_Sensor_Cooling.
- * <li>We retrieve and store the camera's serial number using CCD_Command_Get_Serial_Number to store the returned string
- *     in Setup_Data.Serial_Number.
- * <li>We retrieve and store the camera's firmware version using CCD_Command_Get_Firmware_Version 
- *     to store the returned string in Setup_Data.Firmware_Version.
- * <li>We get the number of bytes per pixel from the camera library using CCD_Command_Get_Bytes_Per_Pixel,
- *     and store the returned value (as an integer) in Setup_Data.Bytes_Per_Pixel.
- * <li>We get the pixel width from the camera library using CCD_Command_Get_Pixel_Width,
- *     and store the returned value in Setup_Data.Pixel_Width.
- * <li>We get the pixel height from the camera library using CCD_Command_Get_Pixel_Height,
- *     and store the returned value in Setup_Data.Pixel_Height.
- * <li>We get the sensor width from the camera library using CCD_Command_Get_Sensor_Width,
- *     and store the returned value in Setup_Data.Sensor_Width.
- * <li>We get the sensor height from the camera library using CCD_Command_Get_Sensor_Height,
- *     and store the returned value in Setup_Data.Sensor_Height.
- * <li>We get the timestamp clock frequency from the camera library using 
- *     CCD_Command_Get_Timestamp_Clock_Frequency, and store the returned value in Setup_Data.Timestamp_Clock_Frequency.
- * <li>We get the image size in bytes from the camera library using CCD_Command_Get_Image_Size_Bytes,
- *     and store the returned value in Setup_Data.Image_Size_Bytes.
+ * <li>We call CCD_Command_Description_Get_Num_ADCs to get the number of ADCs supported by this camera.
+ * <li>If the returned ADC count is greater than one, we call CCD_Command_Set_ADC_Operation(2) to use the extra ADC.
+ * <li>We call CCD_Command_Set_Bit_Alignment(0x0001) to set the returned data to be LSB.
+ * <li>We call CCD_Command_Set_Noise_Filter_Mode to set noise reduction to off.
+ * <li>We call CCD_Command_Arm_Camera to update the cameras internal state to take account of the new settings.
+ * <li>We call CCD_Command_Grabber_Post_Arm to update the grabber's state to match the camera's state.
  * <ul>
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #Setup_Error_Number
@@ -167,6 +153,13 @@ static char Setup_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * @see ccd_command.html#CCD_Command_Reset_Settings
  * @see ccd_command.html#CCD_Command_Set_Timestamp_Mode
  * @see ccd_command.html#CCD_Command_Set_Timebase
+ * @see ccd_command.html#CCD_Command_Set_Delay_Exposure_Time
+ * @see ccd_command.html#CCD_Command_Description_Get_Num_ADCs
+ * @see ccd_command.html#CCD_Command_Set_ADC_Operation
+ * @see ccd_command.html#CCD_Command_Set_Bit_Alignment
+ * @see ccd_command.html#CCD_Command_Set_Noise_Filter_Mode
+ * @see ccd_command.html#CCD_Command_Arm_Camera
+ * @see ccd_command.html#CCD_Command_Grabber_Post_Arm
  * @see ccd_general.html#CCD_General_Log_Format
  * @see ccd_general.html#CCD_General_Log
  */
@@ -272,17 +265,13 @@ int CCD_Setup_Startup(void)
 		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Arm_Camera failed.");
 		return FALSE;
 	}
-		
-	/* turn cooling on */
-	/*
-	if(!CCD_Command_Set_Sensor_Cooling(TRUE))
+	/* update the grabber  to the camera state */
+	if(!CCD_Command_Grabber_Post_Arm())
 	{
-		Setup_Error_Number = ;
-		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_Sensor_Cooling(TRUE) failed.");
+		Setup_Error_Number = 15;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Grabber_Post_Arm failed.");
 		return FALSE;
 	}
-	*/
-
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Setup_Startup: Finished.");
 #endif /* LOGGING */
