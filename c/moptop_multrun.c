@@ -190,7 +190,7 @@ int Moptop_Multrun_Exposure_Length_Set(double exposure_length_s)
 {
 	/* configure the CCD camera exposure length 
 	** Note this might be modified by the Andor library. */
-	if(!CCD_Exposure_Length_Set(exposure_length_s))
+	if(!CCD_Exposure_Length_Set(exposure_length_s*MOPTOP_GENERAL_ONE_SECOND_MS))
 	{
 		Moptop_General_Error_Number = 640;
 		sprintf(Moptop_General_Error_String,

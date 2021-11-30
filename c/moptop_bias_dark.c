@@ -584,6 +584,7 @@ static int Bias_Dark_Setup(void)
  * @see #Bias_Dark_Abort
  * @see #Bias_Dark_Get_Fits_Filename
  * @see #Bias_Dark_Write_Fits_Image
+ * @see moptop_general.html#MOPTOP_GENERAL_ONE_SECOND_MS
  * @see moptop_general.html#Moptop_General_Log
  * @see moptop_general.html#Moptop_General_Log_Format
  * @see moptop_general.html#Moptop_General_Error_Number
@@ -680,7 +681,7 @@ static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposur
 			return FALSE;
 		}
 		/* set exposure length  */
-		if(!CCD_Exposure_Length_Set(exposure_length_s))
+		if(!CCD_Exposure_Length_Set(exposure_length_s*MOPTOP_GENERAL_ONE_SECOND_MS))
 		{
 			Moptop_General_Error_Number = 713;
 			sprintf(Moptop_General_Error_String,
