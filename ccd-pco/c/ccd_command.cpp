@@ -728,15 +728,15 @@ int CCD_Command_Set_Noise_Filter_Mode(int mode)
 
 /**
  * Set how camera exposures are triggered
- * @param mode An integer: 0x0 (software/auto sequence), 0x2 (external exposure start and software trigger), 
- *             0x3 (external exposure control).
+ * @param mode An enum of type CCD_COMMAND_TRIGGER_MODE. Used to select external or internal trigger modes.
  * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #CCD_COMMAND_TRIGGER_MODE
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
  * @see ccd_general.html#CCD_General_Log_Format
  */
-int CCD_Command_Set_Trigger_Mode(int mode)
+int CCD_Command_Set_Trigger_Mode(enum CCD_COMMAND_TRIGGER_MODE mode)
 {
 	DWORD pco_err;
 
@@ -1016,6 +1016,67 @@ int CCD_Command_Get_Image_Size_Bytes(int *image_size)
 #if LOGGING > 5
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
 			       "CCD_Command_Get_Image_Size_Bytes: Returned image size in bytes of %d.",(*image_size));
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Set how camera exposures are triggered
+ * @param mode An enum of type CCD_COMMAND_TRIGGER_MODE. Used to select external or internal trigger modes.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #CCD_COMMAND_TRIGGER_MODE
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Get_Trigger_Mode(enum CCD_COMMAND_TRIGGER_MODE *mode)
+{
+	DWORD pco_err;
+	WORD mode_w;
+	
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Get_Trigger_Mode: Started.");
+#endif /* LOGGING */
+	if(mode == NULL)
+	{
+		Command_Error_Number = 48;
+		sprintf(Command_Error_String,"CCD_Command_Get_Trigger_Mode:mode was NULL.");
+		return FALSE;
+	}
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 49;
+		sprintf(Command_Error_String,
+			"CCD_Command_Get_Trigger_Mode:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Camera->PCO_GetTriggerMode(&mode_w);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 50;
+		sprintf(Command_Error_String,"CCD_Command_Get_Trigger_Mode:"
+			"Camera PCO_GetTriggerMode failed with PCO error code 0x%x.",pco_err);
+		return FALSE;
+	}
+	switch(mode_w)
+	{
+		case 0x0: /* software/  auto */
+			(*mode) = CCD_COMMAND_TRIGGER_MODE_INTERNAL;
+			break;
+		case 0x2: /* external exposure start & software trigger */
+			(*mode) = CCD_COMMAND_TRIGGER_MODE_EXTERNAL;
+			break;
+		default:
+			Command_Error_Number = 51;
+			sprintf(Command_Error_String,"CCD_Command_Get_Trigger_Mode:"
+				"Camera PCO_GetTriggerMode returned unsupported trigger mode 0x%x.",mode_w);
+			
+			break;
+	}
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_VERBOSE,
+			       "CCD_Command_Get_Trigger_Mode: Finished and returned trigger mode %d.",(*mode));
 #endif /* LOGGING */
 	return TRUE;
 }

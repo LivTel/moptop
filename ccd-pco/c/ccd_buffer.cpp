@@ -135,16 +135,13 @@ int CCD_Buffer_Initialise(void)
 		return FALSE;
 	}
 	/* save the pco library computed image size in bytes. This takes account of the binning (set
-	** to 1 above, and extra space for associated meta-data we request in CCD_Setup_Startup */
+	** to 1 above) */
 	Buffer_Data.Image_Size_Bytes = CCD_Setup_Get_Image_Size_Bytes();
 	sensor_width = CCD_Setup_Get_Sensor_Width();
 	sensor_height = CCD_Setup_Get_Sensor_Height();
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Buffer_Initialise: Binned 1 image size %d bytes vs "
-			       "sensor size (%d x %d ) = %d bytes : %d bytes for metadata.",
-			       Buffer_Data.Image_Size_Bytes,
-			       sensor_width,sensor_height,(sensor_width*sensor_height),
-			       Buffer_Data.Image_Size_Bytes-(sensor_width*sensor_height));
+			       "sensor size (%d x %d ).",Buffer_Data.Image_Size_Bytes,sensor_width,sensor_height);
 #endif /* LOGGING */
 	/* allocate buffers */
 #if LOGGING > 0
@@ -154,14 +151,6 @@ int CCD_Buffer_Initialise(void)
 	for(i=0; i < BUFFER_COUNT; i++)
 	{
 		Buffer_Data.Image_Buffer_List[i] = (int *)malloc(Buffer_Data.Image_Size_Bytes* sizeof(int));
-		/*Buffer_Data.Image_Buffer_List[i] = aligned_alloc(16,Buffer_Data.Image_Size_Bytes);*/
-		/* or
-		** unaligned_buffer = malloc(Buffer_Data.Image_Size_Bytes+8);
-		** aligned_buffer = (unaligned_buffer+7) & 0x7;
-		** Buffer_Data.Image_Buffer_List[i] = malloc(Buffer_Data.Image_Size_Bytes+8);
-		** We would have to save both the aligned address (to pass to the Andor library) and the unaligned 
-		** address (for free).
-		 */
 		if(Buffer_Data.Image_Buffer_List[i] == NULL)
 		{
 			Buffer_Error_Number = 2;
@@ -170,8 +159,7 @@ int CCD_Buffer_Initialise(void)
 			return FALSE;
 		}
 #if LOGGING > 0
-		CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
-				       "CCD_Buffer_Initialise: Buffer %d = %p.",
+		CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"CCD_Buffer_Initialise: Buffer %d = %p.",
 				       i,Buffer_Data.Image_Buffer_List[i]);
 #endif /* LOGGING */
 	}/* end for */

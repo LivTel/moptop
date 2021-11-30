@@ -50,7 +50,7 @@ static char Exposure_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
 ** -------------------------------------------------------- */
 /**
  * Routine to set the camera exposure triggering mode. 
- * @param trigger_mode Which mode to use. 
+ * @param external An integer boolean, if TRUE externally trigger, otherwise internally trigger exposures.
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #Exposure_Error_Number
  * @see #Exposure_Error_String
@@ -58,12 +58,24 @@ static char Exposure_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * @see ccd_command.html#CCD_Command_Set_Trigger_Mode
  * @see ccd_general.html#CCD_General_Log_Format
  */
-int CCD_Exposure_Set_Trigger_Mode(char *trigger_mode)
+int CCD_Exposure_Set_Trigger_Mode(int external)
 {
+	enum CCD_COMMAND_TRIGGER_MODE trigger_mode;
+	
 	Exposure_Error_Number = 0;
 #if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Set_Trigger_Mode: Started.");
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Set_Trigger_Mode(%d): Started.",external);
 #endif /* LOGGING */
+	if(external)
+		trigger_mode = CCD_COMMAND_TRIGGER_MODE_EXTERNAL;
+	else
+		trigger_mode = CCD_COMMAND_TRIGGER_MODE_INTERNAL;
+	if(!CCD_Command_Set_Trigger_Mode(trigger_mode))
+	{
+		Exposure_Error_Number = 1;
+		sprintf(Exposure_Error_String,"CCD_Exposure_Set_Trigger_Mode: CCD_Command_Set_Trigger_Mode failed.");
+		return FALSE;
+	}
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Set_Trigger_Mode: Finished.");
 #endif /* LOGGING */
@@ -71,46 +83,64 @@ int CCD_Exposure_Set_Trigger_Mode(char *trigger_mode)
 }
 
 /**
- * Routine used to determine whether the last trigger mode set was SOFTWARE.
- * @return The routine returns TRUE if the last set trigger mode was CCD_COMMAND_TRIGGER_MODE_SOFTWARE, FALSE otherwise.
+ * Routine used to determine whether the last trigger mode set was SOFTWARE (internal).
+ * @return The routine returns TRUE if the last set trigger mode was CCD_COMMAND_TRIGGER_MODE_INTERNAL, FALSE otherwise.
  * @see #Exposure_Data
+ * @see ccd_command.html#CCD_Command_Get_Trigger_Mode
  */
 int CCD_Exposure_Trigger_Mode_Is_Software(void)
 {
-	return TRUE;
+	enum CCD_COMMAND_TRIGGER_MODE mode;
+	
+	if(!CCD_Command_Get_Trigger_Mode(&mode))
+		return FALSE;
+	return (mode == CCD_COMMAND_TRIGGER_MODE_INTERNAL);
 }
 
 /**
  * Routine used to determine whether the last trigger mode set was EXTERNAL.
  * @return The routine returns TRUE if the last set trigger mode was CCD_COMMAND_TRIGGER_MODE_EXTERNAL, FALSE otherwise.
  * @see #Exposure_Data
+ * @see ccd_command.html#CCD_Command_Get_Trigger_Mode
  */
 int CCD_Exposure_Trigger_Mode_Is_External(void)
 {
-	return FALSE;
+	enum CCD_COMMAND_TRIGGER_MODE mode;
+	
+	if(!CCD_Command_Get_Trigger_Mode(&mode))
+		return FALSE;
+	return (mode == CCD_COMMAND_TRIGGER_MODE_EXTERNAL);
 }
 
 /**
- * Set the requested exposure length. The actual exposure length may be changed by the Andor library.
- * @param exposure_length_s The exposure length as a double in seconds.
+ * Set the requested exposure length. 
+ * @param exposure_length_ms The exposure length as an integer in milliseconds.
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #Exposure_Error_Number
  * @see #Exposure_Error_String
- * @see ccd_command.html#CCD_Command_Set_Exposure_Time
+ * @see ccd_command.html#CCD_Command_Set_Delay_Exposure_Time
  * @see ccd_general.html#CCD_GENERAL_ONE_SECOND_MS 
  * @see ccd_general.html#CCD_General_Log_Format
  */
-int CCD_Exposure_Length_Set(double exposure_length_s)
+int CCD_Exposure_Length_Set(int exposure_length_ms)
 {
 	Exposure_Error_Number = 0;
 #if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Set: Started.");
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Set(%d): Started.",exposure_length_ms);
 #endif /* LOGGING */
+	/* assume the timebase has previously been set to milliseconds.
+	** See CCD_Setup_Startup: CCD_Command_Set_Timebase(2,2) */
+	if(!CCD_Command_Set_Delay_Exposure_Time(0,exposure_length_ms))
+	{
+		Exposure_Error_Number = 2;
+		sprintf(Exposure_Error_String,
+			"CCD_Exposure_Length_Set: CCD_Command_Set_Delay_Exposure_Time(0,%d) failed.",exposure_length_ms);
+		return FALSE;
+	}
 #if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Set: Exposure length set to %.6f s.",
-			       exposure_length_s);
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Set: Exposure length set to %d ms.",
+			       exposure_length_ms);
 #endif /* LOGGING */
-	
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Set: Finished.");
 #endif /* LOGGING */
