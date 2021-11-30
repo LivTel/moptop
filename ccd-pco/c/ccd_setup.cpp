@@ -306,7 +306,7 @@ int CCD_Setup_Shutdown(void)
 	/* close the open connection to the CCD camera */
 	if(!CCD_Command_Close())
 	{
-		Setup_Error_Number = 4;
+		Setup_Error_Number = 17;
 		sprintf(Setup_Error_String,"CCD_Setup_Shutdown: CCD_Command_Close failed.");
 		return FALSE;
 	}
@@ -328,14 +328,20 @@ int CCD_Setup_Shutdown(void)
  * <ul>
  * <li>We use CCD_SETUP_BINNING_IS_VALID to check the binning parameter is a supported binning.
  * <li>We store the binning in Setup_Data.Binning.
+ * <li>We call CCD_Command_Set_Binning to set the binning.
+ * <li>We call CCD_Command_Arm_Camera to update the camera's internal settings to use the new binning.
+ * <li>We call CCD_Command_Grabber_Post_Arm to update the grabber's internal settings to use the new binning.
+ * <li>
  * </ul>
  * @param bin The binning to apply to the readout. 
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #CCD_SETUP_BINNING_IS_VALID
- * @see #SETUP_ENUM_VALUE_STRING_LENGTH
  * @see #Setup_Error_Number
  * @see #Setup_Error_String
  * @see #Setup_Data
+ * @see ccd_command.html#CCD_Command_Set_Binning
+ * @see ccd_command.html#CCD_Command_Arm_Camera
+ * @see ccd_command.html#CCD_Command_Grabber_Post_Arm
  */
 int CCD_Setup_Dimensions(int bin)
 {
@@ -350,6 +356,29 @@ int CCD_Setup_Dimensions(int bin)
 	}
 	/* save the binning for later retrieval */
 	Setup_Data.Binning = bin;
+	/* we may need to retrieve the ROI, and reset it after setting the binning */
+	/* set the actual binning */
+	if(!CCD_Command_Set_Binning(bin,bin))
+	{
+		Setup_Error_Number = 18;
+		sprintf(Setup_Error_String,"CCD_Setup_Dimensions: CCD_Command_Set_Binning failed.");
+		return FALSE;
+	}
+	/* get camera to update it's internal settings */
+	if(!CCD_Command_Arm_Camera())
+	{
+		Setup_Error_Number = 19;
+		sprintf(Setup_Error_String,"CCD_Setup_Dimensions: CCD_Command_Arm_Camera failed.");
+		return FALSE;
+	}
+	/* get grabber to update to the new binning */
+	if(!CCD_Command_Grabber_Post_Arm())
+	{
+		Setup_Error_Number = 20;
+		sprintf(Setup_Error_String,"CCD_Setup_Dimensions: CCD_Command_Grabber_Post_Arm failed.");
+		return FALSE;
+	}
+	/* get the new camera image size in bytes */
 	/* update the image size in bytes, that changes with binning */
 	if(!CCD_Command_Get_Image_Size_Bytes(&(Setup_Data.Image_Size_Bytes)))
 	{
@@ -387,6 +416,7 @@ int CCD_Setup_Get_Binning(void)
  */
 int CCD_Setup_Get_Serial_Number(char *serial_number_string,int string_length)
 {
+	/* diddly */
 	if(strlen(Setup_Data.Serial_Number) >= string_length)
 	{
 		Setup_Error_Number = 31;
@@ -413,6 +443,7 @@ int CCD_Setup_Get_Serial_Number(char *serial_number_string,int string_length)
  */
 int CCD_Setup_Get_Firmware_Version(char *firmware_version_string,int string_length)
 {
+	/* diddly */
 	if(strlen(Setup_Data.Firmware_Version) >= string_length)
 	{
 		Setup_Error_Number = 32;
@@ -433,6 +464,7 @@ int CCD_Setup_Get_Firmware_Version(char *firmware_version_string,int string_leng
  */
 int CCD_Setup_Get_Readout_Time(void)
 {
+	/* diddly */
 	return Setup_Data.Readout_Time;
 }
 
@@ -444,6 +476,7 @@ int CCD_Setup_Get_Readout_Time(void)
  */
 int CCD_Setup_Get_Bytes_Per_Pixel(void)
 {
+	/* diddly */
 	return Setup_Data.Bytes_Per_Pixel;
 }
 
@@ -455,6 +488,7 @@ int CCD_Setup_Get_Bytes_Per_Pixel(void)
  */
 float CCD_Setup_Get_Pixel_Width(void)
 {
+	/* diddly */
 	return Setup_Data.Pixel_Width;
 }
 
@@ -466,6 +500,7 @@ float CCD_Setup_Get_Pixel_Width(void)
  */
 float CCD_Setup_Get_Pixel_Height(void)
 {
+	/* diddly */
 	return Setup_Data.Pixel_Height;
 }
 
@@ -477,6 +512,7 @@ float CCD_Setup_Get_Pixel_Height(void)
  */
 int CCD_Setup_Get_Sensor_Width(void)
 {
+	/* diddly */
 	return Setup_Data.Sensor_Width;
 }
 
@@ -488,6 +524,7 @@ int CCD_Setup_Get_Sensor_Width(void)
  */
 int CCD_Setup_Get_Sensor_Height(void)
 {
+	/* diddly */
 	return Setup_Data.Sensor_Height;
 }
 
@@ -499,6 +536,7 @@ int CCD_Setup_Get_Sensor_Height(void)
  */
 long long int CCD_Setup_Get_Timestamp_Clock_Frequency(void)
 {
+	/* diddly */
 	return Setup_Data.Timestamp_Clock_Frequency;
 }
 

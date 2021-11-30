@@ -3,7 +3,6 @@
 #define CCD_SETUP_H
 /**
  * Is the specified binning value valid. Valid binning numbers are: 1,2,?. 
- * TODO diddly
  * @param b The binning value to test.
  * @return TRUE if the binning is a valid number and FALSE if it not.
  */

@@ -765,6 +765,44 @@ int CCD_Command_Set_Trigger_Mode(int mode)
 }
 
 /**
+ * Set the camera binning.
+ * @param bin_x An integer, the horizontal binning.
+ * @param bin_y An integer, the vertical binning.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Set_Binning(int bin_x,int bin_y)
+{
+	DWORD pco_err;
+
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Binning(%d,%d): Started.",bin_x,bin_y);
+#endif /* LOGGING */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 41;
+		sprintf(Command_Error_String,
+			"CCD_Command_Set_Binning:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Camera->PCO_SetBinning(bin_x,bin_y);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 42;
+		sprintf(Command_Error_String,"CCD_Command_Set_Binning:"
+			"Camera PCO_SetBinning(%d,%d) failed with PCO error code 0x%x.",bin_x,bin_y,pco_err);
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Trigger_Mode: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
  * Get the camera/sensor/psu temperatures from the camera.
  * @param valid_sensor_temp The address of an integer, on a successful return from this function this will contain
  *        TRUE if a valid sensor temperature was read, and FALSE if it was not read. This address can be NULL
@@ -894,6 +932,61 @@ int CCD_Command_Description_Get_Num_ADCs(int *adc_count)
 	return TRUE;
 }
 
+/**
+ * Get the actual size of the image that the camera will return, given the current binning settings.
+ * @param image_width The address of an integer to store the width of the image, in pixels.
+ * @param image_height The address of an integer to store height of the image, in pixels.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see ccd_general.html#CCD_General_Log
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Get_Actual_Size(int *image_width,int *image_height)
+{
+	DWORD pco_err;
+	DWORD image_width_w,image_height_w;
+	
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Get_Actual_Size: Started.");
+#endif /* LOGGING */
+	if(image_width == NULL)
+	{
+		Command_Error_Number = 43;
+		sprintf(Command_Error_String,"CCD_Command_Get_Actual_Size:image_width was NULL.");
+		return FALSE;
+	}
+	if(image_height == NULL)
+	{
+		Command_Error_Number = 44;
+		sprintf(Command_Error_String,"CCD_Command_Get_Actual_Size:image_height was NULL.");
+		return FALSE;
+	}
+	/* check camera instance has been created, if so open should have been called,
+	** and the Description field retrieved from the camera head. */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 45;
+		sprintf(Command_Error_String,"CCD_Command_Get_Actual_Size:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Camera->PCO_GetActualSize(&image_width_w,&image_height_w);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 46;
+		sprintf(Command_Error_String,"CCD_Command_Get_Temperature:PCO_GetActualSize failed(0x%x).",pco_err);
+		return FALSE;
+	}
+	(*image_width) = image_width_w;
+	(*image_height) = image_height_w;
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+			       "CCD_Command_Get_Actual_Size returned width = %d pixels, height = %d pixels.",
+			       (*image_width),(*image_height));
+#endif /* LOGGING */
+	return TRUE;
+}
 
 /**
  * Get the size of the image in bytes.
@@ -901,9 +994,29 @@ int CCD_Command_Description_Get_Num_ADCs(int *adc_count)
  * @return The routine returns TRUE on success and FALSE if an error occurs.
  * @see #Command_Error_Number
  * @see #Command_Error_String
+ * @see ccd_general.html#CCD_General_Log
+ * @see ccd_general.html#CCD_General_Log_Format
  */ 
 int CCD_Command_Get_Image_Size_Bytes(int *image_size)
 {
+	int image_width,image_height;
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Get_Image_Size_Bytes: Started.");
+#endif /* LOGGING */
+	if(image_size == NULL)
+	{
+		Command_Error_Number = 47;
+		sprintf(Command_Error_String,"CCD_Command_Get_Image_Size_Bytes:image_size was NULL.");
+		return FALSE;
+	}
+	/* get the binned image dimensions from the camera */
+	if(!CCD_Command_Get_Actual_Size(&image_width,&image_height))
+		return FALSE;
+	(*image_size) = image_width*image_height*sizeof(WORD);
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+			       "CCD_Command_Get_Image_Size_Bytes: Returned image size in bytes of %d.",(*image_size));
+#endif /* LOGGING */
 	return TRUE;
 }
 
