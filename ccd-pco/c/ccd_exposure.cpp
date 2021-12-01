@@ -159,7 +159,7 @@ int CCD_Exposure_Length_Set(int exposure_length_ms)
  */
 int CCD_Exposure_Length_Get(int *exposure_length_ms)
 {
-	double exposure_length_s;
+	int delay_time;
 
 	Exposure_Error_Number = 0;
 #if LOGGING > 0
@@ -171,7 +171,16 @@ int CCD_Exposure_Length_Get(int *exposure_length_ms)
 		sprintf(Exposure_Error_String,"CCD_Exposure_Length_Get: exposure_length_ms was NULL.");
 		return FALSE;
 	}
-	
+	/* CCD_Command_Get_Delay_Exposure_Time returns the delay_time and exposure_length in units
+	** specified by CCD_Command_Set_Timebase. This should have been set to milliseconds by a call in
+	** CCD_Setup_Startup, otherwise the returned value will have the wrong units.
+	*/
+	if(!CCD_Command_Get_Delay_Exposure_Time(&delay_time,exposure_length_ms))
+	{
+		Exposure_Error_Number = 3;
+		sprintf(Exposure_Error_String,"CCD_Exposure_Length_Get: CCD_Command_Get_Delay_Exposure_Time failed.");
+		return FALSE;
+	}
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Get: Finished.");
 #endif /* LOGGING */

@@ -803,6 +803,44 @@ int CCD_Command_Set_Binning(int bin_x,int bin_y)
 }
 
 /**
+ * Call the Grabber to acquire 1 frame from the camera, and place the data into the passed in image buffer.
+ * @param image_buffer The address of some allocated memory to hold the read out image.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see ccd_general.html#CCD_General_Log
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Grabber_Acquire_Image_Async_Wait(void *image_buffer)
+{
+	DWORD pco_err;
+
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Grabber_Acquire_Image_Async_Wait: Started.");
+#endif /* LOGGING */
+	if(Command_Data.Grabber == NULL)
+	{
+		Command_Error_Number = 58;
+		sprintf(Command_Error_String,
+			"CCD_Command_Grabber_Acquire_Image_Async_Wait:Grabber CPco_grab_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Grabber->Acquire_Image_Async_wait(image_buffer);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 59;
+		sprintf(Command_Error_String,"CCD_Command_Grabber_Acquire_Image_Async_Wait:"
+			"Grabber Acquire_Image_Async_wait(%p) failed with PCO error code 0x%x.",image_buffer,pco_err);
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Grabber_Acquire_Image_Async_Wait: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+	
+}
+/**
  * Get the camera/sensor/psu temperatures from the camera.
  * @param valid_sensor_temp The address of an integer, on a successful return from this function this will contain
  *        TRUE if a valid sensor temperature was read, and FALSE if it was not read. This address can be NULL
@@ -928,6 +966,98 @@ int CCD_Command_Description_Get_Num_ADCs(int *adc_count)
 #if LOGGING > 5
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Description_Get_Num_ADCs returned %d ADCs.",
 			       (*adc_count));
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Get the minimum exposure length of the camera, as returned from it's description
+ * (retrieved from the camera head when opening a connection to the camera, and stored in Command_Data.Description).
+ * @param minimum_exposure_length_s The address of an double to store the minimum exposure length in seconds.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see ccd_general.html#CCD_GENERAL_ONE_SECOND_NS
+ * @see ccd_general.html#CCD_General_Log
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Get_Exposure_Time_Min(double *minimum_exposure_length_s)
+{
+	DWORD min_expose_dw_ns;
+	
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Get_Exposure_Time_Min: Started.");
+#endif /* LOGGING */
+	if(minimum_exposure_length_s == NULL)
+	{
+		Command_Error_Number = 54;
+		sprintf(Command_Error_String,
+			"CCD_Command_Get_Exposure_Time_Min:minimum_exposure_length_s was NULL.");
+		return FALSE;
+	}
+	/* check camera instance has been created, if so open should have been called,
+	** and the Description field retrieved from the camera head. */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 55;
+		sprintf(Command_Error_String,
+			"CCD_Command_Get_Exposure_Time_Min:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	min_expose_dw_ns = Command_Data.Description.dwMinExposureDESC;
+	/* The minimum exposure length in the description structure is in nanoseconds, convert to seconds */
+	(*minimum_exposure_length_s) = ((double)min_expose_dw_ns)/((double)CCD_GENERAL_ONE_SECOND_NS);
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+			       "CCD_Command_Get_Exposure_Time_Min returned %.2f s minimum exposure length.",
+			       (*minimum_exposure_length_s));
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Get the maximum exposure length of the camera, as returned from it's description
+ * (retrieved from the camera head when opening a connection to the camera, and stored in Command_Data.Description).
+ * @param maximum_exposure_length_s The address of an double to store the maximum exposure length in seconds.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see ccd_general.html#CCD_GENERAL_ONE_SECOND_MS
+ * @see ccd_general.html#CCD_General_Log
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Get_Exposure_Time_Max(double *maximum_exposure_length_s)
+{
+	DWORD max_expose_dw_ms;
+	
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Get_Exposure_Time_Max: Started.");
+#endif /* LOGGING */
+	if(maximum_exposure_length_s == NULL)
+	{
+		Command_Error_Number = 56;
+		sprintf(Command_Error_String,
+			"CCD_Command_Get_Exposure_Time_Max:maximum_exposure_length_s was NULL.");
+		return FALSE;
+	}
+	/* check camera instance has been created, if so open should have been called,
+	** and the Description field retrieved from the camera head. */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 57;
+		sprintf(Command_Error_String,
+			"CCD_Command_Get_Exposure_Time_Max:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	max_expose_dw_ms = Command_Data.Description.dwMaxExposureDESC;
+	/* The maximum exposure length in the description structure is in milliseconds, convert to seconds */
+	(*maximum_exposure_length_s) = ((double)max_expose_dw_ms)/((double)CCD_GENERAL_ONE_SECOND_MS);
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+			       "CCD_Command_Get_Exposure_Time_Max returned %.2f s maximum exposure length.",
+			       (*maximum_exposure_length_s));
 #endif /* LOGGING */
 	return TRUE;
 }
@@ -1077,6 +1207,54 @@ int CCD_Command_Get_Trigger_Mode(enum CCD_COMMAND_TRIGGER_MODE *mode)
 #if LOGGING > 5
 	CCD_General_Log_Format(LOG_VERBOSITY_VERBOSE,
 			       "CCD_Command_Get_Trigger_Mode: Finished and returned trigger mode %d.",(*mode));
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Get the currently set delay and exposure time.
+ * @param delay_time The address of an integer, to be filled in with the current delay time, 
+ *                    in units previously specified by CCD_Command_Set_Timebase.
+ * @param exposure_time The address of an integer, to be filled in with the current exposure length, 
+ *        in units previously specified by CCD_Command_Set_Timebase.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see #CCD_Command_Set_Timebase
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Get_Delay_Exposure_Time(int *delay_time,int *exposure_time)
+{
+	DWORD exp_time_dw,delay_time_dw;
+	DWORD pco_err;
+
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Get_Delay_Exposure_Time: Started.");
+#endif /* LOGGING */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 52;
+		sprintf(Command_Error_String,
+			"CCD_Command_Get_Delay_Exposure_Time:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Camera->PCO_GetDelayExposure(&delay_time_dw,&exp_time_dw);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 53;
+		sprintf(Command_Error_String,"CCD_Command_Get_Delay_Exposure_Time:"
+			"Camera PCO_GetDelayExposure failed with PCO error code 0x%x.",pco_err);
+		return FALSE;
+	}
+	if(delay_time != NULL)
+		(*delay_time) = delay_time_dw;
+	if(exposure_time != NULL)
+		(*exposure_time) = exp_time_dw;
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+			    "CCD_Command_Get_Delay_Exposure_Time: Finished returning delay time %d, exposure time %d.",
+			       delay_time_dw,exp_time_dw);
 #endif /* LOGGING */
 	return TRUE;
 }

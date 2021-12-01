@@ -27,19 +27,6 @@
 #include "ccd_buffer.h"
 
 /* hash defines */
-/**
- * Maximum number of PI rotator revolutions.
- */
-#define BUFFER_MAX_ROTATOR_REVOLUTION_COUNT   (100)
-/**
- * Maximum number of images per revolution.
- */
-#define BUFFER_MAX_IMAGES_PER_REVOLUTION      (16)
-/**
- * Number of image buffers in the ring buffer.
- * @see #BUFFER_MAX_IMAGES_PER_REVOLUTION
- */
-#define BUFFER_COUNT                          (BUFFER_MAX_IMAGES_PER_REVOLUTION)
 
 /* data types */
 /**
@@ -47,14 +34,14 @@
  * <dl>
  * <dt>Image_Size_Bytes</dt> <dd>The image size in bytes, used to allocate image buffers in Image_Buffer_List.
  *                           Note extra space is allocated for the meta-data.</dd>
- * <dt>Image_Buffer_List</dt> <dd>A list of pointers to allocated image buffers. The list has BUFFER_COUNT entries.</dd>
+ * <dt>Image_Buffer</dt> <dd>An allocated image buffer.</dd>
  * </dl>
  * @see #BUFFER_COUNT
  */
 struct Buffer_Struct
 {
 	int Image_Size_Bytes;
-	int *Image_Buffer_List[BUFFER_COUNT]; /* diddly TODO */
+	int *Image_Buffer;
 };
 
 /* internal variables */
@@ -66,13 +53,12 @@ static char rcsid[] = "$Id$";
  * The instance of Buffer_Struct that contains local data for this module. This is initialised as follows:
  * <dl>
  * <dt>Image_Size_Bytes</dt> <dd>0</dd>
- * <dt>Image_Buffer_List</dt> <dd>{NULL}</dd>
+ * <dt>Image_Buffer</dt> <dd>NULL</dd>
  * </dl>
  */
 static struct Buffer_Struct Buffer_Data = 
 {
-	0,
-	{NULL}
+	0,NULL
 };
 
 /**
@@ -91,18 +77,15 @@ static char Buffer_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
 ** External Functions
 ** -------------------------------------------------------- */
 /**
- * Create a sequence of buffers used to store read out data from the CCD.
+ * Create the image buffer used to store read out data from the CCD.
  * <ul>
- * <li>We set all (BUFFER_COUNT) the image buffers in Buffer_Data.Image_Buffer_List to NULL.
+ * <li>We set the image buffer Buffer_Data.Image_Buffer to NULL.
  * <li>We call CCD_Setup_Dimensions with binning 1 to configure the PCO library. This also sets up the setup
  *     module to return the image size in bytes for binning 1.
  * <li>We call CCD_Setup_Get_Image_Size_Bytes to get the image size in bytes for binning 1 from the setup module.
  *     We store this in Buffer_Data.
- * <li>We call CCD_Setup_Get_Sensor_Width and CCD_Setup_Get_Sensor_Height to get the sensor size, and print
- *     out some information on image sizes.
- * <li>We loop over all (BUFFER_COUNT) the image buffers and allocate Buffer_Data.Image_Size_Bytes memory for each
- *     buffer, and stored in Buffer_Data.Image_Buffer_List. We use aligned_alloc to ensure the buffer is aligned
- *     to an 8 byte boundary (as required by Andor).
+ * <li>We allocate Buffer_Data.Image_Size_Bytes memory for the image buffer, 
+ *     and store the allocated pointer in Buffer_Data.Image_Buffer. 
  * </ul>
  * @return The routine returns TRUE on success and FALSE if an error occurs.
  * @see #BUFFER_COUNT
@@ -112,21 +95,14 @@ static char Buffer_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * @see ccd_general.html#CCD_General_Log_Format
  * @see ccd_setup.html#CCD_Setup_Dimensions
  * @see ccd_setup.html#CCD_Setup_Get_Image_Size_Bytes
- * @see ccd_setup.html#CCD_Setup_Get_Sensor_Width
- * @see ccd_setup.html#CCD_Setup_Get_Sensor_Height
  */
 int CCD_Buffer_Initialise(void)
 {
-	int i,sensor_width,sensor_height;
-
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Buffer_Initialise: Started.");
 #endif /* LOGGING */
-	/* initialise all image buffer pointers to NULL */
-	for(i=0; i < BUFFER_COUNT; i++)
-	{
-		Buffer_Data.Image_Buffer_List[i] = NULL;
-	}
+	/* initialise the image buffer pointer to NULL */
+	Buffer_Data.Image_Buffer = NULL;
 	/* set the binning to 1. This also updates setup's image size in bytes. */
 	if(!CCD_Setup_Dimensions(1))
 	{
@@ -137,32 +113,27 @@ int CCD_Buffer_Initialise(void)
 	/* save the pco library computed image size in bytes. This takes account of the binning (set
 	** to 1 above) */
 	Buffer_Data.Image_Size_Bytes = CCD_Setup_Get_Image_Size_Bytes();
-	sensor_width = CCD_Setup_Get_Sensor_Width();
-	sensor_height = CCD_Setup_Get_Sensor_Height();
 #if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Buffer_Initialise: Binned 1 image size %d bytes vs "
-			       "sensor size (%d x %d ).",Buffer_Data.Image_Size_Bytes,sensor_width,sensor_height);
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Buffer_Initialise: Binned 1 image size %d bytes.",
+			       Buffer_Data.Image_Size_Bytes);
 #endif /* LOGGING */
 	/* allocate buffers */
 #if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_VERBOSE,"CCD_Buffer_Initialise: Allocating %d buffers of %d bytes size.",
-			       BUFFER_COUNT,Buffer_Data.Image_Size_Bytes);
+	CCD_General_Log_Format(LOG_VERBOSITY_VERBOSE,"CCD_Buffer_Initialise: Allocating image buffer of %d bytes size.",
+			       Buffer_Data.Image_Size_Bytes);
 #endif /* LOGGING */
-	for(i=0; i < BUFFER_COUNT; i++)
+	Buffer_Data.Image_Buffer = (int *)malloc(Buffer_Data.Image_Size_Bytes* sizeof(int));
+	if(Buffer_Data.Image_Buffer == NULL)
 	{
-		Buffer_Data.Image_Buffer_List[i] = (int *)malloc(Buffer_Data.Image_Size_Bytes* sizeof(int));
-		if(Buffer_Data.Image_Buffer_List[i] == NULL)
-		{
-			Buffer_Error_Number = 2;
-			sprintf(Buffer_Error_String,"CCD_Buffer_Initialise: Allocating %d bytes for "
-				"buffer %d of %d failed.",Buffer_Data.Image_Size_Bytes,i,BUFFER_COUNT);
-			return FALSE;
-		}
+		Buffer_Error_Number = 2;
+		sprintf(Buffer_Error_String,"CCD_Buffer_Initialise: Allocating %d bytes failed.",
+			Buffer_Data.Image_Size_Bytes);
+		return FALSE;
+	}
 #if LOGGING > 0
-		CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"CCD_Buffer_Initialise: Buffer %d = %p.",
-				       i,Buffer_Data.Image_Buffer_List[i]);
+		CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,"CCD_Buffer_Initialise: Buffer = %p.",
+				       Buffer_Data.Image_Buffer);
 #endif /* LOGGING */
-	}/* end for */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Buffer_Initialise: Finished.");
 #endif /* LOGGING */
@@ -170,79 +141,28 @@ int CCD_Buffer_Initialise(void)
 }
 
 /**
- * Add a sequence of image buffers to the PCO library queue.
- * @param image_count The number of images we expect to acquire, we add this number of buffers to the PCO queue.
- * @see ccd_general.html#CCD_General_Log_Format
- * @return The routine returns TRUE on success and FALSE if an error occurs.
- * @see #BUFFER_COUNT
- * @see #Buffer_Error_Number
- * @see #Buffer_Error_String
+ * Free previously allocated buffers.
+ * <ul>
+ * <li>We free the  allocated data pointed to by Buffer_Data.Image_Buffer and set the pointer to NULL.
+ * </ul>
  * @see #Buffer_Data
- * @see ccd_command.html#CCD_Command_Queue_Buffer
- * @see ccd_general.html#CCD_General_Log_Format
- * @see ccd_setup.html#CCD_Setup_Get_Image_Size_Bytes
  */
-int CCD_Buffer_Queue_Images(int image_count)
+int CCD_Buffer_Free(void)
 {
-	int i,buffer_index;
-
-#if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Buffer_Queue_Images: Started.");
-#endif /* LOGGING */
-#if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Buffer_Queue_Images: Queueing %d image buffers.",image_count);
-#endif /* LOGGING */
-	for(i = 0; i < image_count; i++)
-	{
-		/* calculate image buffer list index */
-		buffer_index = i%BUFFER_COUNT;
-#if LOGGING > 0
-		CCD_General_Log_Format(LOG_VERBOSITY_VERBOSE,
-				       "CCD_Buffer_Queue_Images: Using image buffer list index %d for image %d.",
-				       buffer_index,i);
-#endif /* LOGGING */
-		/* Queue the buffer. Here we use CCD_Setup_Get_Image_Size_Bytes to get the binned image size,
-		** as otherwise CCD_Command_Queue_Buffer returns INVALID_SIZE. The actual buffer
-		** is allocated to the size Buffer_Data.Image_Size_Bytes, which was computed for binning 1 */
-		/* diddly TODO
-		if(!CCD_Command_Queue_Buffer(Buffer_Data.Image_Buffer_List[buffer_index],
-					     CCD_Setup_Get_Image_Size_Bytes()))
-		{
-			Buffer_Error_Number = 3;
-			sprintf(Buffer_Error_String,
-				"CCD_Buffer_Initialise: Failed to queue image buffer list index %d (%p, size %d/%d) "
-				"for image %d.",buffer_index,Buffer_Data.Image_Buffer_List[buffer_index],
-				CCD_Setup_Get_Image_Size_Bytes(),Buffer_Data.Image_Size_Bytes,i);
-			return FALSE;
-		}
-		*/
-	}/* end for */
-#if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Buffer_Queue_Images: Finished.");
-#endif /* LOGGING */
+	if(Buffer_Data.Image_Buffer != NULL)
+		free(Buffer_Data.Image_Buffer);
+	Buffer_Data.Image_Buffer = NULL;
 	return TRUE;
 }
 
 /**
- * Free previously allocated buffers.
- * <ul>
- * <li>We loop over BUFFER_COUNT. If each Buffer_Data.Image_Buffer_List pointer is non-NULL, we free the 
- *     allocated data and set the pointer to NULL.
- * </ul>
- * @see #Buffer_Data
- * @see #BUFFER_COUNT
+ * Return the pointer used to store read out CCD images.
+ * @return A pointer to the allocated memory, stored in Buffer_Data.Image_Buffer.
+ * @see #CCD_Buffer_Get_Image_Buffer
  */
-int CCD_Buffer_Free(void)
+void *CCD_Buffer_Get_Image_Buffer(void)
 {
-	int i;
-
-	for(i=0; i < BUFFER_COUNT; i++)
-	{
-		if(Buffer_Data.Image_Buffer_List[i] != NULL)
-			free(Buffer_Data.Image_Buffer_List[i]);
-		Buffer_Data.Image_Buffer_List[i] = NULL;
-	}
-	return TRUE;
+	return Buffer_Data.Image_Buffer;
 }
 
 /**
