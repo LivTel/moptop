@@ -119,7 +119,7 @@ static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposur
 				    char ***filename_list,int *filename_count);
 static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,
 				       char *filename,int filename_length);
-static int Bias_Dark_Write_Fits_Image(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,int andor_exposure_length_ms,
+static int Bias_Dark_Write_Fits_Image(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,int pco_exposure_length_ms,
 				      struct timespec exposure_end_time,long long int camera_ticks,
 				      unsigned char *image_buffer,
 				      int image_buffer_length,char *filename);
@@ -393,7 +393,7 @@ int Moptop_Bias_Dark_Abort(void)
 	if(Bias_Dark_In_Progress)
 	{
 		/* stop the camera acquisition */
-		if(!CCD_Command_Acquisition_Stop())
+		if(!CCD_Command_Set_Recording_State(FALSE))
 		{
 			Moptop_General_Error_Number = 730;
 			sprintf(Moptop_General_Error_String,
@@ -541,10 +541,6 @@ static int Bias_Dark_Setup(void)
  * Routine to actually acquire the bias/dark images.
  * <ul>
  * <li>We check the filename_list and filename_count are not NULL and initialise them.
- * <li>We set the camera shutter to stay closed using CCD_Command_Set_Shutter_Mode.
- * <li>We get the camera clock frequency using CCD_Command_Get_Timestamp_Clock_Frequency.
- * <li>We reset the cameras internal timestamp clock using CCD_Command_Timestamp_Clock_Reset.
- * <li>We initialise last_camera_ticks to zero.
  * <li>We loop over the Bias_Dark_Data.Image_Count, using Bias_Dark_Data.Image_Index as an index counter 
  *     (for status reporting):
  *     <ul>
@@ -617,10 +613,7 @@ static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposur
 	struct timespec exposure_end_time;
 	char filename[BIAS_DARK_FITS_FILENAME_LENGTH];
 	unsigned char *image_buffer = NULL;
-	unsigned int timeout_ms;
-	double camera_clock_difference;
-	long long int camera_ticks,last_camera_ticks,timestamp_clock_frequency;
-	int andor_exposure_length_ms;
+	int pco_exposure_length_ms;
 	int image_buffer_length;
 	
 #if MOPTOP_DEBUG > 1
@@ -645,80 +638,55 @@ static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposur
 	(*filename_list) = NULL;
 	(*filename_count) = 0;
 	/* set shutter mode to close */
-	if(!CCD_Command_Set_Shutter_Mode(CCD_COMMAND_SHUTTER_MODE_CLOSED))
+	/* diddly how do we do this for PCO cameras? */
+	/* set exposure length  */
+	if(!CCD_Exposure_Length_Set(exposure_length_s*MOPTOP_GENERAL_ONE_SECOND_MS))
 	{
-		Moptop_General_Error_Number = 751;
-		sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:"
-			"Failed to set camera shutter mode to closed.");
+		Moptop_General_Error_Number = 713;
+		sprintf(Moptop_General_Error_String,
+			"Bias_Dark_Acquire_Images: Failed to set exposure length to %.6f s.",exposure_length_s);
 		return FALSE;
 	}
-	/* get camera's internal clock frequency for use in the loop */
-	if(!CCD_Command_Get_Timestamp_Clock_Frequency(&timestamp_clock_frequency))
+	Bias_Dark_Data.Requested_Exposure_Length = exposure_length_s;
+	/* turn on camera internal triggering */
+	if(!CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_INTERNAL))
 	{
-		Moptop_General_Error_Number = 734;
+		Moptop_General_Error_Number = 715;
 		sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:"
-			"Failed to get timestamp clock frequency.");
+			"Failed to set camera trigger mode to internal.");
 		return FALSE;
 	}
-	/* reset internal clock timestamp */
-	if(!CCD_Command_Timestamp_Clock_Reset())
+	/* get the camera ready with the new settings */
+	if(!CCD_Command_Arm_Camera())
 	{
-		Moptop_General_Error_Number = 714;
-		sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:"
-			"Failed to reset camera timestamp clock.");
+		Moptop_General_Error_Number = 705;
+		sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images: Failed to arm camera.");
 		return FALSE;
 	}
-	last_camera_ticks = 0;
+	/* update the grabber so thats ready */
+	if(!CCD_Command_Grabber_Post_Arm())
+	{
+		Moptop_General_Error_Number = 706;
+		sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images: Failed to post-arm grabber.");
+		return FALSE;
+	}
+	/* get the actual exposure length used by the camera */
+	if(!CCD_Exposure_Length_Get(&pco_exposure_length_ms))
+	{
+		Moptop_General_Error_Number = 707;
+		sprintf(Moptop_General_Error_String,
+			"Bias_Dark_Acquire_Images: Failed to get exposure length from the camera.");
+		return FALSE;
+	}
 	/* acquire frames */
 	for(Bias_Dark_Data.Image_Index=0;Bias_Dark_Data.Image_Index < Bias_Dark_Data.Image_Count;
 	    Bias_Dark_Data.Image_Index++)
 	{
-		/* setup CCD_Buffer for image acquisition */
-		if(!CCD_Buffer_Queue_Images(1))
-		{
-			Moptop_General_Error_Number = 712;
-			sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:Failed to queue image buffers.");
-			return FALSE;
-		}
-		/* set exposure length  */
-		if(!CCD_Exposure_Length_Set(exposure_length_s*MOPTOP_GENERAL_ONE_SECOND_MS))
-		{
-			Moptop_General_Error_Number = 713;
-			sprintf(Moptop_General_Error_String,
-				"Bias_Dark_Acquire_Images: Failed to set exposure length to %.6f s.",exposure_length_s);
-			return FALSE;
-		}
-		Bias_Dark_Data.Requested_Exposure_Length = exposure_length_s;
-		andor_exposure_length_ms = (int)(exposure_length_s * 1000.0);
-		timeout_ms = (andor_exposure_length_ms+1000) * 2;
-		/* turn on camera internal triggering */
-		if(!CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_INTERNAL))
-		{
-			Moptop_General_Error_Number = 715;
-			sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:"
-				"Failed to set camera trigger mode to internal.");
-			return FALSE;
-		}
-		/* bias and darks need cycle mode to be fixed */
-		if(!CCD_Command_Set_Cycle_Mode(CCD_COMMAND_CYCLE_MODE_FIXED))
-		{
-			Moptop_General_Error_Number = 725;
-			sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:CCD_Command_Set_Cycle_Mode(%s) failed.",
-				CCD_COMMAND_CYCLE_MODE_FIXED);
-			return FALSE;
-		}
-		/* set frame count to 1 */
-		if(!CCD_Command_Set_Frame_Count(1))
-		{
-			Moptop_General_Error_Number = 726;
-			sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:CCD_Command_Set_Frame_Count(1) failed.");
-			return FALSE;
-		}				     
-		/* enable the CCD acquisition */
-		if(!CCD_Command_Acquisition_Start())
+		/* start taking data */
+		if(!CCD_Command_Set_Recording_State(TRUE))
 		{
 			Moptop_General_Error_Number = 716;
-			sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:Failed to start camera acquisition.");
+			sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:Failed to start camera recording.");
 			return FALSE;
 		}
 		/* get exposure start timestamp */
@@ -728,44 +696,38 @@ static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposur
 		if(Bias_Dark_Data.Image_Index == 0)
 			Bias_Dark_Data.Multrun_Start_Time = Bias_Dark_Data.Exposure_Start_Time;
 		/* get an acquired image buffer */
-		if(!CCD_Command_Wait_Buffer(&image_buffer,&image_buffer_length,timeout_ms))
+		if(!CCD_Command_Grabber_Acquire_Image_Async_Wait(CCD_Buffer_Get_Image_Buffer()))
 		{
-			CCD_Command_Acquisition_Stop();
-			CCD_Command_Flush();
+			CCD_Command_Set_Recording_State(FALSE);
 			Moptop_General_Error_Number = 735;
-			sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:"
-				"Failed to retrieve image buffer.");
+			sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:Failed to grab an image.");
 			return FALSE;
 		}
 		/* get camera timestamp */
-		if(!CCD_Command_Get_Timestamp_From_Metadata(image_buffer,image_buffer_length,&camera_ticks))
+		if(!CCD_Command_Get_Timestamp_From_Metadata(CCD_Buffer_Get_Image_Buffer(),
+							    CCD_Setup_Get_Image_Size_Bytes(),&camera_timestamp))
 		{
-			CCD_Command_Acquisition_Stop();
-			CCD_Command_Flush();
+			CCD_Command_Set_Recording_State(FALSE);
 			Moptop_General_Error_Number = 736;
 			sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:"
 				"Failed to get timestamp from metadata.");
 			return FALSE;
 		}
-		camera_clock_difference = ((double)(camera_ticks-last_camera_ticks))/(double)timestamp_clock_frequency;
-		last_camera_ticks = camera_ticks;
 		/* get exposure end timestamp */
 		clock_gettime(CLOCK_REALTIME,&exposure_end_time);
 		/* generate a new filename for this FITS image */
 		Bias_Dark_Get_Fits_Filename(exposure_type,filename,BIAS_DARK_FITS_FILENAME_LENGTH);
 		/* write fits image */
-		if(!Bias_Dark_Write_Fits_Image(exposure_type,andor_exposure_length_ms,exposure_end_time,camera_ticks,
-					       image_buffer,image_buffer_length,filename))
+		if(!Bias_Dark_Write_Fits_Image(exposure_type,pco_exposure_length_ms,exposure_end_time,camera_timestamp,
+					       CCD_Buffer_Get_Image_Buffer(),CCD_Setup_Get_Image_Size_Bytes(),filename))
 		{
-			CCD_Command_Acquisition_Stop();
-			CCD_Command_Flush();
+			CCD_Command_Set_Recording_State(FALSE);
 			return FALSE;
 		}
 		/* add fits image to list */
 		if(!CCD_Fits_Filename_List_Add(filename,filename_list,filename_count))
 		{
-			CCD_Command_Acquisition_Stop();
-			CCD_Command_Flush();
+			CCD_Command_Set_Recording_State(FALSE);
 			Moptop_General_Error_Number = 737;
 			sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:"
 				"Failed to add filename '%s' to list of filenames (count = %d).",
@@ -773,18 +735,10 @@ static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposur
 			return FALSE;
 		}
 		/* stop CCD acquisition */
-		if(!CCD_Command_Acquisition_Stop())
+		if(!CCD_Command_Set_Recording_State(FALSE))
 		{
-			CCD_Command_Flush();
 			Moptop_General_Error_Number = 727;
-			sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:Failed to stop camera acquisition.");
-			return FALSE;
-		}
-		/* flush buffers every time */
-		if(!CCD_Command_Flush())
-		{
-			Moptop_General_Error_Number = 729;
-			sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:Failed to flush camera.");
+			sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:Failed to stop camera recording.");
 			return FALSE;
 		}
 		/* check for abort */
@@ -869,7 +823,7 @@ static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expo
  *     Multrun_Data.CCD_Temperature.
  * <li>We set the "TEMPSTAT" FITS keyword value based on the cached CCD temperature status stored in
  *     Multrun_Data.CCD_Temperature_Status_String.
- * <li>We set the "EXPTIME" and "XPOSURE" FITS keyword value to the andor_exposure_length_ms in seconds.
+ * <li>We set the "EXPTIME" and "XPOSURE" FITS keyword value to the pco_exposure_length_ms in seconds.
  * <li>We set the "EXPREQST" FITS keyword value to the Multrun_Data.Requested_Exposure_Length.
  * <li>We set the "CCDXPIXE" FITS keyword value to CCD_Setup_Get_Pixel_Width in m.
  * <li>We set the "CCDYPIXE" FITS keyword value to CCD_Setup_Get_Pixel_Height in m.
@@ -892,7 +846,7 @@ static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expo
  * </ul>
  * @param exposure_type An CCD_FITS_FILENAME_EXPOSURE_TYPE, one of:
  *        CCD_FITS_FILENAME_EXPOSURE_TYPE_BIAS or CCD_FITS_FILENAME_EXPOSURE_TYPE_DARK.
- * @param andor_exposure_length_ms The exposure length as retrieved from the camera, in milliseconds.
+ * @param pco_exposure_length_ms The exposure length as retrieved from the camera, in milliseconds.
  * @param exposure_end_time A timestamp representing the end time of the exposure being saved. Actually a timestamp
  *        taken just after the camera has signalled a buffer is available.
  * @param camera_ticks A long long int holding the camera clock ticks stored by the camera in it's meta-data at the
@@ -931,7 +885,7 @@ static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expo
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Pixel_Height
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Timestamp_Clock_Frequency
  */
-static int Bias_Dark_Write_Fits_Image(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,int andor_exposure_length_ms,
+static int Bias_Dark_Write_Fits_Image(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,int pco_exposure_length_ms,
 				      struct timespec exposure_end_time,long long int camera_ticks,
 				      unsigned char *image_buffer,
 				      int image_buffer_length,char *filename)
@@ -1037,12 +991,12 @@ static int Bias_Dark_Write_Fits_Image(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expos
 		return FALSE;
 	/* EXPTIME is the actual exposure length returned from the camera, in seconds */
 	if(!Moptop_Fits_Header_Float_Add("EXPTIME",
-					 ((double)andor_exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS),
+					 ((double)pco_exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS),
 					 "[sec] Actual exposure"))
 		return FALSE;
 	/* XPOSURE is the actual exposure length returned from the camera, in seconds */
 	if(!Moptop_Fits_Header_Float_Add("XPOSURE",
-					 ((double)andor_exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS),
+					 ((double)pco_exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS),
 					 "[sec] Actual exposure"))
 		return FALSE;
 	/* EXPREQST is the requested exposure length in seconds (from Bias_Dark_Data.Requested_Exposure_Length) */
