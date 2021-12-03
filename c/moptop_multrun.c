@@ -163,7 +163,8 @@ static int Moptop_Abort = FALSE;
 static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *filename_count);
 static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *filename,int filename_length);
 static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms,struct timespec exposure_end_time,
-				    long long int camera_ticks,double requested_rotator_angle,double rotator_start_angle,
+				    int camera_image_number,struct timespec camera_timestamp,
+				    double requested_rotator_angle,double rotator_start_angle,
 				    double rotator_end_angle,double rotator_difference,
 				    unsigned char *image_buffer,int image_buffer_length,char *filename);
 /* ----------------------------------------------------------------------------
@@ -189,7 +190,7 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 int Moptop_Multrun_Exposure_Length_Set(double exposure_length_s)
 {
 	/* configure the CCD camera exposure length 
-	** Note this might be modified by the Andor library. */
+	** Note this might be modified by the PCO library. */
 	if(!CCD_Exposure_Length_Set(exposure_length_s*MOPTOP_GENERAL_ONE_SECOND_MS))
 	{
 		Moptop_General_Error_Number = 640;
@@ -441,18 +442,9 @@ int Moptop_Multrun_Setup(int *multrun_number)
  * @see moptop_config.html#Moptop_Config_Rotator_Is_Enabled
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Run_Velocity_Get
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Step_Angle_Get
- * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Queue_Images
- * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_CYCLE_MODE_CONTINUOUS
- * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_SHUTTER_MODE_AUTO
- * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE_EXTERNAL
- * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE_SOFTWARE
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Start
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Stop
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Flush
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Timestamp_Clock_Reset
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Shutter_Mode
+ * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Recording_State
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Trigger_Mode
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Cycle_Mode
  * @see ../pirot/cdocs/pirot_command.html#PIROT_Command_TRO
  * @see ../pirot/cdocs/pirot_command.html#PIROT_Command_MOV
  * @see ../pirot/cdocs/pirot_setup.html#PIROT_SETUP_ROTATOR_TOLERANCE
@@ -552,30 +544,6 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 	Moptop_General_Log_Format("multrun","moptop_multrun.c","Moptop_Multrun",LOG_VERBOSITY_VERBOSE,"MULTRUN",
 				  "Rotator end position %.3f.",rotator_end_position);
 #endif
-	/* setup CCD_Buffer for image acquisition */
-	if(!CCD_Buffer_Queue_Images(Multrun_Data.Image_Count))
-	{
-		Multrun_In_Progress = FALSE;
-		Moptop_General_Error_Number = 609;
-		sprintf(Moptop_General_Error_String,"Multrun_Acquire_Images:Failed to queue image buffers.");
-		return FALSE;
-	}
-	/* reset internal clock timestamp */
-	if(!CCD_Command_Timestamp_Clock_Reset())
-	{
-		Multrun_In_Progress = FALSE;
-		Moptop_General_Error_Number = 614;
-		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to reset camera timestamp clock.");
-		return FALSE;
-	}
-	/* set shutter mode to auto */
-	if(!CCD_Command_Set_Shutter_Mode(CCD_COMMAND_SHUTTER_MODE_AUTO))
-	{
-		Multrun_In_Progress = FALSE;
-		Moptop_General_Error_Number = 653;
-		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to set camera shutter mode to auto.");
-		return FALSE;
-	}	
 	/* turn on camera external triggering */
 	if(!CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_EXTERNAL))
 	{
@@ -584,22 +552,30 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to set camera trigger mode to external.");
 		return FALSE;
 	}
-	/* Multruns need cycle mode to be continuous */
-	if(!CCD_Command_Set_Cycle_Mode(CCD_COMMAND_CYCLE_MODE_CONTINUOUS))
+	/* get the camera ready with the new settings */
+	if(!CCD_Command_Arm_Camera())
 	{
 		Multrun_In_Progress = FALSE;
 		Moptop_General_Error_Number = 652;
-		sprintf(Moptop_General_Error_String,"Moptop_Multrun:CCD_Command_Set_Cycle_Mode(%s) failed.",
-			CCD_COMMAND_CYCLE_MODE_CONTINUOUS);
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun:CCD_Command_Arm_Camera failed.");
 		return FALSE;
 	}
-	/* enable the CCD acquisition */
-	if(!CCD_Command_Acquisition_Start())
+	/* update the grabber so thats ready */
+	if(!CCD_Command_Grabber_Post_Arm())
 	{
 		Multrun_In_Progress = FALSE;
-		CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_SOFTWARE);
+		Moptop_General_Error_Number = ;
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun:CCD_Command_Grabber_Post_Arm failed.");
+		return FALSE;
+	}
+	/* start taking data */
+	if(!CCD_Command_Set_Recording_State(TRUE))
+	{
+		Multrun_In_Progress = FALSE;
+		CCD_Command_Set_Recording_State(FALSE);
+		CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_INTERNAL);
 		Moptop_General_Error_Number = 615;
-		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to start camera acquisition.");
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to start camera recording data.");
 		return FALSE;
 	}
 	/* only configure and move the rotator, this this is the C layer with it enabled */
@@ -609,8 +585,8 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 		if(!PIROT_Command_TRO(TRUE))
 		{
 			Multrun_In_Progress = FALSE;
-			CCD_Command_Acquisition_Stop();
-			CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_SOFTWARE);
+			CCD_Command_Set_Recording_State(FALSE);
+			CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_INTERNAL);
 			Moptop_General_Error_Number = 606;
 			sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to enable rotator triggering.");
 			return FALSE;
@@ -623,8 +599,8 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 		if(!PIROT_Command_MOV(rotator_end_position))
 		{
 			Multrun_In_Progress = FALSE;
-			CCD_Command_Acquisition_Stop();
-			CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_SOFTWARE);
+			CCD_Command_Set_Recording_State(FALSE);
+			CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_INTERNAL);
 			PIROT_Command_TRO(FALSE);
 			Moptop_General_Error_Number = 607;
 			sprintf(Moptop_General_Error_String,
@@ -636,44 +612,34 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 	retval = Multrun_Acquire_Images(do_standard,filename_list,filename_count);
 	if(retval == FALSE)
 	{
-		CCD_Command_Acquisition_Stop();
-		CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_SOFTWARE);
-		CCD_Command_Flush();
+		CCD_Command_Set_Recording_State(FALSE);
+		CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_INTERNAL);
 		if(Moptop_Config_Rotator_Is_Enabled())
 			PIROT_Command_TRO(FALSE);
 		Multrun_In_Progress = FALSE;
 		return FALSE;
 	}
-	/* stop CCD acquisition */
-	if(!CCD_Command_Acquisition_Stop())
+	/* stop recording data */
+	if(!CCD_Command_Set_Recording_State(FALSE))
 	{
 		Multrun_In_Progress = FALSE;
-		CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_SOFTWARE);
+		CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_INTERNAL);
 		if(Moptop_Config_Rotator_Is_Enabled())
 			PIROT_Command_TRO(FALSE);
 		Moptop_General_Error_Number = 616;
-		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to stop camera acquisition.");
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to stop camera recording.");
 		return FALSE;
 	}
 	/* turn off external camera triggering */
-	if(!CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_SOFTWARE))
+	if(!CCD_Command_Set_Trigger_Mode(CCD_COMMAND_TRIGGER_MODE_INTERNAL))
 	{
 		Multrun_In_Progress = FALSE;
 		if(Moptop_Config_Rotator_Is_Enabled())
 			PIROT_Command_TRO(FALSE);
 		Moptop_General_Error_Number = 645;
-		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to set camera trigger mode to software.");
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to set camera trigger mode to internal.");
 		return FALSE;
 	}		
-	if(!CCD_Command_Flush())
-	{
-		Multrun_In_Progress = FALSE;
-		if(Moptop_Config_Rotator_Is_Enabled())
-			PIROT_Command_TRO(FALSE);
-		Moptop_General_Error_Number = 624;
-		sprintf(Moptop_General_Error_String,"Moptop_Multrun:Failed to flush camera.");
-		return FALSE;
-	}
 	/* only configure and move the rotator, this this is the C layer with it enabled */
 	if(Moptop_Config_Rotator_Is_Enabled())
 	{
@@ -699,7 +665,7 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
  * <li>Sets Moptop_Abort to TRUE.
  * <li>If Multrun_In_Progress is true:
  *     <ul>
- *     <li>Stop camera acquisition using CCD_Command_Acquisition_Stop.
+ *     <li>Stop camera acquisition using CCD_Command_Set_Recording_State(FALSE).
  *     <li>If therotator is enabled (Moptop_Config_Rotator_Is_Enabled), stop the rotator triggering using 
  *         PIROT_Command_TRO.
  *     </ul>
@@ -709,7 +675,7 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
  * @see #Moptop_Abort
  * @see #Multrun_In_Progress
  * @see moptop_config.html#Moptop_Config_Rotator_Is_Enabled
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Stop
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Recording_State
  * @see ../pirot/cdocs/pirot_command.html#PIROT_Command_TRO
  */
 int Moptop_Multrun_Abort(void)
@@ -717,12 +683,12 @@ int Moptop_Multrun_Abort(void)
 	Moptop_Abort = TRUE;
 	if(Multrun_In_Progress)
 	{
-		/* stop the camera acquisition */
-		if(!CCD_Command_Acquisition_Stop())
+		/* stop the camera recording */
+		if(!CCD_Command_Set_Recording_State(FALSE))
 		{
 			Moptop_General_Error_Number = 617;
 			sprintf(Moptop_General_Error_String,
-				"Moptop_Multrun_Abort:Failed to stop camera acquisition.");
+				"Moptop_Multrun_Abort:Failed to stop camera recording.");
 			return FALSE;
 		}
 		/* stop rotator triggering, if the rotator is enabled */
@@ -1046,7 +1012,8 @@ void Moptop_Multrun_Flip_Y(int ncols,int nrows,unsigned short *exposure_data)
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_config.html#Moptop_Config_Rotator_Is_Enabled
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Wait_Buffer
+ * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Get_Image_Buffer
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Grabber_Acquire_Image_Async_Wait
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Timestamp_Clock_Frequency
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Timestamp_From_Metadata
  * @see ../ccd/cdocs/ccd_exposure.html#CCD_Exposure_Length_Get
@@ -1057,14 +1024,12 @@ static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *fil
 {
 	struct timespec exposure_end_time;
 	char filename[MULTRUN_FITS_FILENAME_LENGTH];
-	unsigned char *image_buffer = NULL;
 	unsigned int timeout_ms;
 	double requested_rotator_angle = 0.0;
 	double rotator_start_angle,current_rotator_position,rotator_difference,rotator_end_angle;
 	double camera_clock_difference;
-	long long int camera_ticks,last_camera_ticks,timestamp_clock_frequency;
-	int andor_exposure_length_ms;
-	int image_buffer_length,images_per_cycle;
+	int pco_exposure_length_ms;
+	int images_per_cycle;
 	
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("multrun","moptop_multrun.c","Multrun_Acquire_Images",LOG_VERBOSITY_INTERMEDIATE,
@@ -1086,18 +1051,11 @@ static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *fil
 	(*filename_list) = NULL;
 	(*filename_count) = 0;
 	/* compute how long CCD_Command_Wait_Buffer should wait for an image to arrive, in milliseconds */
-	/* get exposure length used by andor */
-	if(!CCD_Exposure_Length_Get(&andor_exposure_length_ms))
+	/* get exposure length used by the pco camera */
+	if(!CCD_Exposure_Length_Get(&pco_exposure_length_ms))
 	{
 		Moptop_General_Error_Number = 610;
-		sprintf(Moptop_General_Error_String,"Multrun_Acquire_Images:Failed to get Andor exposure length.");
-		return FALSE;
-	}
-	/* get camera's internal clock frequency for use in the loop */
-	if(!CCD_Command_Get_Timestamp_Clock_Frequency(&timestamp_clock_frequency))
-	{
-		Moptop_General_Error_Number = 621;
-		sprintf(Moptop_General_Error_String,"Multrun_Acquire_Images:Failed to get timestamp clock frequency.");
+		sprintf(Moptop_General_Error_String,"Multrun_Acquire_Images:Failed to get PCO exposure length.");
 		return FALSE;
 	}
 	/* time taken between two triggers is rotator_step_angle/rotator_run_velocity 
@@ -1106,7 +1064,6 @@ static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *fil
 	timeout_ms = (int)(4.0*(Moptop_Multrun_Rotator_Step_Angle_Get()/Moptop_Multrun_Rotator_Run_Velocity_Get()))*
 		MOPTOP_GENERAL_ONE_SECOND_MS;
 	images_per_cycle = (int)(360.0 / Moptop_Multrun_Rotator_Step_Angle_Get());
-	last_camera_ticks = 0;
 	/* acquire frames */
 	for(Multrun_Data.Image_Index=0;Multrun_Data.Image_Index < Multrun_Data.Image_Count; Multrun_Data.Image_Index++)
 	{
@@ -1119,7 +1076,7 @@ static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *fil
 		Multrun_Data.Rotation_Number = (Multrun_Data.Image_Index / images_per_cycle) + 1;
 		Multrun_Data.Sequence_Number = (Multrun_Data.Image_Index % images_per_cycle) + 1;
 		/* get an acquired image buffer */
-		if(!CCD_Command_Wait_Buffer(&image_buffer,&image_buffer_length,timeout_ms))
+		if(!CCD_Command_Grabber_Acquire_Image_Async_Wait(CCD_Buffer_Get_Image_Buffer()))
 		{
 			Moptop_General_Error_Number = 611;
 			sprintf(Moptop_General_Error_String,"Multrun_Acquire_Images:Failed to retrieve image buffer.");
