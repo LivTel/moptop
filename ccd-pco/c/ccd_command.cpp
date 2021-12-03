@@ -83,6 +83,9 @@ static int Command_Error_Number = 0;
  */
 static char Command_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
 
+/* internal functions */
+static int Command_BCD_To_Decimal(unsigned char x);
+
 /* --------------------------------------------------------
 ** External Functions
 ** -------------------------------------------------------- */
@@ -1260,6 +1263,130 @@ int CCD_Command_Get_Delay_Exposure_Time(int *delay_time,int *exposure_time)
 }
 
 /**
+ * Get the image number from the metadata encoded in the first few bytes of the image data.
+ * The algorithm is copied from the example programs. The shift is zero for 64-bit linux machines with a PCO edge head.
+ * @param image_buffer A pointer to the image data read out from the camera.
+ * @param image_buffer_length The length of the image buffer.
+ * @param image_number The address of an integer to store the decoded image number.
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see ccd_general.html#CCD_General_Log
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Get_Image_Number_From_Metadata(void *image_buffer,size_t image_buffer_length,int *image_number)
+{
+	unsigned short *b;
+	int y,shift;
+	int image_nr=0;
+
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Get_Image_Number_From_Metadata: Started.");
+#endif /* LOGGING */
+	if(image_buffer == NULL)
+	{
+		Command_Error_Number = 60;
+		sprintf(Command_Error_String,"CCD_Command_Get_Image_Number_From_Metadata:image_buffer was NULL.");
+		return FALSE;
+	}
+	if(image_number == NULL)
+	{
+		Command_Error_Number = 61;
+		sprintf(Command_Error_String,"CCD_Command_Get_Image_Number_From_Metadata:image_number was NULL.");
+		return FALSE;
+	}
+	shift = 0;
+	b=(unsigned short *)(image_buffer);
+	y=100*100*100;
+	for(;y>0;y/=100)
+	{
+		*b>>=shift;
+		image_nr += (((*b&0x00F0)>>4)*10 + (*b&0x000F))*y;
+		b++;
+	}
+	(*image_number) = image_nr;
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_VERBOSE,
+			       "CCD_Command_Get_Image_Number_From_Metadata: Returned image number %d.",(*image_number));
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Routine to extract the timestamp from the read out image data.
+ * @param image_buffer A pointer to the image data.
+ * @param image_buffer_length The length of the image buffer in bytes.
+ * @param camera_timestamp The address of a timespec structure. On a successful return this will be filled in
+ *        with the extracted timestamp.
+ * @see #Command_BCD_To_Decimal
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see ccd_general.html#CCD_General_Log
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Get_Timestamp_From_Metadata(void *image_buffer,size_t image_buffer_length,
+					    struct timespec *camera_timestamp)
+{
+	struct tm timestamp_tm;
+	WORD *picbuf = NULL;
+	int century,year,month,day,hour,mins,secs,csecs,ccsec;
+	
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Get_Timestamp_From_Metadata: Started.");
+#endif /* LOGGING */
+	if(image_buffer == NULL)
+	{
+		Command_Error_Number = 62;
+		sprintf(Command_Error_String,"CCD_Command_Get_Timestamp_From_Metadata:image_buffer was NULL.");
+		return FALSE;
+	}
+	if(camera_timestamp == NULL)
+	{
+		Command_Error_Number = 63;
+		sprintf(Command_Error_String,"CCD_Command_Get_Timestamp_From_Metadata:camera_timestamp was NULL.");
+		return FALSE;
+	}
+	picbuf = (WORD*)image_buffer;
+	century = Command_BCD_To_Decimal(picbuf[4]);
+	year = Command_BCD_To_Decimal(picbuf[5]);
+	month = Command_BCD_To_Decimal(picbuf[6]);
+	day = Command_BCD_To_Decimal(picbuf[7]);
+	hour = Command_BCD_To_Decimal(picbuf[8]);
+	mins = Command_BCD_To_Decimal(picbuf[9]);
+	secs = Command_BCD_To_Decimal(picbuf[10]);
+	csecs = Command_BCD_To_Decimal(picbuf[11]); /* tenths and hundredths of a second */
+	ccsec = Command_BCD_To_Decimal(picbuf[12]); /* thousandths and ten thousandths of a second */
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
+			      "CCD_Command_Get_Timestamp_From_Metadata: century = %d, year = %d, month = %d, day = %d.",
+			       century,year,month,day);
+	CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
+			      "CCD_Command_Get_Timestamp_From_Metadata: hour = %d, minutes = %d, seconds = %d, tenths/hundredths = %d, thousandths and ten thousandths = %d.",
+			       hour,mins,secs,csecs,ccsec);
+#endif /* LOGGING */
+	/* setup timestamp_tm */
+	timestamp_tm.tm_sec = secs;
+	timestamp_tm.tm_min = mins;
+	timestamp_tm.tm_hour = hour;
+	timestamp_tm.tm_mday = day;
+	timestamp_tm.tm_mon = month-1; /* tm_mon 0..11, month 1..12 */
+	timestamp_tm.tm_year = year; /* tm_year is year - 1900 */
+	if(century == 20)
+		timestamp_tm.tm_year += 100; /* tm_year is year - 1900 */
+	/* ignored by mktime
+	timestamp_tm.tm_wday = ;
+	timestamp_tm.tm_yday = ;
+	*/
+	timestamp_tm.tm_isdst = 0; /* no daylight saving time */
+	/* convert timestamp_tm to a time_t (seconds since the epoch) and store in camera_timestamp.tv_sec */
+	(*camera_timestamp).tv_sec = mktime(&timestamp_tm);
+	(*camera_timestamp).tv_nsec = (csecs*10000000)+(ccsec*100000);
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Get_Timestamp_From_Metadata: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
  * Get the current value of the error number.
  * @return The current value of the error number.
  * @see #Command_Error_Number
@@ -1316,3 +1443,13 @@ void CCD_Command_Error_String(char *error_string)
 /* =======================================
 **  internal functions 
 ** ======================================= */
+/**
+ * Routine to convert the BCD (binary coded decimal) number to a normal integer.
+ * @param x An unisgned char containing the BCD number (0..100). This is noamlly passed in a WORD, and we take
+ *        the lower byte which contains the encoded number.
+ * @return The decoded integer (0..100).
+ */
+static int Command_BCD_To_Decimal(unsigned char x)
+{
+    return x - 6 * (x >> 4);
+}

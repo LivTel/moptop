@@ -120,7 +120,8 @@ static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposur
 static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,
 				       char *filename,int filename_length);
 static int Bias_Dark_Write_Fits_Image(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,int pco_exposure_length_ms,
-				      struct timespec exposure_end_time,long long int camera_ticks,
+				      struct timespec exposure_end_time,int camera_image_number,
+				      struct timespec camera_timestamp,
 				      unsigned char *image_buffer,
 				      int image_buffer_length,char *filename);
 
@@ -610,11 +611,12 @@ static int Bias_Dark_Setup(void)
 static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,double exposure_length_s,
 				    char ***filename_list,int *filename_count)
 {
+	struct timespec camera_timestamp;
 	struct timespec exposure_end_time;
 	char filename[BIAS_DARK_FITS_FILENAME_LENGTH];
 	unsigned char *image_buffer = NULL;
 	int pco_exposure_length_ms;
-	int image_buffer_length;
+	int image_buffer_length,camera_image_number;
 	
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("biasdark","moptop_bias_dark.c","Bias_Dark_Acquire_Images",
@@ -703,6 +705,18 @@ static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposur
 			sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:Failed to grab an image.");
 			return FALSE;
 		}
+		/* get exposure end timestamp */
+		clock_gettime(CLOCK_REALTIME,&exposure_end_time);
+		/* get camera image number */
+		if(!CCD_Command_Get_Image_Number_From_Metadata(CCD_Buffer_Get_Image_Buffer(),
+							       CCD_Setup_Get_Image_Size_Bytes(),&camera_image_number))
+		{
+			CCD_Command_Set_Recording_State(FALSE);
+			Moptop_General_Error_Number = 708;
+			sprintf(Moptop_General_Error_String,"Bias_Dark_Acquire_Images:"
+				"Failed to get image number from metadata.");
+			return FALSE;
+		}
 		/* get camera timestamp */
 		if(!CCD_Command_Get_Timestamp_From_Metadata(CCD_Buffer_Get_Image_Buffer(),
 							    CCD_Setup_Get_Image_Size_Bytes(),&camera_timestamp))
@@ -713,12 +727,11 @@ static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposur
 				"Failed to get timestamp from metadata.");
 			return FALSE;
 		}
-		/* get exposure end timestamp */
-		clock_gettime(CLOCK_REALTIME,&exposure_end_time);
 		/* generate a new filename for this FITS image */
 		Bias_Dark_Get_Fits_Filename(exposure_type,filename,BIAS_DARK_FITS_FILENAME_LENGTH);
 		/* write fits image */
-		if(!Bias_Dark_Write_Fits_Image(exposure_type,pco_exposure_length_ms,exposure_end_time,camera_timestamp,
+		if(!Bias_Dark_Write_Fits_Image(exposure_type,pco_exposure_length_ms,exposure_end_time,
+					       camera_image_number,camera_timestamp,
 					       CCD_Buffer_Get_Image_Buffer(),CCD_Setup_Get_Image_Size_Bytes(),filename))
 		{
 			CCD_Command_Set_Recording_State(FALSE);
@@ -795,18 +808,7 @@ static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expo
 #endif
 	return TRUE;
 }
-/* diddly delete
- * <li>We set the "FILTER1" FITS keyword value based on the cached filter name in Multrun_Data.Filter_Name.
- * <li>We set the "FILTERI1" FITS keyword value based on the cached filter name in Multrun_Data.Filter_Id.
- * <li>We set the "MOPRMODE" FITS keyword value to the requested rotator speed stored in Multrun_Data.Rotator_Speed.
- * <li>We set the "MOPRRATE" FITS keyword value to the rotator angular velocity stored in Multrun_Data.Rotator_Run_Velocity.
- * <li>We set the "MOPRREQ" FITS keyword value to the requested_rotator_angle.
- * <li>We set the "MOPRBEG" FITS keyword value to the rotator_start_angle.
- * <li>We set the "MOPREND" FITS keyword value to the rotator_end_angle.
- * <li>We set the "MOPRARC" FITS keyword value to the rotator_difference.
- * <li>We set the "MOPRNUM" FITS keyword value to the Multrun_Data.Rotation_Number.
- * <li>We set the "MOPRPOS" FITS keyword value to the Multrun_Data.Sequence_Number.
- */
+
 /**
  * Write the FITS image to disk.
  * <ul>
@@ -828,7 +830,8 @@ static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expo
  * <li>We set the "CCDXPIXE" FITS keyword value to CCD_Setup_Get_Pixel_Width in m.
  * <li>We set the "CCDYPIXE" FITS keyword value to CCD_Setup_Get_Pixel_Height in m.
  * <li>We set the "CLKFREQ" FITS keyword value to CCD_Setup_Get_Timestamp_Clock_Frequency.
- * <li>We set the "CLKSTAMP" FITS keyword value to camera_ticks.
+ * <li>We set the "PICNUM" FITS keyword value to the camera_image_number.
+ * <li>We set the "CAMTIME" FITS keyword value to the camera__timestamp.
  * <li>We create a file lock on the filename to write to using CCD_Fits_Filename_Lock.
  * <li>We create the FITS filename using fits_create_file.
  * <li>We calculate the binned image dimensions using CCD_Setup_Get_Sensor_Width / CCD_Setup_Get_Sensor_Height / 
@@ -849,10 +852,10 @@ static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expo
  * @param pco_exposure_length_ms The exposure length as retrieved from the camera, in milliseconds.
  * @param exposure_end_time A timestamp representing the end time of the exposure being saved. Actually a timestamp
  *        taken just after the camera has signalled a buffer is available.
- * @param camera_ticks A long long int holding the camera clock ticks stored by the camera in it's meta-data at the
- *        instant it began this exposure.
+ * @param camera_image_number The camera image number extracted from the read-out image's meta-data.
+ * @param camera_timestamp A timestamp recorded by the camera and extracted from the read-out image's meta-data.
  * @param image_buffer The image buffer containing the data to write to disk.
- * @param image_buffer_length The length of data in the image buffer (note this includes metadata).
+ * @param image_buffer_length The length of data in the image buffer.
  * @param filename A string containing the FITS filename to write the data into.
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #Bias_Dark_Data
@@ -886,7 +889,8 @@ static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expo
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Timestamp_Clock_Frequency
  */
 static int Bias_Dark_Write_Fits_Image(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,int pco_exposure_length_ms,
-				      struct timespec exposure_end_time,long long int camera_ticks,
+				      struct timespec exposure_end_time,int camera_image_number,
+				      struct timespec camera_timestamp,
 				      unsigned char *image_buffer,
 				      int image_buffer_length,char *filename)
 {
@@ -1017,8 +1021,12 @@ static int Bias_Dark_Write_Fits_Image(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expos
 	if(!Moptop_Fits_Header_Long_Long_Integer_Add("CLKFREQ",CCD_Setup_Get_Timestamp_Clock_Frequency(),
 						     "[Hz] Detector clock tick frequency"))
 		return FALSE;
-	/* CLKSTAMP is the camera clock timestamp (in ticks) the camera took when this exposure started */
-	if(!Moptop_Fits_Header_Long_Long_Integer_Add("CLKSTAMP",camera_ticks,"Image clock tick value"))
+	/* PICNUM is the camera image number retrieved from the camera read out's metadata. */
+	if(!Moptop_Fits_Header_Integer_Add("PICNUM",camera_image_number,"Camera meta-data image number"))
+		return FALSE;
+	/* CAMTIME is the camera clock timestamp the when this exposure started, from the camera's meta-data */
+	Moptop_Fits_Header_TimeSpec_To_Date_Obs_String(camera_timestamp,exposure_time_string);
+	if(!Moptop_Fits_Header_String_Add("CAMTIME",exposure_time_string,"[UTC] Cameras timestamp."))
 		return FALSE;
 	/* create lock file */
 #if MOPTOP_DEBUG > 5

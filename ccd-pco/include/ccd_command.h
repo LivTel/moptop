@@ -45,13 +45,16 @@ extern int CCD_Command_Close(void);
 	extern int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *camera_temp,
 					       int *valid_psu_temp,int *psu_temp);
 	extern int CCD_Command_Description_Get_Num_ADCs(int *adc_count);
-	extern int CCD_Command_Get_Exposure_Time_Min(int *minimum_exposure_length_s);
-	extern int CCD_Command_Get_Exposure_Time_Max(int *maximum_exposure_length_s);
+	extern int CCD_Command_Get_Exposure_Time_Min(double *minimum_exposure_length_s);
+	extern int CCD_Command_Get_Exposure_Time_Max(double *maximum_exposure_length_s);
 	extern int CCD_Command_Get_Actual_Size(int *image_width,int *image_height);
 	extern int CCD_Command_Get_Image_Size_Bytes(int *image_size);
 	extern int CCD_Command_Get_Trigger_Mode(enum CCD_COMMAND_TRIGGER_MODE *mode);
 	extern int CCD_Command_Get_Delay_Exposure_Time(int *delay_time,int *exposure_time);
-	
+	extern int CCD_Command_Get_Image_Number_From_Metadata(void *image_buffer,size_t image_buffer_length,
+							      int *image_number);
+	extern int CCD_Command_Get_Timestamp_From_Metadata(void *image_buffer,size_t image_buffer_length,
+							   struct timespec *camera_timestamp);
 extern int CCD_Command_Get_Error_Number(void);
 extern void CCD_Command_Error(void);
 extern void CCD_Command_Error_String(char *error_string);
