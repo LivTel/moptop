@@ -1157,6 +1157,63 @@ int CCD_Command_Description_Get_Max_Vertical_Size(int *max_ver_size)
 }
 
 /**
+ * Get the camera type and serial number of the currently connected camera.
+ * @param camera_type The address of an integer to store the camera type number.
+ * @param serial_number The address of an integer to store the serial number of the camera.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see ccd_general.html#CCD_General_Log
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Get_Camera_Type(int *camera_type,int *serial_number)
+{
+	DWORD pco_err;
+	DWORD serial_number_dw;
+	WORD camera_type_w;
+	
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Get_Camera_Type: Started.");
+#endif /* LOGGING */
+	if(camera_type == NULL)
+	{
+		Command_Error_Number = 69;
+		sprintf(Command_Error_String,"CCD_Command_Get_Camera_Type:camera_type was NULL.");
+		return FALSE;
+	}
+	if(serial_number == NULL)
+	{
+		Command_Error_Number = 70;
+		sprintf(Command_Error_String,"CCD_Command_Get_Camera_Type:serial_number was NULL.");
+		return FALSE;
+	}
+	/* check camera instance has been created, if so open should have been called,
+	** and the Description field retrieved from the camera head. */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 71;
+		sprintf(Command_Error_String,"CCD_Command_Get_Camera_Type:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Camera->PCO_GetCameraType(&camera_type_w,&serial_number_dw);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 72;
+		sprintf(Command_Error_String,"CCD_Command_Get_Camera_Type:PCO_GetCameraType failed(0x%x).",pco_err);
+		return FALSE;
+	}
+	(*camera_type) = camera_type_w;
+	(*serial_number) = serial_number_dw;
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+			       "CCD_Command_Get_Camera_Type returned camera type = 0x%x, serial number = %d.",
+			       (*camera_type),(*serial_number));
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
  * Get the actual size of the image that the camera will return, given the current binning settings.
  * @param image_width The address of an integer to store the width of the image, in pixels.
  * @param image_height The address of an integer to store height of the image, in pixels.
@@ -1199,7 +1256,7 @@ int CCD_Command_Get_Actual_Size(int *image_width,int *image_height)
 	if(pco_err != PCO_NOERROR)
 	{
 		Command_Error_Number = 46;
-		sprintf(Command_Error_String,"CCD_Command_Get_Temperature:PCO_GetActualSize failed(0x%x).",pco_err);
+		sprintf(Command_Error_String,"CCD_Command_Get_Actual_Size:PCO_GetActualSize failed(0x%x).",pco_err);
 		return FALSE;
 	}
 	(*image_width) = image_width_w;
