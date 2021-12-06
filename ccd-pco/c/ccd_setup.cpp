@@ -135,6 +135,10 @@ static char Setup_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * <li>If the returned ADC count is greater than one, we call CCD_Command_Set_ADC_Operation(2) to use the extra ADC.
  * <li>We call CCD_Command_Set_Bit_Alignment(0x0001) to set the returned data to be LSB.
  * <li>We call CCD_Command_Set_Noise_Filter_Mode to set noise reduction to off.
+ * <li>We call CCD_Command_Description_Get_Max_Horizontal_Size to get Setup_Data.Sensor_Width from the camera
+ *     description.
+ * <li>We call CCD_Command_Description_Get_Max_Vertical_Size to get Setup_Data.Sensor_Height from the camera
+ *     description.
  * <li>We call CCD_Command_Arm_Camera to update the cameras internal state to take account of the new settings.
  * <li>We call CCD_Command_Grabber_Post_Arm to update the grabber's state to match the camera's state.
  * <ul>
@@ -154,6 +158,8 @@ static char Setup_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * @see ccd_command.html#CCD_Command_Set_ADC_Operation
  * @see ccd_command.html#CCD_Command_Set_Bit_Alignment
  * @see ccd_command.html#CCD_Command_Set_Noise_Filter_Mode
+ * @see ccd_command.html#CCD_Command_Description_Get_Max_Horizontal_Size
+ * @see ccd_command.html#CCD_Command_Description_Get_Max_Vertical_Size
  * @see ccd_command.html#CCD_Command_Arm_Camera
  * @see ccd_command.html#CCD_Command_Grabber_Post_Arm
  * @see ccd_general.html#CCD_General_Log_Format
@@ -254,6 +260,21 @@ int CCD_Setup_Startup(void)
 			"CCD_Setup_Startup: CCD_Command_Set_Noise_Filter_Mode(0x000) failed.");
 		return FALSE;
 	}
+	/* get and store some data from the description, for use later */
+	if(!CCD_Command_Description_Get_Max_Horizontal_Size(&Setup_Data.Sensor_Width))
+	{
+		Setup_Error_Number = 15;
+		sprintf(Setup_Error_String,
+			"CCD_Setup_Startup: Failed to get the maximum horizontal size from the description.");
+		return FALSE;
+	}
+	if(!CCD_Command_Description_Get_Max_Vertical_Size(&Setup_Data.Sensor_Height))
+	{
+		Setup_Error_Number = 21;
+		sprintf(Setup_Error_String,
+			"CCD_Setup_Startup: Failed to get the maximum vertical size from the description.");
+		return FALSE;
+	}	
 	/* prepare camera for taking data */
 	if(!CCD_Command_Arm_Camera())
 	{
@@ -261,15 +282,6 @@ int CCD_Setup_Startup(void)
 		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Arm_Camera failed.");
 		return FALSE;
 	}
-	/* update the grabber  to the camera state */
-	/* diddly This fails with 0x80312006 at the moment. No binning/image dimensions set yet?
-	if(!CCD_Command_Grabber_Post_Arm())
-	{
-		Setup_Error_Number = 15;
-		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Grabber_Post_Arm failed.");
-		return FALSE;
-	}
-	*/
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Setup_Startup: Finished.");
 #endif /* LOGGING */
@@ -510,7 +522,6 @@ float CCD_Setup_Get_Pixel_Height(void)
  */
 int CCD_Setup_Get_Sensor_Width(void)
 {
-	/* diddly */
 	return Setup_Data.Sensor_Width;
 }
 
@@ -522,7 +533,6 @@ int CCD_Setup_Get_Sensor_Width(void)
  */
 int CCD_Setup_Get_Sensor_Height(void)
 {
-	/* diddly */
 	return Setup_Data.Sensor_Height;
 }
 

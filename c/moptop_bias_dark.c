@@ -163,8 +163,8 @@ int Moptop_Bias_Dark_Flip_Set(int flip_x,int flip_y)
  * <li>We initialise Moptop_Abort to FALSE, and Moptop_In_Progress to TRUE.
  * <li>We check the exposure count is sensible, and initialise BiasDark_Data.Image_Count to it.
  * <li>We call Bias_Dark_Setup to do some common setup tasks.
- * <li>We call CCD_Command_Get_Exposure_Time_Min to get the minimum exposure length the camera will allow. We
- *     use this as the exposure length for the bias frames.
+ * <li>We call CCD_Command_Description_Get_Exposure_Time_Min to get the minimum exposure length the camera will allow. 
+ *     We use this as the exposure length for the bias frames.
  * <li>We call Bias_Dark_Acquire_Images to take the images and save them to disk.
  * <li>We set Moptop_In_Progress to FALSE.
  * </ul>
@@ -178,7 +178,7 @@ int Moptop_Bias_Dark_Flip_Set(int flip_x,int flip_y)
  * @see #Bias_Dark_Setup
  * @see #Bias_Dark_Acquire_Images
  * @see moptop_general.html#MOPTOP_GENERAL_ONE_SECOND_MS
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Exposure_Time_Min
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Description_Get_Exposure_Time_Min
  */
 int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *filename_count)
 {
@@ -225,7 +225,7 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
 		return FALSE;
 	}
 	/* get the minimum exposure length for this camera, in decimal seconds */
-	if(!CCD_Command_Get_Exposure_Time_Min(&minimum_exposure_length_s))
+	if(!CCD_Command_Description_Get_Exposure_Time_Min(&minimum_exposure_length_s))
 	{
 		Bias_Dark_In_Progress = FALSE;
 		Moptop_General_Error_Number = 753;
@@ -258,8 +258,8 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
  * <li>We initialise Moptop_Abort to FALSE, and Moptop_In_Progress to TRUE.
  * <li>We check the exposure count is sensible, and initialise BiasDark_Data.Image_Count to it.
  * <li>We call Bias_Dark_Setup to do some common setup tasks.
- * <li>We check the requested exposure length is legal by calling CCD_Command_Get_Exposure_Time_Min and
- *     CCD_Command_Get_Exposure_Time_Max to get the allowed exposure lengths from the camera, and then
+ * <li>We check the requested exposure length is legal by calling CCD_Command_Description_Get_Exposure_Time_Min and
+ *     CCD_Command_Description_Get_Exposure_Time_Max to get the allowed exposure lengths from the camera, and then
  *     comparing exposure_length_ms to them (after converting to ms).
  * <li>We call Bias_Dark_Acquire_Images to take the images and save them to disk.
  * <li>We set Bias_Dark_In_Progress to FALSE.
@@ -274,8 +274,8 @@ int Moptop_Bias_Dark_MultBias(int exposure_count,char ***filename_list,int *file
  * @see #Bias_Dark_Setup
  * @see #Bias_Dark_Acquire_Images
  * @see moptop_general.html#MOPTOP_GENERAL_ONE_SECOND_MS
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Exposure_Time_Min
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Exposure_Time_Max
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Description_Get_Exposure_Time_Min
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Description_Get_Exposure_Time_Max
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_FITS_FILENAME_EXPOSURE_TYPE_DARK
  */
 int Moptop_Bias_Dark_MultDark(int exposure_length_ms,int exposure_count,
@@ -326,7 +326,7 @@ int Moptop_Bias_Dark_MultDark(int exposure_length_ms,int exposure_count,
 	}
 	/* check exposure length is legal */
 	/* get minimum exposure length the camera allows, in seconds */
-	if(!CCD_Command_Get_Exposure_Time_Min(&minimum_exposure_length_s))
+	if(!CCD_Command_Description_Get_Exposure_Time_Min(&minimum_exposure_length_s))
 	{
 		Bias_Dark_In_Progress = FALSE;
 		Moptop_General_Error_Number = 754;
@@ -338,7 +338,7 @@ int Moptop_Bias_Dark_MultDark(int exposure_length_ms,int exposure_count,
 				  "BIAS","Minumum camera exposure length is %.3f seconds.",minimum_exposure_length_s);
 #endif
 	/* get maximum exposure length the camera allows, in seconds */
-	if(!CCD_Command_Get_Exposure_Time_Max(&maximum_exposure_length_s))
+	if(!CCD_Command_Description_Get_Exposure_Time_Max(&maximum_exposure_length_s))
 	{
 		Bias_Dark_In_Progress = FALSE;
 		Moptop_General_Error_Number = 755;

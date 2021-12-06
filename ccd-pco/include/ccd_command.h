@@ -45,8 +45,10 @@ extern int CCD_Command_Close(void);
 	extern int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *camera_temp,
 					       int *valid_psu_temp,int *psu_temp);
 	extern int CCD_Command_Description_Get_Num_ADCs(int *adc_count);
-	extern int CCD_Command_Get_Exposure_Time_Min(double *minimum_exposure_length_s);
-	extern int CCD_Command_Get_Exposure_Time_Max(double *maximum_exposure_length_s);
+	extern int CCD_Command_Description_Get_Exposure_Time_Min(double *minimum_exposure_length_s);
+	extern int CCD_Command_Description_Get_Exposure_Time_Max(double *maximum_exposure_length_s);
+	extern int CCD_Command_Description_Get_Max_Horizontal_Size(int *max_hor_size);
+	extern int CCD_Command_Description_Get_Max_Vertical_Size(int *max_ver_size);
 	extern int CCD_Command_Get_Actual_Size(int *image_width,int *image_height);
 	extern int CCD_Command_Get_Image_Size_Bytes(int *image_size);
 	extern int CCD_Command_Get_Trigger_Mode(enum CCD_COMMAND_TRIGGER_MODE *mode);

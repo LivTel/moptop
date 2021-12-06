@@ -431,7 +431,7 @@ int CCD_Command_Set_Recording_State(int rec_state)
 		return FALSE;
 	}
 #if LOGGING > 5
-	CCD_General_Log(LOG_VERBOSITY_VERY_VERBOSE,"CCD_Command_Set_Camera_To_Current_Time: Finished.");
+	CCD_General_Log(LOG_VERBOSITY_VERY_VERBOSE,"CCD_Command_Set_Recording_State: Finished.");
 #endif /* LOGGING */
 	return TRUE;
 }
@@ -996,18 +996,18 @@ int CCD_Command_Description_Get_Num_ADCs(int *adc_count)
  * @see ccd_general.html#CCD_General_Log
  * @see ccd_general.html#CCD_General_Log_Format
  */
-int CCD_Command_Get_Exposure_Time_Min(double *minimum_exposure_length_s)
+int CCD_Command_Description_Get_Exposure_Time_Min(double *minimum_exposure_length_s)
 {
 	DWORD min_expose_dw_ns;
 	
 #if LOGGING > 5
-	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Get_Exposure_Time_Min: Started.");
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Description_Get_Exposure_Time_Min: Started.");
 #endif /* LOGGING */
 	if(minimum_exposure_length_s == NULL)
 	{
 		Command_Error_Number = 54;
 		sprintf(Command_Error_String,
-			"CCD_Command_Get_Exposure_Time_Min:minimum_exposure_length_s was NULL.");
+			"CCD_Command_Description_Get_Exposure_Time_Min:minimum_exposure_length_s was NULL.");
 		return FALSE;
 	}
 	/* check camera instance has been created, if so open should have been called,
@@ -1016,7 +1016,7 @@ int CCD_Command_Get_Exposure_Time_Min(double *minimum_exposure_length_s)
 	{
 		Command_Error_Number = 55;
 		sprintf(Command_Error_String,
-			"CCD_Command_Get_Exposure_Time_Min:Camera CPco_com_usb instance not created.");
+			"CCD_Command_Description_Get_Exposure_Time_Min:Camera CPco_com_usb instance not created.");
 		return FALSE;
 	}
 	min_expose_dw_ns = Command_Data.Description.dwMinExposureDESC;
@@ -1024,7 +1024,7 @@ int CCD_Command_Get_Exposure_Time_Min(double *minimum_exposure_length_s)
 	(*minimum_exposure_length_s) = ((double)min_expose_dw_ns)/((double)CCD_GENERAL_ONE_SECOND_NS);
 #if LOGGING > 5
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
-			       "CCD_Command_Get_Exposure_Time_Min returned %.2f s minimum exposure length.",
+			       "CCD_Command_Description_Get_Exposure_Time_Min returned %.2f s minimum exposure length.",
 			       (*minimum_exposure_length_s));
 #endif /* LOGGING */
 	return TRUE;
@@ -1042,18 +1042,18 @@ int CCD_Command_Get_Exposure_Time_Min(double *minimum_exposure_length_s)
  * @see ccd_general.html#CCD_General_Log
  * @see ccd_general.html#CCD_General_Log_Format
  */
-int CCD_Command_Get_Exposure_Time_Max(double *maximum_exposure_length_s)
+int CCD_Command_Description_Get_Exposure_Time_Max(double *maximum_exposure_length_s)
 {
 	DWORD max_expose_dw_ms;
 	
 #if LOGGING > 5
-	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Get_Exposure_Time_Max: Started.");
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Description_Get_Exposure_Time_Max: Started.");
 #endif /* LOGGING */
 	if(maximum_exposure_length_s == NULL)
 	{
 		Command_Error_Number = 56;
 		sprintf(Command_Error_String,
-			"CCD_Command_Get_Exposure_Time_Max:maximum_exposure_length_s was NULL.");
+			"CCD_Command_Description_Get_Exposure_Time_Max:maximum_exposure_length_s was NULL.");
 		return FALSE;
 	}
 	/* check camera instance has been created, if so open should have been called,
@@ -1062,7 +1062,7 @@ int CCD_Command_Get_Exposure_Time_Max(double *maximum_exposure_length_s)
 	{
 		Command_Error_Number = 57;
 		sprintf(Command_Error_String,
-			"CCD_Command_Get_Exposure_Time_Max:Camera CPco_com_usb instance not created.");
+			"CCD_Command_Description_Get_Exposure_Time_Max:Camera CPco_com_usb instance not created.");
 		return FALSE;
 	}
 	max_expose_dw_ms = Command_Data.Description.dwMaxExposureDESC;
@@ -1070,8 +1070,88 @@ int CCD_Command_Get_Exposure_Time_Max(double *maximum_exposure_length_s)
 	(*maximum_exposure_length_s) = ((double)max_expose_dw_ms)/((double)CCD_GENERAL_ONE_SECOND_MS);
 #if LOGGING > 5
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
-			       "CCD_Command_Get_Exposure_Time_Max returned %.2f s maximum exposure length.",
+			       "CCD_Command_Description_Get_Exposure_Time_Max returned %.2f s maximum exposure length.",
 			       (*maximum_exposure_length_s));
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Get the maximum horizontal (x) size of the camera sensor (in standard mode), as returned from it's description
+ * (retrieved from the camera head when opening a connection to the camera, and stored in Command_Data.Description).
+ * @param max_hor_size The address of an integer to store the maximum horizontal (x) size of the sensor, in pixels.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see ccd_general.html#CCD_General_Log
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Description_Get_Max_Horizontal_Size(int *max_hor_size)
+{
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Description_Get_Max_Horizontal_Size: Started.");
+#endif /* LOGGING */
+	if(max_hor_size == NULL)
+	{
+		Command_Error_Number = 65;
+		sprintf(Command_Error_String,
+			"CCD_Command_Description_Get_Max_Horizontal_Size:max_hor_size was NULL.");
+		return FALSE;
+	}
+	/* check camera instance has been created, if so open should have been called,
+	** and the Description field retrieved from the camera head. */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 66;
+		sprintf(Command_Error_String,
+			"CCD_Command_Description_Get_Max_Horizontal_Size:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	(*max_hor_size) = Command_Data.Description.wMaxHorzResStdDESC;
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+			       "CCD_Command_Description_Get_Max_Horizontal_Size returned %d pixels.",(*max_hor_size));
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Get the maximum vertical (y) size of the camera sensor (in standard mode), as returned from it's description
+ * (retrieved from the camera head when opening a connection to the camera, and stored in Command_Data.Description).
+ * @param max_ver_size The address of an integer to store the maximum vertical (y) size of the sensor, in pixels.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see ccd_general.html#CCD_General_Log
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Description_Get_Max_Vertical_Size(int *max_ver_size)
+{
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Description_Get_Max_Vertical_Size: Started.");
+#endif /* LOGGING */
+	if(max_ver_size == NULL)
+	{
+		Command_Error_Number = 67;
+		sprintf(Command_Error_String,
+			"CCD_Command_Description_Get_Max_Vertical_Size:max_ver_size was NULL.");
+		return FALSE;
+	}
+	/* check camera instance has been created, if so open should have been called,
+	** and the Description field retrieved from the camera head. */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 68;
+		sprintf(Command_Error_String,
+			"CCD_Command_Description_Get_Max_Vertical_Size:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	(*max_ver_size) = Command_Data.Description.wMaxVertResStdDESC;
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+			       "CCD_Command_Description_Get_Max_Vertical_Size returned %d pixels.",(*max_ver_size));
 #endif /* LOGGING */
 	return TRUE;
 }
