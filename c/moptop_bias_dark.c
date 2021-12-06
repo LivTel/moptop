@@ -589,7 +589,6 @@ static int Bias_Dark_Setup(void)
  * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Queue_Images
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Wait_Buffer
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Timestamp_Clock_Reset
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Timestamp_Clock_Frequency
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Timestamp_From_Metadata
  * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_CYCLE_MODE_FIXED
  * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE_INTERNAL
@@ -829,9 +828,8 @@ static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expo
  * <li>We set the "EXPREQST" FITS keyword value to the Multrun_Data.Requested_Exposure_Length.
  * <li>We set the "CCDXPIXE" FITS keyword value to CCD_Setup_Get_Pixel_Width in m.
  * <li>We set the "CCDYPIXE" FITS keyword value to CCD_Setup_Get_Pixel_Height in m.
- * <li>We set the "CLKFREQ" FITS keyword value to CCD_Setup_Get_Timestamp_Clock_Frequency.
  * <li>We set the "PICNUM" FITS keyword value to the camera_image_number.
- * <li>We set the "CAMTIME" FITS keyword value to the camera__timestamp.
+ * <li>We set the "CAMTIME" FITS keyword value to the camera_timestamp.
  * <li>We create a file lock on the filename to write to using CCD_Fits_Filename_Lock.
  * <li>We create the FITS filename using fits_create_file.
  * <li>We calculate the binned image dimensions using CCD_Setup_Get_Sensor_Width / CCD_Setup_Get_Sensor_Height / 
@@ -886,7 +884,6 @@ static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expo
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Binning
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Pixel_Width
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Pixel_Height
- * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Timestamp_Clock_Frequency
  */
 static int Bias_Dark_Write_Fits_Image(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,int pco_exposure_length_ms,
 				      struct timespec exposure_end_time,int camera_image_number,
@@ -1016,10 +1013,6 @@ static int Bias_Dark_Write_Fits_Image(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expos
 	if(!Moptop_Fits_Header_Float_Add("CCDYPIXE",
 					 CCD_Setup_Get_Pixel_Height()/((double)MOPTOP_GENERAL_ONE_METRE_MICROMETRE),
 					 "[m] Detector pixel height"))
-		return FALSE;
-	/* CLKFREQ is the timestamp clock frequency of the internal camera clock */
-	if(!Moptop_Fits_Header_Long_Long_Integer_Add("CLKFREQ",CCD_Setup_Get_Timestamp_Clock_Frequency(),
-						     "[Hz] Detector clock tick frequency"))
 		return FALSE;
 	/* PICNUM is the camera image number retrieved from the camera read out's metadata. */
 	if(!Moptop_Fits_Header_Integer_Add("PICNUM",camera_image_number,"Camera meta-data image number"))

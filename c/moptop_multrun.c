@@ -162,11 +162,13 @@ static int Moptop_Abort = FALSE;
 /* internal functions */
 static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *filename_count);
 static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *filename,int filename_length);
-static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms,struct timespec exposure_end_time,
-				    int camera_image_number,struct timespec camera_timestamp,
+static int Multrun_Write_Fits_Image(int do_standard,int pco_exposure_length_ms,
+				    struct timespec exposure_end_time,int camera_image_number,
+				    struct timespec camera_timestamp,
 				    double requested_rotator_angle,double rotator_start_angle,
 				    double rotator_end_angle,double rotator_difference,
-				    unsigned char *image_buffer,int image_buffer_length,char *filename);
+				    unsigned char *image_buffer,
+				    int image_buffer_length,char *filename);
 /* ----------------------------------------------------------------------------
 ** 		external functions 
 ** ---------------------------------------------------------------------------- */
@@ -564,7 +566,7 @@ int Moptop_Multrun(int exposure_length_ms,int use_exposure_length,int exposure_c
 	if(!CCD_Command_Grabber_Post_Arm())
 	{
 		Multrun_In_Progress = FALSE;
-		Moptop_General_Error_Number = ;
+		Moptop_General_Error_Number = 609;
 		sprintf(Moptop_General_Error_String,"Moptop_Multrun:CCD_Command_Grabber_Post_Arm failed.");
 		return FALSE;
 	}
@@ -1014,7 +1016,7 @@ void Moptop_Multrun_Flip_Y(int ncols,int nrows,unsigned short *exposure_data)
  * @see moptop_config.html#Moptop_Config_Rotator_Is_Enabled
  * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Get_Image_Buffer
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Grabber_Acquire_Image_Async_Wait
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Timestamp_Clock_Frequency
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Image_Number_From_Metadata
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Timestamp_From_Metadata
  * @see ../ccd/cdocs/ccd_exposure.html#CCD_Exposure_Length_Get
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_List_Add
@@ -1022,13 +1024,13 @@ void Moptop_Multrun_Flip_Y(int ncols,int nrows,unsigned short *exposure_data)
  */
 static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *filename_count)
 {
-	struct timespec exposure_end_time;
+	struct timespec exposure_end_time,camera_timestamp;
 	char filename[MULTRUN_FITS_FILENAME_LENGTH];
 	unsigned int timeout_ms;
 	double requested_rotator_angle = 0.0;
 	double rotator_start_angle,current_rotator_position,rotator_difference,rotator_end_angle;
 	double camera_clock_difference;
-	int pco_exposure_length_ms;
+	int pco_exposure_length_ms,camera_image_number;
 	int images_per_cycle;
 	
 #if MOPTOP_DEBUG > 1
@@ -1101,24 +1103,34 @@ static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *fil
 			rotator_difference = Moptop_Multrun_Rotator_Step_Angle_Get();
 			rotator_end_angle = fmod(requested_rotator_angle+Moptop_Multrun_Rotator_Step_Angle_Get(),360.0);
 		}
+		/* get camera image number */
+		if(!CCD_Command_Get_Image_Number_From_Metadata(CCD_Buffer_Get_Image_Buffer(),
+							       CCD_Setup_Get_Image_Size_Bytes(),&camera_image_number))
+		{
+			Moptop_General_Error_Number = 614;
+			sprintf(Moptop_General_Error_String,"Multrun_Acquire_Images:"
+				"Failed to get image_number from metadata.");
+			return FALSE;
+		}
 		/* get camera timestamp */
-		if(!CCD_Command_Get_Timestamp_From_Metadata(image_buffer,image_buffer_length,&camera_ticks))
+		if(!CCD_Command_Get_Timestamp_From_Metadata(CCD_Buffer_Get_Image_Buffer(),
+							    CCD_Setup_Get_Image_Size_Bytes(),&camera_timestamp))
 		{
 			Moptop_General_Error_Number = 622;
 			sprintf(Moptop_General_Error_String,"Multrun_Acquire_Images:"
 				"Failed to get timestamp from metadata.");
 			return FALSE;
 		}
-		camera_clock_difference = ((double)(camera_ticks-last_camera_ticks))/(double)timestamp_clock_frequency;
-		last_camera_ticks = camera_ticks;
 		/* get exposure end timestamp */
 		clock_gettime(CLOCK_REALTIME,&exposure_end_time);
 		/* generate a new filename for this FITS image */
 		Multrun_Get_Fits_Filename(images_per_cycle,do_standard,filename,MULTRUN_FITS_FILENAME_LENGTH);
 		/* write fits image */
-		Multrun_Write_Fits_Image(do_standard,andor_exposure_length_ms,exposure_end_time,camera_ticks,
+		Multrun_Write_Fits_Image(do_standard,pco_exposure_length_ms,exposure_end_time,
+					 camera_image_number,camera_timestamp,
 					 requested_rotator_angle,rotator_start_angle,rotator_end_angle,
-					 rotator_difference,image_buffer,image_buffer_length,filename);
+					 rotator_difference,
+					 CCD_Buffer_Get_Image_Buffer(),CCD_Setup_Get_Image_Size_Bytes(),filename);
 		/* add fits image to list */
 		if(!CCD_Fits_Filename_List_Add(filename,filename_list,filename_count))
 		{
@@ -1230,12 +1242,12 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  * <li>We set the "MOPRARC" FITS keyword value to the rotator_difference.
  * <li>We set the "MOPRNUM" FITS keyword value to the Multrun_Data.Rotation_Number.
  * <li>We set the "MOPRPOS" FITS keyword value to the Multrun_Data.Sequence_Number.
- * <li>We set the "EXPTIME" and "XPOSURE" FITS keyword value to the andor_exposure_length_ms in seconds.
+ * <li>We set the "EXPTIME" and "XPOSURE" FITS keyword value to the pco_exposure_length_ms in seconds.
  * <li>We set the "EXPREQST" FITS keyword value to the Multrun_Data.Requested_Exposure_Length.
  * <li>We set the "CCDXPIXE" FITS keyword value to CCD_Setup_Get_Pixel_Width in m.
  * <li>We set the "CCDYPIXE" FITS keyword value to CCD_Setup_Get_Pixel_Height in m.
- * <li>We set the "CLKFREQ" FITS keyword value to CCD_Setup_Get_Timestamp_Clock_Frequency.
- * <li>We set the "CLKSTAMP" FITS keyword value to camera_ticks.
+ * <li>We set the "PICNUM" FITS keyword value to the camera_image_number.
+ * <li>We set the "CAMTIME" FITS keyword value to the camera_timestamp.
  * <li>We create a file lock on the filename to write to using CCD_Fits_Filename_Lock.
  * <li>We create the FITS filename using fits_create_file.
  * <li>We calculate the binned image dimensions using CCD_Setup_Get_Sensor_Width / CCD_Setup_Get_Sensor_Height / 
@@ -1252,11 +1264,11 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  * <li>We remove the file lock on the FITS image using CCD_Fits_Filename_UnLock.
  * </ul>
  * @param do_standard A boolean, if TRUE this is an observation of a standard, otherwise it is not.
- * @param andor_exposure_length_ms The exposure length as retrieved from the camera, in milliseconds.
+ * @param pco_exposure_length_ms The exposure length as retrieved from the camera, in milliseconds.
  * @param exposure_end_time A timestamp representing the end time of the exposure being saved. Actually a timestamp
  *        taken just after the camera has signalled a buffer is available.
- * @param camera_ticks A long long int holding the camera clock ticks stored by the camera in it's meta-data at the
- *        instant it began this exposure.
+ * @param camera_image_number The camera image number extracted from the read-out image's meta-data.
+ * @param camera_timestamp A timestamp recorded by the camera and extracted from the read-out image's meta-data.
  * @param requested_rotator_angle The requested rotator angle at which we expect the exposure to have started at 
  *        in degrees.
  * @param rotator_start_angle The rotator angle _in the current rotation_ at which 
@@ -1265,7 +1277,7 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  *        exposure.
  * @param rotator_difference The difference between the rotator start angle and the rotator end angle in degrees.
  * @param image_buffer The image buffer containing the data to write to disk.
- * @param image_buffer_length The length of data in the image buffer (note this includes metadata).
+ * @param image_buffer_length The length of data in the image buffer.
  * @param filename A string containing the FITS filename to write the data into.
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #Multrun_Data
@@ -1294,8 +1306,9 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Pixel_Height
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Timestamp_Clock_Frequency
  */
-static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms,
-				    struct timespec exposure_end_time,long long int camera_ticks,
+static int Multrun_Write_Fits_Image(int do_standard,int pco_exposure_length_ms,
+				    struct timespec exposure_end_time,int camera_image_number,
+				    struct timespec camera_timestamp,
 				    double requested_rotator_angle,double rotator_start_angle,
 				    double rotator_end_angle,double rotator_difference,
 				    unsigned char *image_buffer,
@@ -1411,12 +1424,12 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 		return FALSE;
 	/* EXPTIME is the actual exposure length returned from the camera, in seconds */
 	if(!Moptop_Fits_Header_Float_Add("EXPTIME",
-					 ((double)andor_exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS),
+					 ((double)pco_exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS),
 					 "[sec] Actual exposure"))
 		return FALSE;
 	/* XPOSURE is the actual exposure length returned from the camera, in seconds */
 	if(!Moptop_Fits_Header_Float_Add("XPOSURE",
-					 ((double)andor_exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS),
+					 ((double)pco_exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS),
 					 "[sec] Actual exposure"))
 		return FALSE;
 	/* EXPREQST is the requested exposure length in seconds (from Multrun_Data.Requested_Exposure_Length) */
@@ -1432,12 +1445,12 @@ static int Multrun_Write_Fits_Image(int do_standard,int andor_exposure_length_ms
 					 CCD_Setup_Get_Pixel_Height()/((double)MOPTOP_GENERAL_ONE_METRE_MICROMETRE),
 					 "[m] Detector pixel height"))
 		return FALSE;
-	/* CLKFREQ is the timestamp clock frequency of the internal camera clock */
-	if(!Moptop_Fits_Header_Long_Long_Integer_Add("CLKFREQ",CCD_Setup_Get_Timestamp_Clock_Frequency(),
-						     "[Hz] Detector clock tick frequency"))
+	/* PICNUM is the camera image number retrieved from the camera read out's metadata. */
+	if(!Moptop_Fits_Header_Integer_Add("PICNUM",camera_image_number,"Camera meta-data image number"))
 		return FALSE;
-	/* CLKSTAMP is the camera clock timestamp (in ticks) the camera took when this exposure started */
-	if(!Moptop_Fits_Header_Long_Long_Integer_Add("CLKSTAMP",camera_ticks,"Image clock tick value"))
+	/* CAMTIME is the camera clock timestamp the when this exposure started, from the camera's meta-data */
+	Moptop_Fits_Header_TimeSpec_To_Date_Obs_String(camera_timestamp,exposure_time_string);
+	if(!Moptop_Fits_Header_String_Add("CAMTIME",exposure_time_string,"[UTC] Cameras timestamp."))
 		return FALSE;
 	/* create lock file */
 #if MOPTOP_DEBUG > 5
