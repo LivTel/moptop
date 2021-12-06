@@ -60,8 +60,6 @@
  *                       CCD_Setup_Startup.</dd>
  * <dt>Sensor_Height</dt> <dd>An integer storing the sensor height in pixels retrieved from the camera during 
  *                       CCD_Setup_Startup.</dd>
- * <dt>Timestamp_Clock_Frequency</dt> <dd>A long long integer storing the timestamp clock frequency in Hertz 
- *                                    retrieved from the camera during CCD_Setup_Startup.</dd>
  * <dt>Image_Size_Bytes</dt> <dd>An integer storing the image size in bytes.</dd>
  * </dl>
  * @see #SETUP_ENUM_VALUE_STRING_LENGTH
@@ -78,7 +76,6 @@ struct Setup_Struct
 	double Pixel_Height;
 	int Sensor_Width;
 	int Sensor_Height;
-	long long int Timestamp_Clock_Frequency;
 	int Image_Size_Bytes;
 };
 
@@ -100,13 +97,12 @@ static char rcsid[] = "$Id$";
  * <dt>Pixel_Height</dt> <dd>0.0</dd>
  * <dt>Sensor_Width</dt> <dd>0</dd>
  * <dt>Sensor_Height</dt> <dd>0</dd>
- * <dt>Timestamp_Clock_Frequency</dt> <dd>0L</dd>
  * <dt>Image_Size_Bytes</dt> <dd>0</dd>
  * </dl>
  */
 static struct Setup_Struct Setup_Data = 
 {
-	0,1,"","",-1,-1,0.0,0.0,0,0,0L,0
+	0,1,"","",-1,-1,0.0,0.0,0,0,0
 };
 
 /**
@@ -526,18 +522,6 @@ int CCD_Setup_Get_Sensor_Height(void)
 {
 	/* diddly */
 	return Setup_Data.Sensor_Height;
-}
-
-/**
- * Return clock frequency of the internal clock used to generate frame timestamps, 
- * as previously retrieved from the camera head and stored in Setup_Data.
- * @return The timestamp clock frequency in Hertz.
- * @see #Setup_Data
- */
-long long int CCD_Setup_Get_Timestamp_Clock_Frequency(void)
-{
-	/* diddly */
-	return Setup_Data.Timestamp_Clock_Frequency;
 }
 
 /**

@@ -25,7 +25,6 @@ extern float CCD_Setup_Get_Pixel_Width(void);
 extern float CCD_Setup_Get_Pixel_Height(void);
 extern int CCD_Setup_Get_Sensor_Width(void);
 extern int CCD_Setup_Get_Sensor_Height(void);
-extern long long int CCD_Setup_Get_Timestamp_Clock_Frequency(void);
 extern int CCD_Setup_Get_Image_Size_Bytes(void);
 extern int CCD_Setup_Get_Error_Number(void);
 extern void CCD_Setup_Error(void);
