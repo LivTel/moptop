@@ -262,12 +262,14 @@ int CCD_Setup_Startup(void)
 		return FALSE;
 	}
 	/* update the grabber  to the camera state */
+	/* diddly This fails with 0x80312006 at the moment. No binning/image dimensions set yet?
 	if(!CCD_Command_Grabber_Post_Arm())
 	{
 		Setup_Error_Number = 15;
 		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Grabber_Post_Arm failed.");
 		return FALSE;
 	}
+	*/
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Setup_Startup: Finished.");
 #endif /* LOGGING */
