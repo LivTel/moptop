@@ -1264,6 +1264,81 @@ int CCD_Command_Get_Camera_Type(int *camera_type,int *serial_number)
 }
 
 /**
+ * Get the current 'region of interest', given the current binning settings. This is the area of the detector
+ * to read out, in binned pixels.
+ * @param start_x The address of an integer to store the first pixel in x on the detector to read out.
+ * @param start_y The address of an integer to store the first pixel in y on the detector to read out.
+ * @param end_x The address of an integer to store the last pixel in x on the detector to read out.
+ * @param end_y The address of an integer to store the last pixel in y on the detector to read out.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
+ * @see ccd_general.html#CCD_General_Log
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Get_ROI(int *start_x,int *start_y,int *end_x,int *end_y)
+{
+	DWORD pco_err;
+	WORD start_x_w,start_y_w,end_x_w,end_y_w;
+	
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Get_ROI: Started.");
+#endif /* LOGGING */
+	if(start_x == NULL)
+	{
+		Command_Error_Number = 73;
+		sprintf(Command_Error_String,"CCD_Command_Get_ROI:start_x was NULL.");
+		return FALSE;
+	}
+	if(start_y == NULL)
+	{
+		Command_Error_Number = 74;
+		sprintf(Command_Error_String,"CCD_Command_Get_ROI:start_y was NULL.");
+		return FALSE;
+	}
+	if(end_x == NULL)
+	{
+		Command_Error_Number = 75;
+		sprintf(Command_Error_String,"CCD_Command_Get_ROI:end_x was NULL.");
+		return FALSE;
+	}
+	if(end_y == NULL)
+	{
+		Command_Error_Number = 76;
+		sprintf(Command_Error_String,"CCD_Command_Get_ROI:end_y was NULL.");
+		return FALSE;
+	}
+	/* check camera instance has been created, if so open should have been called,
+	** and the Description field retrieved from the camera head. */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 77;
+		sprintf(Command_Error_String,"CCD_Command_Get_ROI:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Camera->PCO_GetROI(&start_x_w,&start_y_w,&end_x_w,&end_y_w);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 78;
+		sprintf(Command_Error_String,"CCD_Command_Get_ROI:PCO_GetROI failed(0x%x) (%s).",
+			pco_err,Command_PCO_Get_Error_Text(pco_err));
+		return FALSE;
+	}
+	(*start_x) = start_x_w;
+	(*start_y) = start_y_w;
+	(*end_x) = end_x_w;
+	(*end_y) = end_y_w;
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+			       "CCD_Command_Get_ROI returned start (%d,%d), end = (%d,%d).",
+			       (*start_x),(*start_y),(*end_x),(*end_y));
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
  * Get the actual size of the image that the camera will return, given the current binning settings.
  * @param image_width The address of an integer to store the width of the image, in pixels.
  * @param image_height The address of an integer to store height of the image, in pixels.

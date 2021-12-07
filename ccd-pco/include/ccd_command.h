@@ -50,6 +50,7 @@ extern int CCD_Command_Close(void);
 	extern int CCD_Command_Description_Get_Max_Horizontal_Size(int *max_hor_size);
 	extern int CCD_Command_Description_Get_Max_Vertical_Size(int *max_ver_size);
 	extern int CCD_Command_Get_Camera_Type(int *camera_type,int *serial_number);
+	extern int CCD_Command_Get_ROI(int *start_x,int *start_y,int *end_x,int *end_y);
 	extern int CCD_Command_Get_Actual_Size(int *image_width,int *image_height);
 	extern int CCD_Command_Get_Image_Size_Bytes(int *image_size);
 	extern int CCD_Command_Get_Trigger_Mode(enum CCD_COMMAND_TRIGGER_MODE *mode);
