@@ -25,6 +25,11 @@
 #include "VersionNo.h"
 #include "Cpco_com.h"
 #include "Cpco_grab_usb.h"
+/*
+ *  PCO_errt_w.h produces loads of -Wwrite-strings warnings when compiled, so turn off this warning for
+ * this source file.
+ */
+#pragma GCC diagnostic ignored "-Wwrite-strings"
 /**
  * Define PCO_ERRT_H_CREATE_OBJECT before including PCO_errt_w.h to enable the PCO_GetErrorText
  * function to be defined.
@@ -197,6 +202,7 @@ int CCD_Command_Finalise(void)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_GENERAL_ONE_SECOND_MS
  * @see ccd_general.html#CCD_GENERAL_ONE_MILLISECOND_NS
  * @see ccd_general.html#CCD_GENERAL_ONE_SECOND_NS
@@ -225,8 +231,8 @@ int CCD_Command_Open(int board)
 	{
 		Command_Error_Number = 4;
 		sprintf(Command_Error_String,
-			"CCD_Command_Open:Camera Open_Cam(board=%d) failed with PCO error code 0x%x.",
-			Command_Data.Camera_Board,pco_err);
+			"CCD_Command_Open:Camera Open_Cam(board=%d) failed with PCO error code 0x%x (%s).",
+			Command_Data.Camera_Board,pco_err,Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 	/* create grabber for opened camera */
@@ -250,8 +256,8 @@ int CCD_Command_Open(int board)
 	{
 		Command_Error_Number = 64;
 		sprintf(Command_Error_String,
-			"CCD_Command_Open:Grabber Open_Grabber(board=%d) failed with PCO error code 0x%x.",
-			Command_Data.Camera_Board,pco_err);
+			"CCD_Command_Open:Grabber Open_Grabber(board=%d) failed with PCO error code 0x%x (%s).",
+			Command_Data.Camera_Board,pco_err,Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 	Command_Data.Grabber->Set_Grabber_Timeout(Command_Data.Grabber_Timeout);
@@ -263,7 +269,8 @@ int CCD_Command_Open(int board)
 	{
 		Command_Error_Number = 25;
 		sprintf(Command_Error_String,
-			"CCD_Command_Open:Camera PCO_GetCameraDescriptor failed with PCO error code 0x%x.",pco_err);
+			"CCD_Command_Open:Camera PCO_GetCameraDescriptor failed with PCO error code 0x%x (%s).",
+			pco_err,Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 #if LOGGING > 0
@@ -343,6 +350,7 @@ int CCD_Command_Arm_Camera(void)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log_Format
  */
 int CCD_Command_Grabber_Post_Arm(void)
@@ -364,7 +372,8 @@ int CCD_Command_Grabber_Post_Arm(void)
 	{
 		Command_Error_Number = 38;
 		sprintf(Command_Error_String,"CCD_Command_Grabber_Post_Arm:"
-			"Grabber PostArm failed with PCO error code 0x%x.",pco_err);
+			"Grabber PostArm failed with PCO error code 0x%x (%s).",pco_err,
+			Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 #if LOGGING > 5
@@ -379,6 +388,7 @@ int CCD_Command_Grabber_Post_Arm(void)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log
  */
 int CCD_Command_Set_Camera_To_Current_Time(void)
@@ -400,7 +410,8 @@ int CCD_Command_Set_Camera_To_Current_Time(void)
 	{
 		Command_Error_Number = 13;
 		sprintf(Command_Error_String,"CCD_Command_Set_Camera_To_Current_Time:"
-			"Camera PCO_SetCameraToCurrentTime failed with PCO error code 0x%x.",pco_err);
+			"Camera PCO_SetCameraToCurrentTime failed with PCO error code 0x%x (%s).",pco_err,
+			Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 #if LOGGING > 5
@@ -417,6 +428,7 @@ int CCD_Command_Set_Camera_To_Current_Time(void)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log_Format
  */
 int CCD_Command_Set_Recording_State(int rec_state)
@@ -445,8 +457,8 @@ int CCD_Command_Set_Recording_State(int rec_state)
 	{
 		Command_Error_Number = 12;
 		sprintf(Command_Error_String,"CCD_Command_Set_Recording_State:"
-			"Camera PCO_SetRecordingState(%d) failed with PCO error code 0x%x.",
-			rec_state,pco_err);
+			"Camera PCO_SetRecordingState(%d) failed with PCO error code 0x%x (%s).",
+			rec_state,pco_err,Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 #if LOGGING > 5
@@ -461,6 +473,7 @@ int CCD_Command_Set_Recording_State(int rec_state)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log
  */
 int CCD_Command_Reset_Settings(void)
@@ -481,7 +494,8 @@ int CCD_Command_Reset_Settings(void)
 	{
 		Command_Error_Number = 15;
 		sprintf(Command_Error_String,"CCD_Command_Reset_Settings:"
-			"Camera PCO_ResetSettingsToDefault failed with PCO error code 0x%x.",pco_err);
+			"Camera PCO_ResetSettingsToDefault failed with PCO error code 0x%x (%s).",pco_err,
+			Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 #if LOGGING > 5
@@ -497,6 +511,7 @@ int CCD_Command_Reset_Settings(void)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log_Format
  */
 int CCD_Command_Set_Timestamp_Mode(int mode)
@@ -525,8 +540,8 @@ int CCD_Command_Set_Timestamp_Mode(int mode)
 	{
 		Command_Error_Number = 18;
 		sprintf(Command_Error_String,"CCD_Command_Set_Timestamp_Mode:"
-			"Camera PCO_SetTimestampMode(%d) failed with PCO error code 0x%x.",
-			mode,pco_err);
+			"Camera PCO_SetTimestampMode(%d) failed with PCO error code 0x%x (%s).",
+			mode,pco_err,Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 #if LOGGING > 5
@@ -543,6 +558,7 @@ int CCD_Command_Set_Timestamp_Mode(int mode)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log_Format
  */
 int CCD_Command_Set_Timebase(int delay_timebase,int exposure_timebase)
@@ -583,8 +599,8 @@ int CCD_Command_Set_Timebase(int delay_timebase,int exposure_timebase)
 	{
 		Command_Error_Number = 22;
 		sprintf(Command_Error_String,"CCD_Command_Set_Timebase:"
-			"Camera PCO_SetTimebase(%d,%d) failed with PCO error code 0x%x.",
-			del_timebase,exp_timebase,pco_err);
+			"Camera PCO_SetTimebase(%d,%d) failed with PCO error code 0x%x (%s).",
+			del_timebase,exp_timebase,pco_err,Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 #if LOGGING > 5
@@ -603,6 +619,7 @@ int CCD_Command_Set_Timebase(int delay_timebase,int exposure_timebase)
  * @see #Command_Error_Number
  * @see #Command_Error_String
  * @see #CCD_Command_Set_Timebase
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log_Format
  */
 int CCD_Command_Set_Delay_Exposure_Time(int delay_time,int exposure_time)
@@ -629,8 +646,8 @@ int CCD_Command_Set_Delay_Exposure_Time(int delay_time,int exposure_time)
 	{
 		Command_Error_Number = 24;
 		sprintf(Command_Error_String,"CCD_Command_Set_Delay_Exposure_Time:"
-			"Camera PCO_SetDelayExposure(%d,%d) failed with PCO error code 0x%x.",
-			delay_time_dw,exp_time_dw,pco_err);
+			"Camera PCO_SetDelayExposure(%d,%d) failed with PCO error code 0x%x (%s).",
+			delay_time_dw,exp_time_dw,pco_err,Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 #if LOGGING > 5
@@ -646,6 +663,7 @@ int CCD_Command_Set_Delay_Exposure_Time(int delay_time,int exposure_time)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log_Format
  */
 int CCD_Command_Set_ADC_Operation(int num_adcs)
@@ -674,8 +692,8 @@ int CCD_Command_Set_ADC_Operation(int num_adcs)
 	{
 		Command_Error_Number = 28;
 		sprintf(Command_Error_String,"CCD_Command_Set_ADC_Operation:"
-			"Camera PCO_SetADCOperation(%d) failed with PCO error code 0x%x.",
-			num_adcs,pco_err);
+			"Camera PCO_SetADCOperation(%d) failed with PCO error code 0x%x (%s).",
+			num_adcs,pco_err,Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 #if LOGGING > 5
@@ -691,6 +709,7 @@ int CCD_Command_Set_ADC_Operation(int num_adcs)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log_Format
  */
 int CCD_Command_Set_Bit_Alignment(int bit_alignment)
@@ -712,8 +731,8 @@ int CCD_Command_Set_Bit_Alignment(int bit_alignment)
 	{
 		Command_Error_Number = 32;
 		sprintf(Command_Error_String,"CCD_Command_Set_Bit_Alignment:"
-			"Camera PCO_SetBitAlignment(%d) failed with PCO error code 0x%x.",
-			bit_alignment,pco_err);
+			"Camera PCO_SetBitAlignment(%d) failed with PCO error code 0x%x (%s).",
+			bit_alignment,pco_err,Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 #if LOGGING > 5
@@ -729,6 +748,7 @@ int CCD_Command_Set_Bit_Alignment(int bit_alignment)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log_Format
  */
 int CCD_Command_Set_Noise_Filter_Mode(int mode)
@@ -750,7 +770,8 @@ int CCD_Command_Set_Noise_Filter_Mode(int mode)
 	{
 		Command_Error_Number = 34;
 		sprintf(Command_Error_String,"CCD_Command_Set_Noise_Filter_Mode:"
-			"Camera PCO_SetNoiseFilterMode(%d) failed with PCO error code 0x%x.",mode,pco_err);
+			"Camera PCO_SetNoiseFilterMode(%d) failed with PCO error code 0x%x (%s).",mode,pco_err,
+			Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 #if LOGGING > 5
@@ -767,6 +788,7 @@ int CCD_Command_Set_Noise_Filter_Mode(int mode)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log_Format
  */
 int CCD_Command_Set_Trigger_Mode(enum CCD_COMMAND_TRIGGER_MODE mode)
@@ -788,7 +810,8 @@ int CCD_Command_Set_Trigger_Mode(enum CCD_COMMAND_TRIGGER_MODE mode)
 	{
 		Command_Error_Number = 40;
 		sprintf(Command_Error_String,"CCD_Command_Set_Trigger_Mode:"
-			"Camera PCO_SetTriggerMode(%d) failed with PCO error code 0x%x.",mode,pco_err);
+			"Camera PCO_SetTriggerMode(%d) failed with PCO error code 0x%x (%s).",mode,pco_err,
+			Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 #if LOGGING > 5
@@ -805,6 +828,7 @@ int CCD_Command_Set_Trigger_Mode(enum CCD_COMMAND_TRIGGER_MODE mode)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log_Format
  */
 int CCD_Command_Set_Binning(int bin_x,int bin_y)
@@ -826,7 +850,8 @@ int CCD_Command_Set_Binning(int bin_x,int bin_y)
 	{
 		Command_Error_Number = 42;
 		sprintf(Command_Error_String,"CCD_Command_Set_Binning:"
-			"Camera PCO_SetBinning(%d,%d) failed with PCO error code 0x%x.",bin_x,bin_y,pco_err);
+			"Camera PCO_SetBinning(%d,%d) failed with PCO error code 0x%x (%s).",bin_x,bin_y,pco_err,
+			Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 #if LOGGING > 5
@@ -896,6 +921,7 @@ int CCD_Command_Grabber_Acquire_Image_Async_Wait(void *image_buffer)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log
  */
 int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *camera_temp,
@@ -919,7 +945,8 @@ int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *
 	{
 		Command_Error_Number = 9;
 		sprintf(Command_Error_String,
-			"CCD_Command_Get_Temperature:PCO_GetTemperature failed(0x%x).",pco_err);
+			"CCD_Command_Get_Temperature:PCO_GetTemperature failed(0x%x) (%s).",pco_err,
+			Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 	/* PCO_GetTemperature returns:
@@ -1185,6 +1212,7 @@ int CCD_Command_Description_Get_Max_Vertical_Size(int *max_ver_size)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log
  * @see ccd_general.html#CCD_General_Log_Format
  */
@@ -1221,7 +1249,8 @@ int CCD_Command_Get_Camera_Type(int *camera_type,int *serial_number)
 	if(pco_err != PCO_NOERROR)
 	{
 		Command_Error_Number = 72;
-		sprintf(Command_Error_String,"CCD_Command_Get_Camera_Type:PCO_GetCameraType failed(0x%x).",pco_err);
+		sprintf(Command_Error_String,"CCD_Command_Get_Camera_Type:PCO_GetCameraType failed(0x%x) (%s).",
+			pco_err,Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 	(*camera_type) = camera_type_w;
@@ -1242,6 +1271,7 @@ int CCD_Command_Get_Camera_Type(int *camera_type,int *serial_number)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log
  * @see ccd_general.html#CCD_General_Log_Format
  */
@@ -1277,7 +1307,8 @@ int CCD_Command_Get_Actual_Size(int *image_width,int *image_height)
 	if(pco_err != PCO_NOERROR)
 	{
 		Command_Error_Number = 46;
-		sprintf(Command_Error_String,"CCD_Command_Get_Actual_Size:PCO_GetActualSize failed(0x%x).",pco_err);
+		sprintf(Command_Error_String,"CCD_Command_Get_Actual_Size:PCO_GetActualSize failed(0x%x) (%s).",
+			pco_err,Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 	(*image_width) = image_width_w;
@@ -1330,6 +1361,7 @@ int CCD_Command_Get_Image_Size_Bytes(int *image_size)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log_Format
  */
 int CCD_Command_Get_Trigger_Mode(enum CCD_COMMAND_TRIGGER_MODE *mode)
@@ -1358,7 +1390,8 @@ int CCD_Command_Get_Trigger_Mode(enum CCD_COMMAND_TRIGGER_MODE *mode)
 	{
 		Command_Error_Number = 50;
 		sprintf(Command_Error_String,"CCD_Command_Get_Trigger_Mode:"
-			"Camera PCO_GetTriggerMode failed with PCO error code 0x%x.",pco_err);
+			"Camera PCO_GetTriggerMode failed with PCO error code 0x%x (%s).",pco_err,
+			Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 	switch(mode_w)
@@ -1394,6 +1427,7 @@ int CCD_Command_Get_Trigger_Mode(enum CCD_COMMAND_TRIGGER_MODE *mode)
  * @see #Command_Error_Number
  * @see #Command_Error_String
  * @see #CCD_Command_Set_Timebase
+ * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log_Format
  */
 int CCD_Command_Get_Delay_Exposure_Time(int *delay_time,int *exposure_time)
@@ -1416,7 +1450,8 @@ int CCD_Command_Get_Delay_Exposure_Time(int *delay_time,int *exposure_time)
 	{
 		Command_Error_Number = 53;
 		sprintf(Command_Error_String,"CCD_Command_Get_Delay_Exposure_Time:"
-			"Camera PCO_GetDelayExposure failed with PCO error code 0x%x.",pco_err);
+			"Camera PCO_GetDelayExposure failed with PCO error code 0x%x (%s).",pco_err,
+			Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
 	if(delay_time != NULL)
