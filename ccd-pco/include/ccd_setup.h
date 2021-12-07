@@ -17,7 +17,7 @@ extern int CCD_Setup_Startup(void);
 extern int CCD_Setup_Shutdown(void);
 extern int CCD_Setup_Dimensions(int bin);
 extern int CCD_Setup_Get_Binning(void);
-extern int CCD_Setup_Get_Serial_Number(char *serial_number_string,int string_length);
+extern int CCD_Setup_Get_Serial_Number(int *serial_number);
 extern int CCD_Setup_Get_Firmware_Version(char *firmware_version_string,int string_length);
 extern int CCD_Setup_Get_Readout_Time(void);
 extern int CCD_Setup_Get_Bytes_Per_Pixel(void);

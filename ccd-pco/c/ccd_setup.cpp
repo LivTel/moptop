@@ -41,8 +41,7 @@
  * <dl>
  * <dt>Camera_Board</dt> <dd>The board parameter passed to Open_Cam, to determine which camera to connect to.</dd>
  * <dt>Binning</dt> <dd>The readout binning, stored as an integer. Can be one of 1,2,3,4,8. </dd>
- * <dt>Serial_Number</dt> <dd>A character string containing the serial number retrieved from the camera head, 
- *                            of length SETUP_ENUM_VALUE_STRING_LENGTH. 
+ * <dt>Serial_Number</dt> <dd>An integer containing the serial number retrieved from the camera head
  *                            Retrieved from the camera library during CCD_Setup_Startup.</dd>
  * <dt>Firmware_Version</dt> <dd>A character string containing the firmware version retrieved from the 
  *                             camera head, of length SETUP_ENUM_VALUE_STRING_LENGTH. 
@@ -68,7 +67,7 @@ struct Setup_Struct
 {
 	int Camera_Board;
 	int Binning;
-	char Serial_Number[SETUP_ENUM_VALUE_STRING_LENGTH];
+	int Serial_Number;
 	char Firmware_Version[SETUP_ENUM_VALUE_STRING_LENGTH];
 	int Readout_Time;
 	int Bytes_Per_Pixel;
@@ -89,7 +88,7 @@ static char rcsid[] = "$Id$";
  * <dl>
  * <dt>Camera_Board</dt> <dd>0</dd>
  * <dt>Binning</dt> <dd>1</dd>
- * <dt>Serial_Number</dt> <dd>""</dd>
+ * <dt>Serial_Number</dt> <dd>-1</dd>
  * <dt>Firmware_Version</dt> <dd>""</dd>
  * <dt>Readout_Time</dt> <dd>-1</dd>
  * <dt>Bytes_Per_Pixel</dt> <dd>-1</dd>
@@ -102,7 +101,7 @@ static char rcsid[] = "$Id$";
  */
 static struct Setup_Struct Setup_Data = 
 {
-	0,1,"","",-1,-1,0.0,0.0,0,0,0
+	0,1,-1,"",-1,-1,0.0,0.0,0,0,0
 };
 
 /**
@@ -139,6 +138,7 @@ static char Setup_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  *     description.
  * <li>We call CCD_Command_Description_Get_Max_Vertical_Size to get Setup_Data.Sensor_Height from the camera
  *     description.
+ * <li>We call CCD_Command_Get_Camera_Type to get the camera's serial number from it's head.
  * <li>We call CCD_Command_Arm_Camera to update the cameras internal state to take account of the new settings.
  * <li>We call CCD_Command_Grabber_Post_Arm to update the grabber's state to match the camera's state.
  * <ul>
@@ -160,6 +160,7 @@ static char Setup_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * @see ccd_command.html#CCD_Command_Set_Noise_Filter_Mode
  * @see ccd_command.html#CCD_Command_Description_Get_Max_Horizontal_Size
  * @see ccd_command.html#CCD_Command_Description_Get_Max_Vertical_Size
+ * @see ccd_command.html#CCD_Command_Get_Camera_Type
  * @see ccd_command.html#CCD_Command_Arm_Camera
  * @see ccd_command.html#CCD_Command_Grabber_Post_Arm
  * @see ccd_general.html#CCD_General_Log_Format
@@ -167,7 +168,7 @@ static char Setup_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  */
 int CCD_Setup_Startup(void)
 {
-	int adc_count;
+	int adc_count,camera_type;
 
 	Setup_Error_Number = 0;
 #if LOGGING > 0
@@ -274,7 +275,15 @@ int CCD_Setup_Startup(void)
 		sprintf(Setup_Error_String,
 			"CCD_Setup_Startup: Failed to get the maximum vertical size from the description.");
 		return FALSE;
-	}	
+	}
+	/* get and store camera serial number */
+	if(!CCD_Command_Get_Camera_Type(&camera_type,&(Setup_Data.Serial_Number)))
+	{
+		Setup_Error_Number = 22;
+		sprintf(Setup_Error_String,
+			"CCD_Setup_Startup: Failed to get camera type / serial number..");
+		return FALSE;
+	}
 	/* prepare camera for taking data */
 	if(!CCD_Command_Arm_Camera())
 	{
@@ -413,29 +422,24 @@ int CCD_Setup_Get_Binning(void)
 }
 
 /**
- * Routine to retrieve the camera serial number string, saved from the camera in CCD_Setup_Startup to Setup_Data.
- * @param serial_number_string A string of length string_length bytes to copy the camera serial number string stored
- *        in Setup_Data.Serial_Number into. Ideally should be of length SETUP_ENUM_VALUE_STRING_LENGTH.
- * @param string_length The maximum length of characters that can be stored in serial_number_string.
- * @return The string returns TRUE on success and FALSE on failure (the serial_number_string is not long enough to store
- *         the serial number string).
+ * Routine to retrieve the camera serial number, saved from the camera in CCD_Setup_Startup to Setup_Data.
+ * @param serial_number The address of an integer to copy the camera serial number stored
+ *        in Setup_Data.Serial_Number into.
+ * @return The string returns TRUE on success and FALSE on failure.
  * @see #Setup_Data
- * @see #SETUP_ENUM_VALUE_STRING_LENGTH
  * @see #Setup_Error_Number
  * @see #Setup_Error_String
  */
-int CCD_Setup_Get_Serial_Number(char *serial_number_string,int string_length)
+int CCD_Setup_Get_Serial_Number(int *serial_number)
 {
-	/* diddly */
-	if(strlen(Setup_Data.Serial_Number) >= string_length)
+	if(serial_number == NULL)
 	{
 		Setup_Error_Number = 31;
 		sprintf(Setup_Error_String,
-			"CCD_Setup_Get_Serial_Number: serial_number_string length too short (%lu vs %d).",
-			strlen(Setup_Data.Serial_Number),string_length);
+			"CCD_Setup_Get_Serial_Number: serial_number was NULL.");
 		return FALSE;
 	}
-	strcpy(serial_number_string,Setup_Data.Serial_Number);
+	(*serial_number) = Setup_Data.Serial_Number;
 	return TRUE;
 }
 
