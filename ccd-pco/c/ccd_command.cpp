@@ -856,7 +856,7 @@ int CCD_Command_Set_Binning(int bin_x,int bin_y)
 		return FALSE;
 	}
 #if LOGGING > 5
-	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Trigger_Mode: Finished.");
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Binning: Finished.");
 #endif /* LOGGING */
 	return TRUE;
 }
