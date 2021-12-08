@@ -128,7 +128,8 @@ static char Setup_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * <li>We stop any ongoing image acquisitions by calling CCD_Command_Set_Recording_State(FALSE).
  * <li>We reset the camera to a known state by calling CCD_Command_Reset_Settings.
  * <li>We set the camera timestamps to be binary and ASCII using CCD_Command_Set_Timestamp_Mode(2).
- * <li>We set the camera exposure and delay timebase to milliseconds using CCD_Command_Set_Timebase(2,2).
+ * <li>We set the camera exposure and delay timebase to microseconds using 
+ *     CCD_Command_Set_Timebase(CCD_COMMAND_TIMEBASE_US,CCD_COMMAND_TIMEBASE_US).
  * <li>We set an initial delay and exposure time by calling CCD_Command_Set_Delay_Exposure_Time(0,50);
  * <li>We call CCD_Command_Description_Get_Num_ADCs to get the number of ADCs supported by this camera.
  * <li>If the returned ADC count is greater than one, we call CCD_Command_Set_ADC_Operation(2) to use the extra ADC.
@@ -217,11 +218,12 @@ int CCD_Setup_Startup(void)
 		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_Timestamp_Mode(2) failed.");
 		return FALSE;
 	}
-	/* set exposure and delay timebase to milliseconds */
-	if(!CCD_Command_Set_Timebase(2,2))
+	/* set exposure and delay timebase to microseconds */
+	if(!CCD_Command_Set_Timebase(CCD_COMMAND_TIMEBASE_US,CCD_COMMAND_TIMEBASE_US))
 	{
 		Setup_Error_Number = 8;
-		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_Timebase(2,2) failed.");
+		sprintf(Setup_Error_String,
+		       "CCD_Setup_Startup: CCD_Command_Set_Timebase(CCD_COMMAND_TIMEBASE_US,CCD_COMMAND_TIMEBASE_US) failed.");
 		return FALSE;
 	}
 	/* set an initial delay and exposure time */
@@ -364,6 +366,8 @@ int CCD_Setup_Shutdown(void)
  */
 int CCD_Setup_Dimensions(int bin)
 {
+	int start_x,start_y,end_x,end_y;
+	
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Setup_Dimensions: Started.");
 #endif /* LOGGING */
@@ -375,7 +379,6 @@ int CCD_Setup_Dimensions(int bin)
 	}
 	/* save the binning for later retrieval */
 	Setup_Data.Binning = bin;
-	/* we may need to retrieve the ROI, and reset it after setting the binning */
 	/* set the actual binning */
 	if(!CCD_Command_Set_Binning(bin,bin))
 	{
@@ -383,6 +386,17 @@ int CCD_Setup_Dimensions(int bin)
 		sprintf(Setup_Error_String,"CCD_Setup_Dimensions: CCD_Command_Set_Binning failed.");
 		return FALSE;
 	}
+	/* set the ROI to the binned pixel area to read out */
+	start_x = 1;
+	start_y = 1;
+	end_x = Setup_Data.Sensor_Width/bin;
+	end_y = Setup_Data.Sensor_Height/bin;
+	if(!CCD_Command_Set_ROI(start_x,start_y,end_x,end_y))
+	{
+		Setup_Error_Number = 18;
+		sprintf(Setup_Error_String,"CCD_Setup_Dimensions: CCD_Command_Set_ROI failed.");
+		return FALSE;
+	}		
 	/* get camera to update it's internal settings */
 	if(!CCD_Command_Arm_Camera())
 	{

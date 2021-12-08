@@ -33,13 +33,21 @@
  */
 #define CCD_GENERAL_ONE_SECOND_NS	       (1000000000)
 /**
- * The number of nanoseconds in one millisecond. A struct timespec has fields in nanoseconds.
+ * The number of microseconds in one second. We are currently using an exposure timebase of microseconds
  */
-#define CCD_GENERAL_ONE_MILLISECOND_NS	       (1000000)
+#define CCD_GENERAL_ONE_SECOND_US	       (1000000)
 /**
  * The number of milliseconds in one second.
  */
 #define CCD_GENERAL_ONE_SECOND_MS	       (1000)
+/**
+ * The number of nanoseconds in one millisecond. A struct timespec has fields in nanoseconds.
+ */
+#define CCD_GENERAL_ONE_MILLISECOND_NS	       (1000000)
+/**
+ * The number of microseconds in one millisecond.
+ */
+#define CCD_GENERAL_ONE_MILLISECOND_US	       (1000)
 /**
  * The number of nanoseconds in one microsecond.
  */

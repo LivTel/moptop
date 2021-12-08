@@ -119,7 +119,7 @@ static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposur
 				    char ***filename_list,int *filename_count);
 static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,
 				       char *filename,int filename_length);
-static int Bias_Dark_Write_Fits_Image(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,int pco_exposure_length_ms,
+static int Bias_Dark_Write_Fits_Image(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,double pco_exposure_length_s,
 				      struct timespec exposure_end_time,int camera_image_number,
 				      struct timespec camera_timestamp,
 				      unsigned char *image_buffer,
@@ -379,14 +379,14 @@ int Moptop_Bias_Dark_MultDark(int exposure_length_ms,int exposure_count,
  * <li>Sets Bias_Dark_Abort to TRUE.
  * <li>If Bias_Dark_In_Progress is true:
  *     <ul>
- *     <li>Stop camera acquisition using CCD_Command_Acquisition_Stop.
+ *     <li>Stop camera acquisition by calling CCD_Command_Set_Recording_State(FALSE).
  *     </ul>
  * <li>Returns Bias_Dark_In_Progress (i.e. whether there was a bias or dark in progress to be aborted).
  * </ul>
  * @return The routine returns TRUE if the bias or dark was aborted, FALSE otherwise.
  * @see #Bias_Dark_Abort
  * @see #Bias_Dark_In_Progress
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Stop
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Recording_State
  */
 int Moptop_Bias_Dark_Abort(void)
 {
@@ -398,11 +398,10 @@ int Moptop_Bias_Dark_Abort(void)
 		{
 			Moptop_General_Error_Number = 730;
 			sprintf(Moptop_General_Error_String,
-				"Moptop_Bias_Dark_Abort:Failed to stop camera acquisition.");
+				"Moptop_Bias_Dark_Abort:Failed to stop camera recording.");
 			return FALSE;
 		}
 	}/* end if Bias_Dark_In_Progress */
-	/* allow aborted bias/dark to call CCD_Command_Flush rather than call it here */
 	return TRUE;
 }
 
@@ -537,38 +536,32 @@ static int Bias_Dark_Setup(void)
 	return TRUE;
 }
 
-
 /**
  * Routine to actually acquire the bias/dark images.
  * <ul>
  * <li>We check the filename_list and filename_count are not NULL and initialise them.
+ * <li>We set the exposure length to use by calling CCD_Exposure_Length_Set with the exposure_length_s argument.
+ * <li>We set the camera to trigger internally using CCD_Command_Set_Trigger_Mode.
+ * <li>We call CCD_Command_Arm_Camera to update the cameras internal settings.
+ * <li>We call CCD_Command_Grabber_Post_Arm to update the grabber's internal settings to match the camera.
+ * <li>We call CCD_Exposure_Length_Get to get the (potentially modified) exposure length actually used by the PCO camera.
  * <li>We loop over the Bias_Dark_Data.Image_Count, using Bias_Dark_Data.Image_Index as an index counter 
  *     (for status reporting):
  *     <ul>
- *     <li>We queue an image buffer for the next acquisition using CCD_Buffer_Queue_Images.
- *     <li>We set the exposure length to use using CCD_Exposure_Length_Set.
- *     <li>We calculate an exposure timeout to use for CCD_Command_Wait_Buffer as the ((exposure length(s) * 1000) + 1000)*2 
- *         (in milliseconds).
- *     <li>We set the camera to trigger internally using CCD_Command_Set_Trigger_Mode.
- *     <li>We set the camera to take a fixed number of images using CCD_Command_Set_Cycle_Mode to set the cycle mode
- *         to CCD_COMMAND_CYCLE_MODE_FIXED.
- *     <li>We set the number of frames to take to 1 using CCD_Command_Set_Frame_Count.
- *     <li>We start the acquisition using CCD_Command_Acquisition_Start.
+ *     <li>We call CCD_Command_Set_Recording_State to start the camera recording data.
  *     <li>We take a timestamp and store it in Bias_Dark_Data.Exposure_Start_Time.
  *     <li>If this is the first exposure in the multrun we set Bias_Dark_Data.Multrun_Start_Time to the same timestamp.
- *     <li>We wait for a readout by calling CCD_Command_Wait_Buffer.
+ *     <li>We wait for a readout by calling CCD_Command_Grabber_Acquire_Image_Async_Wait, using the previously allocated
+ *         image buffer returned by CCD_Buffer_Get_Image_Buffer.
+ *     <li>We get the camera image number from the image metadata using CCD_Command_Get_Image_Number_From_Metadata.
  *     <li>We get the camera image timestamp from the image metadata using CCD_Command_Get_Timestamp_From_Metadata.
- *     <li>We calculate the camera_clock_difference as the difference in camera ticks between this image and the 
- *         last one, divided by the previously retrieved camera's internal clock frequency.
  *     <li>We get an exposure end timestamp and store it in exposure_end_time.
  *     <li>We call Bias_Dark_Get_Fits_Filename to generate a new FITS filename.
  *     <li>We call Bias_Dark_Write_Fits_Image to write the image data to the generated FTYS filename.
  *     <li>We add the generated filename to the filename list using CCD_Fits_Filename_List_Add.
- *     <li>We disable the camera for acquisition using CCD_Command_Acquisition_Stop.
- *     <li>We flush the camera (and associated queued image buffers) using CCD_Command_Flush.
+ *     <li>We stop the camera recording data by calling CCD_Command_Set_Recording_State.
  *     <li>We check whether the bias/dark has been aborted (Bias_Dark_Abort).
  *     </ul>
- * <li>We set the camera to trigger from software using CCD_Command_Set_Trigger_Mode.
  * </ul>
  * @param exposure_type A CCD_FITS_FILENAME_EXPOSURE_TYPE enum, one of:
  *        CCD_FITS_FILENAME_EXPOSURE_TYPE_BIAS or CCD_FITS_FILENAME_EXPOSURE_TYPE_DARK.
@@ -581,31 +574,26 @@ static int Bias_Dark_Setup(void)
  * @see #Bias_Dark_Abort
  * @see #Bias_Dark_Get_Fits_Filename
  * @see #Bias_Dark_Write_Fits_Image
- * @see moptop_general.html#MOPTOP_GENERAL_ONE_SECOND_MS
  * @see moptop_general.html#Moptop_General_Log
  * @see moptop_general.html#Moptop_General_Log_Format
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
- * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Queue_Images
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Wait_Buffer
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Timestamp_Clock_Reset
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Timestamp_From_Metadata
- * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_CYCLE_MODE_FIXED
- * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE_INTERNAL
- * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE_SOFTWARE
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Start
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Acquisition_Stop
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Flush
+ * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Get_Image_Buffer
+ * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Trigger_Mode
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Cycle_Mode
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Frame_Count
- * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_SHUTTER_MODE_CLOSED
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Shutter_Mode
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Arm_Camera
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Grabber_Post_Arm
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Recording_State
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Grabber_Acquire_Image_Async_Wait
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Image_Number_From_Metadata
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Timestamp_From_Metadata
  * @see ../ccd/cdocs/ccd_exposure.html#CCD_Exposure_Length_Set
+ * @see ../ccd/cdocs/ccd_exposure.html#CCD_Exposure_Length_Get
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_FITS_FILENAME_EXPOSURE_TYPE
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_FITS_FILENAME_EXPOSURE_TYPE_BIAS
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_FITS_FILENAME_EXPOSURE_TYPE_DARK
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_List_Add
+ * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Image_Size_Bytes
  */
 static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,double exposure_length_s,
 				    char ***filename_list,int *filename_count)
@@ -614,7 +602,7 @@ static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposur
 	struct timespec exposure_end_time;
 	char filename[BIAS_DARK_FITS_FILENAME_LENGTH];
 	unsigned char *image_buffer = NULL;
-	int pco_exposure_length_ms;
+	double pco_exposure_length_s;
 	int image_buffer_length,camera_image_number;
 	
 #if MOPTOP_DEBUG > 1
@@ -638,10 +626,8 @@ static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposur
 	}
 	(*filename_list) = NULL;
 	(*filename_count) = 0;
-	/* set shutter mode to close */
-	/* diddly how do we do this for PCO cameras? */
 	/* set exposure length  */
-	if(!CCD_Exposure_Length_Set(exposure_length_s*MOPTOP_GENERAL_ONE_SECOND_MS))
+	if(!CCD_Exposure_Length_Set(exposure_length_s))
 	{
 		Moptop_General_Error_Number = 713;
 		sprintf(Moptop_General_Error_String,
@@ -672,7 +658,7 @@ static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposur
 		return FALSE;
 	}
 	/* get the actual exposure length used by the camera */
-	if(!CCD_Exposure_Length_Get(&pco_exposure_length_ms))
+	if(!CCD_Exposure_Length_Get(&pco_exposure_length_s))
 	{
 		Moptop_General_Error_Number = 707;
 		sprintf(Moptop_General_Error_String,
@@ -729,7 +715,7 @@ static int Bias_Dark_Acquire_Images(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposur
 		/* generate a new filename for this FITS image */
 		Bias_Dark_Get_Fits_Filename(exposure_type,filename,BIAS_DARK_FITS_FILENAME_LENGTH);
 		/* write fits image */
-		if(!Bias_Dark_Write_Fits_Image(exposure_type,pco_exposure_length_ms,exposure_end_time,
+		if(!Bias_Dark_Write_Fits_Image(exposure_type,pco_exposure_length_s,exposure_end_time,
 					       camera_image_number,camera_timestamp,
 					       CCD_Buffer_Get_Image_Buffer(),CCD_Setup_Get_Image_Size_Bytes(),filename))
 		{
@@ -812,7 +798,8 @@ static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expo
  * Write the FITS image to disk.
  * <ul>
  * <li>We set the "OBSTYPE" FITS keyword value based on the value of exposure_type.
- * <li>We set the "DATE"/"DATE-OBS"/"UTSTART" and "MJD" keyword values based on the value of Multrun_Data.Exposure_Start_Time.
+ * <li>We set the "DATE"/"DATE-OBS"/"UTSTART" and "MJD" keyword values based on the value of 
+ *     Multrun_Data.Exposure_Start_Time.
  * <li>We set the "DATE-END" and "UTEND" keyword values based on the value of exposure_end_time.
  * <li>We set the "TELAPSE" keyword value based on the time elapsed between 
  *     Multrun_Data.Multrun_Start_Time and exposure_end_time.
@@ -824,7 +811,7 @@ static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expo
  *     Multrun_Data.CCD_Temperature.
  * <li>We set the "TEMPSTAT" FITS keyword value based on the cached CCD temperature status stored in
  *     Multrun_Data.CCD_Temperature_Status_String.
- * <li>We set the "EXPTIME" and "XPOSURE" FITS keyword value to the pco_exposure_length_ms in seconds.
+ * <li>We set the "EXPTIME" and "XPOSURE" FITS keyword value to the pco_exposure_length_s in seconds.
  * <li>We set the "EXPREQST" FITS keyword value to the Multrun_Data.Requested_Exposure_Length.
  * <li>We set the "CCDXPIXE" FITS keyword value to CCD_Setup_Get_Pixel_Width in m.
  * <li>We set the "CCDYPIXE" FITS keyword value to CCD_Setup_Get_Pixel_Height in m.
@@ -837,8 +824,8 @@ static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expo
  * <li>We create an empty image of the correct dimensions using fits_create_img.
  * <li>We write the FITS headers to the FITS image using CCD_Fits_Header_Write_To_Fits.
  * <li>We check the computed binned image size is not larger than the image_buffer_length.
- * <li>If Multrun_Data.Flip_X is TRUE, we call Moptop_Multrun_Flip_X to flip the image data in the X direction.
- * <li>If Multrun_Data.Flip_Y is TRUE, we call Moptop_Multrun_Flip_Y to flip the image data in the Y direction.
+ * <li>If Bias_Dark_Data.Flip_X is TRUE, we call Moptop_Multrun_Flip_X to flip the image data in the X direction.
+ * <li>If Bias_Dark_Data.Flip_Y is TRUE, we call Moptop_Multrun_Flip_Y to flip the image data in the Y direction.
  * <li>We write the image data to the FITS image using fits_write_img.
  * <li>If the binning value is not 1, we retrieve the current CCDSCALE value, scale it by the binning, 
  *     and update the FITS keyword value.
@@ -847,7 +834,7 @@ static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expo
  * </ul>
  * @param exposure_type An CCD_FITS_FILENAME_EXPOSURE_TYPE, one of:
  *        CCD_FITS_FILENAME_EXPOSURE_TYPE_BIAS or CCD_FITS_FILENAME_EXPOSURE_TYPE_DARK.
- * @param pco_exposure_length_ms The exposure length as retrieved from the camera, in milliseconds.
+ * @param pco_exposure_length_s The exposure length as retrieved from the camera, in seconds.
  * @param exposure_end_time A timestamp representing the end time of the exposure being saved. Actually a timestamp
  *        taken just after the camera has signalled a buffer is available.
  * @param camera_image_number The camera image number extracted from the read-out image's meta-data.
@@ -868,7 +855,6 @@ static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expo
  * @see moptop_fits_header.html#Moptop_Fits_Header_TimeSpec_To_UtStart_String
  * @see moptop_fits_header.html#Moptop_Fits_Header_TimeSpec_To_Mjd
  * @see moptop_general.html#fdifftime
- * @see moptop_general.html#MOPTOP_GENERAL_ONE_SECOND_MS
  * @see moptop_general.html#MOPTOP_GENERAL_ONE_METRE_MICROMETRE
  * @see moptop_general.html#Moptop_General_Log
  * @see moptop_general.html#Moptop_General_Log_Format
@@ -885,7 +871,7 @@ static int Bias_Dark_Get_Fits_Filename(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expo
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Pixel_Width
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Pixel_Height
  */
-static int Bias_Dark_Write_Fits_Image(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,int pco_exposure_length_ms,
+static int Bias_Dark_Write_Fits_Image(enum CCD_FITS_FILENAME_EXPOSURE_TYPE exposure_type,double pco_exposure_length_s,
 				      struct timespec exposure_end_time,int camera_image_number,
 				      struct timespec camera_timestamp,
 				      unsigned char *image_buffer,
@@ -991,14 +977,10 @@ static int Bias_Dark_Write_Fits_Image(enum CCD_FITS_FILENAME_EXPOSURE_TYPE expos
 	if(!Moptop_Fits_Header_String_Add("TEMPSTAT",Bias_Dark_Data.CCD_Temperature_Status_String,NULL))
 		return FALSE;
 	/* EXPTIME is the actual exposure length returned from the camera, in seconds */
-	if(!Moptop_Fits_Header_Float_Add("EXPTIME",
-					 ((double)pco_exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS),
-					 "[sec] Actual exposure"))
+	if(!Moptop_Fits_Header_Float_Add("EXPTIME",pco_exposure_length_s,"[sec] Actual exposure"))
 		return FALSE;
 	/* XPOSURE is the actual exposure length returned from the camera, in seconds */
-	if(!Moptop_Fits_Header_Float_Add("XPOSURE",
-					 ((double)pco_exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS),
-					 "[sec] Actual exposure"))
+	if(!Moptop_Fits_Header_Float_Add("XPOSURE",pco_exposure_length_s,"[sec] Actual exposure"))
 		return FALSE;
 	/* EXPREQST is the requested exposure length in seconds (from Bias_Dark_Data.Requested_Exposure_Length) */
 	if(!Moptop_Fits_Header_Float_Add("EXPREQST",Bias_Dark_Data.Requested_Exposure_Length,

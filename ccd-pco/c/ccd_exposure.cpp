@@ -113,33 +113,50 @@ int CCD_Exposure_Trigger_Mode_Is_External(void)
 }
 
 /**
- * Set the requested exposure length. 
- * @param exposure_length_ms The exposure length as an integer in milliseconds.
+ * Set the requested exposure length. We first set the timebase to CCD_COMMAND_TIMEBASE_US (microseconds),
+ * and convert the exposure length from seconds to microseconds. We do this as a bias frame needs to use the minimum
+ * exposure length, which for a PCO camera is less than 1 millisecond.
+ * @param exposure_length_s The exposure length as an double in seconds.
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #Exposure_Error_Number
  * @see #Exposure_Error_String
+ * @see ccd_general.html#CCD_GENERAL_ONE_SECOND_US
+ * @see ccd_general.html#CCD_GENERAL_ONE_MILLISECOND_US
+ * @see ccd_command.html#CCD_COMMAND_TIMEBASE
+ * @see ccd_command.html#CCD_Command_Set_Timebase
  * @see ccd_command.html#CCD_Command_Set_Delay_Exposure_Time
- * @see ccd_general.html#CCD_GENERAL_ONE_SECOND_MS 
  * @see ccd_general.html#CCD_General_Log_Format
  */
-int CCD_Exposure_Length_Set(int exposure_length_ms)
+int CCD_Exposure_Length_Set(double exposure_length_s)
 {
+	int exposure_length_us;
+	
 	Exposure_Error_Number = 0;
 #if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Set(%d): Started.",exposure_length_ms);
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Set(%.6f s): Started.",exposure_length_s);
 #endif /* LOGGING */
-	/* assume the timebase has previously been set to milliseconds.
-	** See CCD_Setup_Startup: CCD_Command_Set_Timebase(2,2) */
-	if(!CCD_Command_Set_Delay_Exposure_Time(0,exposure_length_ms))
+	/* set exposure and delay timebase to microseconds */
+	if(!CCD_Command_Set_Timebase(CCD_COMMAND_TIMEBASE_US,CCD_COMMAND_TIMEBASE_US))
+	{
+		Exposure_Error_Number = 4;
+		sprintf(Exposure_Error_String,"CCD_Exposure_Length_Set: "
+			"CCD_Command_Set_Timebase(CCD_COMMAND_TIMEBASE_US,CCD_COMMAND_TIMEBASE_US) failed.");
+		return FALSE;
+	}
+	/* convert exposure length to microseconds. */
+	exposure_length_us = (int)(exposure_length_s*((double)CCD_GENERAL_ONE_SECOND_US));
+	/* set exposure length in microseconds */
+	if(!CCD_Command_Set_Delay_Exposure_Time(0,exposure_length_us))
 	{
 		Exposure_Error_Number = 2;
 		sprintf(Exposure_Error_String,
-			"CCD_Exposure_Length_Set: CCD_Command_Set_Delay_Exposure_Time(0,%d) failed.",exposure_length_ms);
+			"CCD_Exposure_Length_Set: CCD_Command_Set_Delay_Exposure_Time(0,%d) failed.",
+			exposure_length_us);
 		return FALSE;
 	}
 #if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Set: Exposure length set to %d ms.",
-			       exposure_length_ms);
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Set: Exposure length set to %d us (%d ms).",
+			       exposure_length_us,exposure_length_us/CCD_GENERAL_ONE_MILLISECOND_US);
 #endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Set: Finished.");
@@ -149,7 +166,7 @@ int CCD_Exposure_Length_Set(int exposure_length_ms)
 
 /**
  * Get the current exposure length in use by the PCO library/camera.
- * @param exposure_length_ms The address of an integer to store the returned exposure length in milliseconds.
+ * @param exposure_length_s The address of a double to store the returned exposure length in decimal seconds.
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see #Exposure_Error_Number
  * @see #Exposure_Error_String
@@ -157,32 +174,41 @@ int CCD_Exposure_Length_Set(int exposure_length_ms)
  * @see ccd_general.html#CCD_GENERAL_ONE_SECOND_MS 
  * @see ccd_general.html#CCD_General_Log_Format
  */
-int CCD_Exposure_Length_Get(int *exposure_length_ms)
+int CCD_Exposure_Length_Get(double *exposure_length_s)
 {
-	int delay_time;
+	int delay_time,exposure_length_us;
 
 	Exposure_Error_Number = 0;
 #if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Get: Started.");
+	CCD_General_Log(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Get: Started.");
 #endif /* LOGGING */
-	if(exposure_length_ms == NULL)
+	if(exposure_length_s == NULL)
 	{
 		Exposure_Error_Number = 5;
-		sprintf(Exposure_Error_String,"CCD_Exposure_Length_Get: exposure_length_ms was NULL.");
+		sprintf(Exposure_Error_String,"CCD_Exposure_Length_Get: exposure_length_s was NULL.");
 		return FALSE;
 	}
 	/* CCD_Command_Get_Delay_Exposure_Time returns the delay_time and exposure_length in units
-	** specified by CCD_Command_Set_Timebase. This should have been set to milliseconds by a call in
-	** CCD_Setup_Startup, otherwise the returned value will have the wrong units.
-	*/
-	if(!CCD_Command_Get_Delay_Exposure_Time(&delay_time,exposure_length_ms))
+	** specified by CCD_Command_Set_Timebase. */
+	/* set exposure and delay timebase to microseconds */
+	if(!CCD_Command_Set_Timebase(CCD_COMMAND_TIMEBASE_US,CCD_COMMAND_TIMEBASE_US))
+	{
+		Exposure_Error_Number = 6;
+		sprintf(Exposure_Error_String,"CCD_Exposure_Length_Get: "
+			"CCD_Command_Set_Timebase(CCD_COMMAND_TIMEBASE_US,CCD_COMMAND_TIMEBASE_US) failed.");
+		return FALSE;
+	}
+	if(!CCD_Command_Get_Delay_Exposure_Time(&delay_time,&exposure_length_us))
 	{
 		Exposure_Error_Number = 3;
 		sprintf(Exposure_Error_String,"CCD_Exposure_Length_Get: CCD_Command_Get_Delay_Exposure_Time failed.");
 		return FALSE;
 	}
+	/* convert retrieved time in microseconds to decimal seconds */
+	(*exposure_length_s) = ((double)exposure_length_us)/((double)CCD_GENERAL_ONE_SECOND_US);
 #if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Get: Finished.");
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Exposure_Length_Get: Returned exposure length %.6f s.",
+			       (*exposure_length_s));
 #endif /* LOGGING */
 	return TRUE;
 }

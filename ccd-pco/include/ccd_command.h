@@ -17,7 +17,22 @@ enum CCD_COMMAND_TRIGGER_MODE
 	CCD_COMMAND_TRIGGER_MODE_INTERNAL = 0x0,
 	CCD_COMMAND_TRIGGER_MODE_EXTERNAL = 0x2
 };
-	
+
+/**
+ * Timebase, used to decide what units are used when specifying exposure/delay lengths.
+ * <ul>
+ * <li><b>CCD_COMMAND_TIMEBASE_NS</b> We are using nanoseconds to specify exposure/delay lengths.
+ * <li><b>CCD_COMMAND_TIMEBASE_US</b> We are using microseconds to specify exposure/delay lengths.
+ * <li><b>CCD_COMMAND_TIMEBASE_MS</b> We are using milliseconds to specify exposure/delay lengths.
+ * </ul>
+ */
+enum CCD_COMMAND_TIMEBASE
+{
+	CCD_COMMAND_TIMEBASE_NS = 0x0,
+	CCD_COMMAND_TIMEBASE_US = 0x1,
+	CCD_COMMAND_TIMEBASE_MS = 0x2
+};
+
 /*  the following 3 lines are needed to support C++ compilers */
 #ifdef __cplusplus
 extern "C" {
@@ -34,13 +49,15 @@ extern int CCD_Command_Close(void);
 	extern int CCD_Command_Set_Recording_State(int rec_state);
 	extern int CCD_Command_Reset_Settings(void);
 	extern int CCD_Command_Set_Timestamp_Mode(int mode);
-	extern int CCD_Command_Set_Timebase(int delay_timebase,int exposure_timebase);
+	extern int CCD_Command_Set_Timebase(enum CCD_COMMAND_TIMEBASE delay_timebase,
+					    enum CCD_COMMAND_TIMEBASE exposure_timebase);
 	extern int CCD_Command_Set_Delay_Exposure_Time(int delay_time,int exposure_time);
 	extern int CCD_Command_Set_ADC_Operation(int num_adcs);
 	extern int CCD_Command_Set_Bit_Alignment(int bit_alignment);
 	extern int CCD_Command_Set_Noise_Filter_Mode(int mode);
 	extern int CCD_Command_Set_Trigger_Mode(enum CCD_COMMAND_TRIGGER_MODE mode);
 	extern int CCD_Command_Set_Binning(int bin_x,int bin_y);
+	extern int CCD_Command_Set_ROI(int start_x,int start_y,int end_x,int end_y);
 	extern int CCD_Command_Grabber_Acquire_Image_Async_Wait(void *image_buffer);
 	extern int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *camera_temp,
 					       int *valid_psu_temp,int *psu_temp);

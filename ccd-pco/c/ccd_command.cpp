@@ -552,16 +552,17 @@ int CCD_Command_Set_Timestamp_Mode(int mode)
 
 /**
  * Set the units used for delays and exposures.
- * @param delay_timebase An integer, used to set the units used for delays: 0x0 (ns), 0x1 (us), 0x2 (ms).
- * @param exposure_timebase An integer, used to set the units used for exposures: 0x0 (ns), 0x1 (us), 0x2 (ms).
+ * @param delay_timebase A CCD_COMMAND_TIMEBASE enumeration , used to set the units used for delays.
+ * @param exposure_timebase A CCD_COMMAND_TIMEBASE enumeration, used to set the units used for exposures.
  * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #CCD_COMMAND_TIMEBASE
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
  * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log_Format
  */
-int CCD_Command_Set_Timebase(int delay_timebase,int exposure_timebase)
+int CCD_Command_Set_Timebase(enum CCD_COMMAND_TIMEBASE delay_timebase,enum CCD_COMMAND_TIMEBASE exposure_timebase)
 {
 	WORD exp_timebase,del_timebase;
 	DWORD pco_err;
@@ -856,6 +857,56 @@ int CCD_Command_Set_Binning(int bin_x,int bin_y)
 	}
 #if LOGGING > 5
 	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Trigger_Mode: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Get the current 'region of interest', given the current binning settings. This is the area of the detector
+ * to read out, in binned pixels.
+ * @param start_x The address of an integer to store the first pixel in x on the detector to read out.
+ * @param start_y The address of an integer to store the first pixel in y on the detector to read out.
+ * @param end_x The address of an integer to store the last pixel in x on the detector to read out.
+ * @param end_y The address of an integer to store the last pixel in y on the detector to read out.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
+ * @see ccd_general.html#CCD_General_Log
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Set_ROI(int start_x,int start_y,int end_x,int end_y)
+{
+	DWORD pco_err;
+	WORD start_x_w,start_y_w,end_x_w,end_y_w;
+	
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Set_ROI(%d,%d,%d,%d): Started.",
+			       start_x,start_y,end_x,end_y);
+#endif /* LOGGING */
+	/* check camera instance has been created, if so open should have been called,
+	** and the Description field retrieved from the camera head. */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 79;
+		sprintf(Command_Error_String,"CCD_Command_Set_ROI:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	start_x_w = start_x;
+	start_y_w = start_y;
+	end_x_w = end_x;
+	end_y_w = end_y;
+	pco_err = Command_Data.Camera->PCO_SetROI(start_x_w,start_y_w,end_x_w,end_y_w);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 80;
+		sprintf(Command_Error_String,"CCD_Command_Set_ROI:PCO_SetROI(%d,%d,%d,%d) failed(0x%x) (%s).",
+			start_x_w,start_y_w,end_x_w,end_y_w,pco_err,Command_PCO_Get_Error_Text(pco_err));
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Set_ROI Finished.");
 #endif /* LOGGING */
 	return TRUE;
 }
@@ -1420,6 +1471,7 @@ int CCD_Command_Get_Image_Size_Bytes(int *image_size)
 	/* get the binned image dimensions from the camera */
 	if(!CCD_Command_Get_Actual_Size(&image_width,&image_height))
 		return FALSE;
+	/* I think pixels are unsigned shorts, typdefed to WORD in the PCO library (defs.h) */
 	(*image_size) = image_width*image_height*sizeof(WORD);
 #if LOGGING > 5
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,

@@ -162,7 +162,7 @@ static int Moptop_Abort = FALSE;
 /* internal functions */
 static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *filename_count);
 static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *filename,int filename_length);
-static int Multrun_Write_Fits_Image(int do_standard,int pco_exposure_length_ms,
+static int Multrun_Write_Fits_Image(int do_standard,double pco_exposure_length_s,
 				    struct timespec exposure_end_time,int camera_image_number,
 				    struct timespec camera_timestamp,
 				    double requested_rotator_angle,double rotator_start_angle,
@@ -183,7 +183,6 @@ static int Multrun_Write_Fits_Image(int do_standard,int pco_exposure_length_ms,
  * </ul>
  * @param exposure_length_s The exposure length to use for each frame, in seconds.
  * @return The routine returns TRUE on success and FALSE on failure.
- * @see moptop_general.html#MOPTOP_GENERAL_ONE_SECOND_MS
  * @see #Multrun_Data
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
@@ -193,7 +192,7 @@ int Moptop_Multrun_Exposure_Length_Set(double exposure_length_s)
 {
 	/* configure the CCD camera exposure length 
 	** Note this might be modified by the PCO library. */
-	if(!CCD_Exposure_Length_Set(exposure_length_s*MOPTOP_GENERAL_ONE_SECOND_MS))
+	if(!CCD_Exposure_Length_Set(exposure_length_s))
 	{
 		Moptop_General_Error_Number = 640;
 		sprintf(Moptop_General_Error_String,
@@ -972,9 +971,7 @@ void Moptop_Multrun_Flip_Y(int ncols,int nrows,unsigned short *exposure_data)
  * <ul>
  * <li>We check the filename_list and filename_count are not NULL and initialise them.
  * <li>We get the camera exposure length using CCD_Exposure_Length_Get.
- * <li>We get the camera's internal clock frequency using CCD_Command_Get_Timestamp_Clock_Frequency.
- * <li>We calculate a timeout as being twice the length of time between two triggers.
- * <li>We initialise last_camera_ticks to zero.
+ * <li>We calculate a timeout as being four times the length of time between two triggers.
  * <li>We loop over the Multrun_Data.Image_Count, using Multrun_Data.Image_Index as an index counter (for status reporting):
  *     <ul>
  *     <li>We take a timestamp and store it in Multrun_Data.Exposure_Start_Time.
@@ -982,14 +979,13 @@ void Moptop_Multrun_Flip_Y(int ncols,int nrows,unsigned short *exposure_data)
  *     <li>We compute the theoretical rotator start angle (within a rotation) and store it in rotator_start_angle.
  *     <li>We compute which rotation we are on and store it in Multrun_Data.Rotation_Number.
  *     <li>We compute the image we are taking within the current rotation and store it in Multrun_Data.Sequence_Number.
- *     <li>We wait for a readout by calling CCD_Command_Wait_Buffer.
+ *     <li>We wait for a readout by calling CCD_Command_Grabber_Acquire_Image_Async_Wait.
  *     <li>If the rotator is configured (Moptop_Config_Rotator_Is_Enabled) we retrieve the actual final rotator 
  *         position using PIROT_Command_Query_POS, and use it compute the rotator_difference and the
  *         rotator_end_angle (the curent position in the current rotation).
  *     <li>If the rotator is _not_ configured  we compute a theoretical rotator_difference and rotator_end_angle.
+ *     <li>We get the camera image number from the image metadata usingCCD_Command_Get_Image_Number_From_Metadata.
  *     <li>We get the camera image timestamp from the image metadata using CCD_Command_Get_Timestamp_From_Metadata.
- *     <li>We calculate the camera_clock_difference as the difference in camera ticks between this image and the 
- *         last one, divided by the previously retrieved camera's internal clock frequency.
  *     <li>We get an exposure end timestamp and store it in exposure_end_time.
  *     <li>We call Multrun_Get_Fits_Filename to generate a new FITS filename.
  *     <li>We call Multrun_Write_Fits_Image to write the image data to the generated FTYS filename.
@@ -1020,6 +1016,7 @@ void Moptop_Multrun_Flip_Y(int ncols,int nrows,unsigned short *exposure_data)
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Timestamp_From_Metadata
  * @see ../ccd/cdocs/ccd_exposure.html#CCD_Exposure_Length_Get
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_List_Add
+ * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Image_Size_Bytes
  * @see ../pirot/cdocs/pirot_command.html#PIROT_Command_Query_POS
  */
 static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *filename_count)
@@ -1030,7 +1027,8 @@ static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *fil
 	double requested_rotator_angle = 0.0;
 	double rotator_start_angle,current_rotator_position,rotator_difference,rotator_end_angle;
 	double camera_clock_difference;
-	int pco_exposure_length_ms,camera_image_number;
+	double pco_exposure_length_s;
+	int camera_image_number;
 	int images_per_cycle;
 	
 #if MOPTOP_DEBUG > 1
@@ -1052,9 +1050,8 @@ static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *fil
 	}
 	(*filename_list) = NULL;
 	(*filename_count) = 0;
-	/* compute how long CCD_Command_Wait_Buffer should wait for an image to arrive, in milliseconds */
 	/* get exposure length used by the pco camera */
-	if(!CCD_Exposure_Length_Get(&pco_exposure_length_ms))
+	if(!CCD_Exposure_Length_Get(&pco_exposure_length_s))
 	{
 		Moptop_General_Error_Number = 610;
 		sprintf(Moptop_General_Error_String,"Multrun_Acquire_Images:Failed to get PCO exposure length.");
@@ -1126,7 +1123,7 @@ static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *fil
 		/* generate a new filename for this FITS image */
 		Multrun_Get_Fits_Filename(images_per_cycle,do_standard,filename,MULTRUN_FITS_FILENAME_LENGTH);
 		/* write fits image */
-		Multrun_Write_Fits_Image(do_standard,pco_exposure_length_ms,exposure_end_time,
+		Multrun_Write_Fits_Image(do_standard,pco_exposure_length_s,exposure_end_time,
 					 camera_image_number,camera_timestamp,
 					 requested_rotator_angle,rotator_start_angle,rotator_end_angle,
 					 rotator_difference,
@@ -1242,7 +1239,7 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  * <li>We set the "MOPRARC" FITS keyword value to the rotator_difference.
  * <li>We set the "MOPRNUM" FITS keyword value to the Multrun_Data.Rotation_Number.
  * <li>We set the "MOPRPOS" FITS keyword value to the Multrun_Data.Sequence_Number.
- * <li>We set the "EXPTIME" and "XPOSURE" FITS keyword value to the pco_exposure_length_ms in seconds.
+ * <li>We set the "EXPTIME" and "XPOSURE" FITS keyword value to the pco_exposure_length_s in seconds.
  * <li>We set the "EXPREQST" FITS keyword value to the Multrun_Data.Requested_Exposure_Length.
  * <li>We set the "CCDXPIXE" FITS keyword value to CCD_Setup_Get_Pixel_Width in m.
  * <li>We set the "CCDYPIXE" FITS keyword value to CCD_Setup_Get_Pixel_Height in m.
@@ -1264,7 +1261,7 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  * <li>We remove the file lock on the FITS image using CCD_Fits_Filename_UnLock.
  * </ul>
  * @param do_standard A boolean, if TRUE this is an observation of a standard, otherwise it is not.
- * @param pco_exposure_length_ms The exposure length as retrieved from the camera, in milliseconds.
+ * @param pco_exposure_length_s The exposure length as retrieved from the camera, in seconds.
  * @param exposure_end_time A timestamp representing the end time of the exposure being saved. Actually a timestamp
  *        taken just after the camera has signalled a buffer is available.
  * @param camera_image_number The camera image number extracted from the read-out image's meta-data.
@@ -1306,7 +1303,7 @@ static int Multrun_Get_Fits_Filename(int images_per_cycle,int do_standard,char *
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Pixel_Height
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Timestamp_Clock_Frequency
  */
-static int Multrun_Write_Fits_Image(int do_standard,int pco_exposure_length_ms,
+static int Multrun_Write_Fits_Image(int do_standard,double pco_exposure_length_s,
 				    struct timespec exposure_end_time,int camera_image_number,
 				    struct timespec camera_timestamp,
 				    double requested_rotator_angle,double rotator_start_angle,
@@ -1423,14 +1420,10 @@ static int Multrun_Write_Fits_Image(int do_standard,int pco_exposure_length_ms,
 	if(!Moptop_Fits_Header_Integer_Add("MOPRPOS",Multrun_Data.Sequence_Number,"MOPTOP Position number within rotation"))
 		return FALSE;
 	/* EXPTIME is the actual exposure length returned from the camera, in seconds */
-	if(!Moptop_Fits_Header_Float_Add("EXPTIME",
-					 ((double)pco_exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS),
-					 "[sec] Actual exposure"))
+	if(!Moptop_Fits_Header_Float_Add("EXPTIME",pco_exposure_length_s,"[sec] Actual exposure"))
 		return FALSE;
 	/* XPOSURE is the actual exposure length returned from the camera, in seconds */
-	if(!Moptop_Fits_Header_Float_Add("XPOSURE",
-					 ((double)pco_exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS),
-					 "[sec] Actual exposure"))
+	if(!Moptop_Fits_Header_Float_Add("XPOSURE",pco_exposure_length_s,"[sec] Actual exposure"))
 		return FALSE;
 	/* EXPREQST is the requested exposure length in seconds (from Multrun_Data.Requested_Exposure_Length) */
 	if(!Moptop_Fits_Header_Float_Add("EXPREQST",Multrun_Data.Requested_Exposure_Length,"[sec] Requested exposure"))
