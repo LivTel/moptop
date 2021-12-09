@@ -130,7 +130,7 @@ int CCD_Setup_Set_Board(int board)
 {
 	Setup_Error_Number = 0;
 #if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Setup_Set_Board(%d): Started.");
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Setup_Set_Board(%d): Started.",board);
 #endif /* LOGGING */
 	Setup_Data.Camera_Board = board;
 #if LOGGING > 0
