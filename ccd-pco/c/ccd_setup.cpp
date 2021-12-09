@@ -136,6 +136,7 @@ int CCD_Setup_Set_Board(int board)
 #if LOGGING > 0
 	CCD_General_Log(LOG_VERBOSITY_TERSE,"CCD_Setup_Set_Board: Finished.");
 #endif /* LOGGING */
+	return TRUE;
 }
 
 /**
