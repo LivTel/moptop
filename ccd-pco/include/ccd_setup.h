@@ -13,6 +13,7 @@
 extern "C" {
 #endif
 
+extern int CCD_Setup_Set_Board(int board);
 extern int CCD_Setup_Startup(void);
 extern int CCD_Setup_Shutdown(void);
 extern int CCD_Setup_Dimensions(int bin);

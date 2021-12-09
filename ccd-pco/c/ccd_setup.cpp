@@ -120,10 +120,31 @@ static char Setup_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
 ** External Functions
 ** -------------------------------------------------------- */
 /**
- * Do the initial setup for a PCO camera.
+ * Set which camera head (board) to connect to.
+ * @param board An integer, the board number of the camera to connect to.
+ * @see #Setup_Error_Number
+ * @see #Setup_Error_String
+ * @see #Setup_Data
+ */
+int CCD_Setup_Set_Board(int board)
+{
+	Setup_Error_Number = 0;
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Setup_Set_Board(%d): Started.");
+#endif /* LOGGING */
+	Setup_Data.Camera_Board = board;
+#if LOGGING > 0
+	CCD_General_Log(LOG_VERBOSITY_TERSE,"CCD_Setup_Set_Board: Finished.");
+#endif /* LOGGING */
+}
+
+/**
+ * Do the initial setup for a PCO camera (specified by the previously set Setup_Data.Camera_Board, 
+ * see CCD_Setup_Set_Board).
  * <ul>
  * <li>We initialise the libraries used using CCD_Command_Initialise.
- * <li>We open a connection to the CCD camera using CCD_Command_Open.
+ * <li>We open a connection to the CCD camera using CCD_Command_Open. 
+ *     We connect to the camera specified by Setup_Data.Camera_Board.
  * <li>We set the PCO camera to use the current time by calling CCD_Command_Set_Camera_To_Current_Time.
  * <li>We stop any ongoing image acquisitions by calling CCD_Command_Set_Recording_State(FALSE).
  * <li>We reset the camera to a known state by calling CCD_Command_Reset_Settings.
@@ -147,6 +168,7 @@ static char Setup_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * @see #Setup_Error_Number
  * @see #Setup_Error_String
  * @see #Setup_Data
+ * @see #CCD_Setup_Set_Board
  * @see ccd_command.html#CCD_Command_Initialise
  * @see ccd_command.html#CCD_Command_Open
  * @see ccd_command.html#CCD_Command_Set_Camera_To_Current_Time
