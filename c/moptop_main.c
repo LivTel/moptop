@@ -455,7 +455,10 @@ static void Moptop_Shutdown_Mechanisms(void)
  * <ul>
  * <li>Use Moptop_Config_Get_Boolean to get "ccd.enable" to see whether the CCD is enabled for initialisation.
  * <li>If it is _not_ enabled, log and return success.
+ * <li>We retrieve the "ccd.board_number" configuration, and call CCD_Setup_Set_Board to setup which camera to connect to.
  * <li>Call CCD_Setup_Startup to initialise the CCD.
+ * <li>We retrieve the "ccd.serial_number" configuration, and test it against the camera serial number retrieved during startup
+ *     (CCD_Setup_Get_Serial_Number), to ensure we are talking to the right camera head.
  * <li>Call CCD_Buffer_Initialise to allocate space for the image buffers.
  * <li>We call Moptop_Config_Get_Character to get the instrument code for this instance of the C layer/CCD
  *     with property keyword: "file.fits.instrument_code".
@@ -465,20 +468,24 @@ static void Moptop_Shutdown_Mechanisms(void)
  * <li>We call CCD_Fits_Header_Initialise to initialise FITS header data.
  * </ul>
  * @return The routine returns TRUE on success and FALSE on failure.
+ * @see moptop_config.html#Moptop_Config_Get_Integer
  * @see moptop_config.html#Moptop_Config_Get_Boolean
  * @see moptop_config.html#Moptop_Config_Get_Character
  * @see moptop_config.html#Moptop_Config_Get_String
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_general.html#Moptop_General_Log
+ * @see moptop_general.html#Moptop_General_Log_Format
  * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Initialise
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Initialise
  * @see ../ccd/cdocs/ccd_fits_header.html#CCD_Fits_Header_Initialise
+ * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Set_Board
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Startup
+ * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Serial_Number
  */
 static int Moptop_Startup_CCD(void)
 {
-	int enabled;
+	int enabled,board_number,test_serial_number,camera_serial_number;
 	char instrument_code;
 	char* data_dir = NULL;
 
@@ -503,10 +510,24 @@ static int Moptop_Startup_CCD(void)
 #endif
 		return TRUE;
 	}
+	/* get which camera head to connect to. */
+	if(!Moptop_Config_Get_Integer("ccd.board_number",&board_number))
+	{
+		Moptop_General_Error_Number = 27;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_CCD:Failed to get camera board number.");
+		return FALSE;
+	}
+	/* tell the CCD library which camera to connect to */
+	if(!CCD_Setup_Set_Board(board_number))
+	{
+		Moptop_General_Error_Number = 28;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_CCD:Failed to set camera to board number %d.",board_number);
+		return FALSE;
+	}	
 	/* actually do initialisation of the CCD/Andor library */
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
-				  "Calling CCD_Setup_Startup.");
+				  "Calling CCD_Setup_Startup for camera board %d.",board_number);
 #endif
 	if(!CCD_Setup_Startup())
 	{
@@ -514,7 +535,34 @@ static int Moptop_Startup_CCD(void)
 		sprintf(Moptop_General_Error_String,"Moptop_Startup_CCD:CCD_Setup_Startup failed.");
 		return FALSE;
 	}
-	/* allocate space for image buffers */
+	/* get which serial number we think this camera should be */
+	if(!Moptop_Config_Get_Integer("ccd.serial_number",&test_serial_number))
+	{
+		Moptop_General_Error_Number = 29;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_CCD:Failed to get config camera serial number.");
+		return FALSE;
+	}
+	/* get the actual camera serial number, as cached by CCD_Setup_Startup */
+	if(!CCD_Setup_Get_Serial_Number(&camera_serial_number))
+	{
+		Moptop_General_Error_Number = 30;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_CCD:Failed to get actual camera serial number.");
+		return FALSE;
+	}
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
+				  "Camera board %d has serial number %d.",board_number,camera_serial_number);
+#endif
+	/* check we are talking to the right camera */
+	if(camera_serial_number != test_serial_number)
+	{
+		Moptop_General_Error_Number = 31;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_CCD:Board %d is camera serial number %d, "
+			"but we expected it to be camera serial number %d.",
+			board_number,camera_serial_number,test_serial_number);
+		return FALSE;		
+	}
+	/* allocate space for image buffer */
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
 				  "Calling CCD_Buffer_Initialise.");
