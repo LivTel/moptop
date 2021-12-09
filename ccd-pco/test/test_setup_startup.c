@@ -20,6 +20,10 @@
  * Verbosity log level : initialised to LOG_VERBOSITY_VERY_VERBOSE.
  */
 static int Log_Level = LOG_VERBOSITY_VERY_VERBOSE;
+/**
+ * Which camera head to connect to. Defaults to 0.
+ */
+static int Camera_Board = 0;
 
 static int Parse_Arguments(int argc, char *argv[]);
 static void Help(void);
@@ -34,6 +38,7 @@ static void Help(void);
  * <li>We setup the CCD library's logging with calls to CCD_General_Set_Log_Filter_Level, 
  *     CCD_General_Set_Log_Filter_Function, CCD_General_Log_Filter_Level_Absolute, 
  *     CCD_General_Set_Log_Handler_Function, CCD_General_Log_Handler_Stdout.
+ * <li>We set which camera to use by calling CCD_Setup_Set_Board.
  * <li>We initialise the library, open a connection to the camera, and perform initial configuration using 
  *     CCD_Setup_Startup.
  * <li>We shutdown the connection to the library using CCD_Setup_Shutdown.
@@ -49,13 +54,13 @@ static void Help(void);
  * @see ../cdocs/ccd_general.html#CCD_General_Set_Log_Handler_Function
  * @see ../cdocs/ccd_general.html#CCD_General_Error
  * @see ../cdocs/ccd_general.html#CCD_General_Log_Handler_Stdout
+ * @see ../cdocs/ccd_setup.html#CCD_Setup_Set_Board
  * @see ../cdocs/ccd_setup.html#CCD_Setup_Startup
  * @see ../cdocs/ccd_setup.html#CCD_Setup_Shutdown
  */
 int main(int argc, char *argv[])
 {
-	char serial_number_string[64];
-	char firmware_version_string[64];
+	int serial_number;
 
 	/* parse arguments */
 	fprintf(stdout,"test_setup_startup : Parsing Arguments.\n");
@@ -64,6 +69,12 @@ int main(int argc, char *argv[])
 	CCD_General_Set_Log_Filter_Level(Log_Level);
 	CCD_General_Set_Log_Filter_Function(CCD_General_Log_Filter_Level_Absolute);
 	CCD_General_Set_Log_Handler_Function(CCD_General_Log_Handler_Stdout);
+	/* set camera */
+	if(!CCD_Setup_Set_Board(Camera_Board))
+	{
+		CCD_General_Error();
+		return 2;
+	}		
 	/* do startup */
 	if(!CCD_Setup_Startup())
 	{
@@ -71,27 +82,15 @@ int main(int argc, char *argv[])
 		return 2;
 	}
 	/* print out some retrieved data */
-	/*
-	if(!CCD_Setup_Get_Serial_Number(serial_number_string,64))
+	if(!CCD_Setup_Get_Serial_Number(&serial_number))
 	{
 		CCD_General_Error();
 		return 3;
 	}
-	if(!CCD_Setup_Get_Firmware_Version(firmware_version_string,64))
-	{
-		CCD_General_Error();
-		return 4;
-	}
-	fprintf(stdout,"Camera Serial Number: %s.\n",serial_number_string);
-	fprintf(stdout,"Firmware Version: %s.\n",firmware_version_string);
-	fprintf(stdout,"Readout Time: %d ms.\n",CCD_Setup_Get_Readout_Time());
+	fprintf(stdout,"Camera Serial Number: %d.\n",serial_number);
 	fprintf(stdout,"Bytes Per Pixel: %d.\n",CCD_Setup_Get_Bytes_Per_Pixel());
-	fprintf(stdout,"Pixel Size: %.3f x %.3f micrometers.\n",CCD_Setup_Get_Pixel_Width(),
-		CCD_Setup_Get_Pixel_Height());
 	fprintf(stdout,"Sensor Size: %d x %d pixels.\n",CCD_Setup_Get_Sensor_Width(),CCD_Setup_Get_Sensor_Height());
-	fprintf(stdout,"Timestamp Clock Frequency: %lld Hz.\n",CCD_Setup_Get_Timestamp_Clock_Frequency());
 	fprintf(stdout,"Image Size: %d bytes.\n",CCD_Setup_Get_Image_Size_Bytes());
-	*/
 	/* do shutdown */
 	if(!CCD_Setup_Shutdown())
 	{
@@ -109,6 +108,7 @@ int main(int argc, char *argv[])
  * Routine to parse command line arguments.
  * @param argc The number of arguments sent to the program.
  * @param argv An array of argument strings.
+ * @see #Camera_Board
  * @see #Log_Level
  * @see #Help
  */
@@ -118,7 +118,25 @@ static int Parse_Arguments(int argc, char *argv[])
 
 	for(i=1;i<argc;i++)
 	{
-		if((strcmp(argv[i],"-help")==0))
+		if((strcmp(argv[i],"-b")==0)||(strcmp(argv[i],"-board")==0))
+		{
+			if((i+1)<argc)
+			{
+				retval = sscanf(argv[i+1],"%d",&Camera_Board);
+				if(retval != 1)
+				{
+					fprintf(stderr,"Parse_Arguments:Failed to parse camera board %s.\n",argv[i+1]);
+					return FALSE;
+				}
+				i++;
+			}
+			else
+			{
+				fprintf(stderr,"Parse_Arguments:-board requires a camera board number.\n");
+				return FALSE;
+			}
+		}
+		else if((strcmp(argv[i],"-help")==0))
 		{
 			Help();
 			return FALSE;
@@ -157,7 +175,8 @@ static void Help(void)
 {
 	fprintf(stdout,"Test Setup Startup:Help.\n");
 	fprintf(stdout,"This program calls the Moptop CCD library's startup routine.\n");
-	fprintf(stdout,"test_setup_startup  [-help][-l[og_level <0..5>].\n");
+	fprintf(stdout,"test_setup_startup [-b[oard] <camera board>][-help][-l[og_level <0..5>].\n");
+	fprintf(stdout,"\t-board selects which camera head to talk to - the default is camera 0.\n");
 }
 /*
 ** $Log$

@@ -27,6 +27,10 @@
  * Verbosity log level : initialised to LOG_VERBOSITY_VERY_VERBOSE.
  */
 static int Log_Level = LOG_VERBOSITY_VERY_VERBOSE;
+/**
+ * Which camera head to connect to. Defaults to 0.
+ */
+static int Camera_Board = 0;
 
 /* functions */
 static int Parse_Arguments(int argc, char *argv[]);
@@ -42,6 +46,7 @@ static void Help(void);
  * <li>We setup the CCD library's logging with calls to CCD_General_Set_Log_Filter_Level, 
  *     CCD_General_Set_Log_Filter_Function, CCD_General_Log_Filter_Level_Absolute, 
  *     CCD_General_Set_Log_Handler_Function, CCD_General_Log_Handler_Stdout.
+ * <li>We set which camera to use by calling CCD_Setup_Set_Board.
  * <li>We initialise the library, open a connection to the camera, and perform initial configuration using 
  *     CCD_Setup_Startup.
  * <li>We call CCD_Temperature_Get to print out the current sensor temperature.
@@ -59,6 +64,7 @@ static void Help(void);
  * @see ../cdocs/ccd_general.html#CCD_General_Set_Log_Handler_Function
  * @see ../cdocs/ccd_general.html#CCD_General_Error
  * @see ../cdocs/ccd_general.html#CCD_General_Log_Handler_Stdout
+ * @see ../cdocs/ccd_setup.html#CCD_Setup_Set_Board
  * @see ../cdocs/ccd_setup.html#CCD_Setup_Startup
  * @see ../cdocs/ccd_setup.html#CCD_Setup_Shutdown
  * @see ../cdocs/ccd_temperature.html#CCD_Temperature_Get
@@ -79,11 +85,17 @@ int main(int argc, char *argv[])
 	CCD_General_Set_Log_Filter_Level(Log_Level);
 	CCD_General_Set_Log_Filter_Function(CCD_General_Log_Filter_Level_Absolute);
 	CCD_General_Set_Log_Handler_Function(CCD_General_Log_Handler_Stdout);
+	/* set camera */
+	if(!CCD_Setup_Set_Board(Camera_Board))
+	{
+		CCD_General_Error();
+		return 2;
+	}		
 	/* do startup */
 	if(!CCD_Setup_Startup())
 	{
 		CCD_General_Error();
-		return 2;
+		return 3;
 	}
 	/* print out current sensor temperature */
 	if(!CCD_Temperature_Get(&current_temperature))
@@ -105,7 +117,7 @@ int main(int argc, char *argv[])
 	if(!CCD_Setup_Shutdown())
 	{
 		CCD_General_Error();
-		return 8;
+		return 6;
 	}
 	return 0;
 }
@@ -118,6 +130,7 @@ int main(int argc, char *argv[])
  * Routine to parse command line arguments.
  * @param argc The number of arguments sent to the program.
  * @param argv An array of argument strings.
+ * @see #Camera_Board
  * @see #Log_Level
  * @see #Help
  */
@@ -127,7 +140,25 @@ static int Parse_Arguments(int argc, char *argv[])
 
 	for(i=1;i<argc;i++)
 	{
-		if((strcmp(argv[i],"-help")==0))
+		if((strcmp(argv[i],"-b")==0)||(strcmp(argv[i],"-board")==0))
+		{
+			if((i+1)<argc)
+			{
+				retval = sscanf(argv[i+1],"%d",&Camera_Board);
+				if(retval != 1)
+				{
+					fprintf(stderr,"Parse_Arguments:Failed to parse camera board %s.\n",argv[i+1]);
+					return FALSE;
+				}
+				i++;
+			}
+			else
+			{
+				fprintf(stderr,"Parse_Arguments:-board requires a camera board number.\n");
+				return FALSE;
+			}
+		}
+		else if((strcmp(argv[i],"-help")==0))
 		{
 			Help();
 			return FALSE;
@@ -166,6 +197,7 @@ static void Help(void)
 {
 	fprintf(stdout,"Test Temperature Control:Help.\n");
 	fprintf(stdout,"This program tests status retrieval of the sensor temperature.\n");
-	fprintf(stdout,"test_temperature [-help][-l[og_level <0..5>].\n");
+	fprintf(stdout,"test_temperature  [-b[oard] <camera board>][-help][-l[og_level <0..5>].\n");
+	fprintf(stdout,"\t-board selects which camera head to talk to - the default is camera 0.\n");
 }
 
