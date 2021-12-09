@@ -12,7 +12,7 @@ CFLAGS 		= -g -I$(INCDIR) $(PCO_CFLAGS) $(LOGGING_CFLAGS) $(LOG_UDP_CFLAGS) $(SH
 LDFLAGS		= $(PCO_LDFLAGS) -lcfitsio -lstdc++
 DOCFLAGS 	= -static
 
-SRCS 		= test_setup_startup.c test_temperature.c
+SRCS 		= test_setup_startup.c test_temperature.c test_get_serial_number.c
 OBJS 		= $(SRCS:%.c=$(BINDIR)/%.o)
 PROGS 		= $(SRCS:%.c=$(BINDIR)/%)
 DOCS 		= $(SRCS:%.c=$(DOCSDIR)/%.html)
