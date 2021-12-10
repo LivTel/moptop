@@ -58,6 +58,7 @@ extern int CCD_Command_Close(void);
 	extern int CCD_Command_Set_Trigger_Mode(enum CCD_COMMAND_TRIGGER_MODE mode);
 	extern int CCD_Command_Set_Binning(int bin_x,int bin_y);
 	extern int CCD_Command_Set_ROI(int start_x,int start_y,int end_x,int end_y);
+	extern int CCD_Command_Set_Cooling_Setpoint_Temperature(int temperature);
 	extern int CCD_Command_Grabber_Acquire_Image_Async_Wait(void *image_buffer);
 	extern int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *camera_temp,
 					       int *valid_psu_temp,int *psu_temp);
@@ -66,12 +67,16 @@ extern int CCD_Command_Close(void);
 	extern int CCD_Command_Description_Get_Exposure_Time_Max(double *maximum_exposure_length_s);
 	extern int CCD_Command_Description_Get_Max_Horizontal_Size(int *max_hor_size);
 	extern int CCD_Command_Description_Get_Max_Vertical_Size(int *max_ver_size);
+	extern int CCD_Command_Description_Get_Default_Cooling_Setpoint(int *temperature);
+	extern int CCD_Command_Description_Get_Min_Cooling_Setpoint(int *temperature);
+	extern int CCD_Command_Description_Get_Max_Cooling_Setpoint(int *temperature);
 	extern int CCD_Command_Get_Camera_Type(int *camera_type,int *serial_number);
 	extern int CCD_Command_Get_ROI(int *start_x,int *start_y,int *end_x,int *end_y);
 	extern int CCD_Command_Get_Actual_Size(int *image_width,int *image_height);
 	extern int CCD_Command_Get_Image_Size_Bytes(int *image_size);
 	extern int CCD_Command_Get_Trigger_Mode(enum CCD_COMMAND_TRIGGER_MODE *mode);
 	extern int CCD_Command_Get_Delay_Exposure_Time(int *delay_time,int *exposure_time);
+	extern int CCD_Command_Get_Cooling_Setpoint_Temperature(int *temperature);
 	extern int CCD_Command_Get_Image_Number_From_Metadata(void *image_buffer,size_t image_buffer_length,
 							      int *image_number);
 	extern int CCD_Command_Get_Timestamp_From_Metadata(void *image_buffer,size_t image_buffer_length,
