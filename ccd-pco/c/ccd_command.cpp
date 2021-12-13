@@ -79,14 +79,14 @@ static char rcsid[] = "$Id$";
  * <dt>Grabber</dt> <dd>NULL</dd>
  * <dt>PCO_Logger</dt> <dd>NULL</dd>
  * <dt>Camera_Board</dt> <dd>0</dd>
- * <dt>Grabber_Timeout</dt> <dd>30000</dd> (The PCO Edge's maximum exposure length is 20s).
+ * <dt>Grabber_Timeout</dt> <dd>40000</dd> (The PCO Edge's maximum exposure length is 20s).
  * <dt>Description</dt> <dd>{}</dd>
  * </dl>
  * @see #Command_Struct
  */
 static struct Command_Struct Command_Data = 
 {
-	NULL,NULL,NULL,0,30000,{}
+	NULL,NULL,NULL,0,40000,{}
 };
 
 /**
