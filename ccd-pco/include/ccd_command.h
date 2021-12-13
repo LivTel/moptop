@@ -60,6 +60,7 @@ extern int CCD_Command_Close(void);
 	extern int CCD_Command_Set_ROI(int start_x,int start_y,int end_x,int end_y);
 	extern int CCD_Command_Set_Cooling_Setpoint_Temperature(int temperature);
 	extern int CCD_Command_Grabber_Acquire_Image_Async_Wait(void *image_buffer);
+	extern int CCD_Command_Grabber_Acquire_Image_Async_Wait_Timeout(void *image_buffer,int timeout_ms);
 	extern int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *camera_temp,
 					       int *valid_psu_temp,int *psu_temp);
 	extern int CCD_Command_Description_Get_Num_ADCs(int *adc_count);

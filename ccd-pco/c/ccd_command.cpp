@@ -79,14 +79,14 @@ static char rcsid[] = "$Id$";
  * <dt>Grabber</dt> <dd>NULL</dd>
  * <dt>PCO_Logger</dt> <dd>NULL</dd>
  * <dt>Camera_Board</dt> <dd>0</dd>
- * <dt>Grabber_Timeout</dt> <dd>10000</dd>
+ * <dt>Grabber_Timeout</dt> <dd>30000</dd> (The PCO Edge's maximum exposure length is 20s).
  * <dt>Description</dt> <dd>{}</dd>
  * </dl>
  * @see #Command_Struct
  */
 static struct Command_Struct Command_Data = 
 {
-	NULL,NULL,NULL,0,10000,{}
+	NULL,NULL,NULL,0,30000,{}
 };
 
 /**
@@ -997,9 +997,51 @@ int CCD_Command_Grabber_Acquire_Image_Async_Wait(void *image_buffer)
 #if LOGGING > 5
 	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Grabber_Acquire_Image_Async_Wait: Finished.");
 #endif /* LOGGING */
-	return TRUE;
-	
+	return TRUE;	
 }
+
+/**
+ * Call the Grabber to acquire 1 frame from the camera, and place the data into the passed in image buffer.
+ * @param image_buffer The address of some allocated memory to hold the read out image.
+ * @param timeout The time to wait for the image to be read out, before timing out, in milliseconds.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String 
+ * @see #Command_PCO_Get_Error_Text
+ * @see ccd_general.html#CCD_General_Log
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Grabber_Acquire_Image_Async_Wait_Timeout(void *image_buffer,int timeout_ms)
+{
+	DWORD pco_err;
+
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_VERBOSE,"CCD_Command_Grabber_Acquire_Image_Async_Wait_Timeout:"
+			       "Started with timeout %d ms.",timeout_ms);
+#endif /* LOGGING */
+	if(Command_Data.Grabber == NULL)
+	{
+		Command_Error_Number = 92;
+		sprintf(Command_Error_String,"CCD_Command_Grabber_Acquire_Image_Async_Wait_Timeout:"
+			"Grabber CPco_grab_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Grabber->Acquire_Image_Async_wait(image_buffer,timeout_ms);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 93;
+		sprintf(Command_Error_String,"CCD_Command_Grabber_Acquire_Image_Async_Wait_Timeout:"
+			"Grabber Acquire_Image_Async_wait(%p,%d) failed with PCO error code 0x%x (%s).",image_buffer,
+			timeout_ms,pco_err,Command_PCO_Get_Error_Text(pco_err));
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Grabber_Acquire_Image_Async_Wait_Timeout: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
 /**
  * Get the camera/sensor/psu temperatures from the camera.
  * @param valid_sensor_temp The address of an integer, on a successful return from this function this will contain

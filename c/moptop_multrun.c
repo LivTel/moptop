@@ -979,7 +979,8 @@ void Moptop_Multrun_Flip_Y(int ncols,int nrows,unsigned short *exposure_data)
  *     <li>We compute the theoretical rotator start angle (within a rotation) and store it in rotator_start_angle.
  *     <li>We compute which rotation we are on and store it in Multrun_Data.Rotation_Number.
  *     <li>We compute the image we are taking within the current rotation and store it in Multrun_Data.Sequence_Number.
- *     <li>We wait for a readout by calling CCD_Command_Grabber_Acquire_Image_Async_Wait.
+ *     <li>We wait for a readout by calling CCD_Command_Grabber_Acquire_Image_Async_Wait_Timeout with a timeout
+ *         for times the time between two triggers.
  *     <li>If the rotator is configured (Moptop_Config_Rotator_Is_Enabled) we retrieve the actual final rotator 
  *         position using PIROT_Command_Query_POS, and use it compute the rotator_difference and the
  *         rotator_end_angle (the curent position in the current rotation).
@@ -1011,7 +1012,7 @@ void Moptop_Multrun_Flip_Y(int ncols,int nrows,unsigned short *exposure_data)
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_config.html#Moptop_Config_Rotator_Is_Enabled
  * @see ../ccd/cdocs/ccd_buffer.html#CCD_Buffer_Get_Image_Buffer
- * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Grabber_Acquire_Image_Async_Wait
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Grabber_Acquire_Image_Async_Wait_Timeout
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Image_Number_From_Metadata
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Get_Timestamp_From_Metadata
  * @see ../ccd/cdocs/ccd_exposure.html#CCD_Exposure_Length_Get
@@ -1058,24 +1059,30 @@ static int Multrun_Acquire_Images(int do_standard,char ***filename_list,int *fil
 		return FALSE;
 	}
 	/* time taken between two triggers is rotator_step_angle/rotator_run_velocity 
-	** Lets make it four times that in milliseconds, at two times the wait on moptop2 can timeout for the first frame
+	** Lets make it four times that in milliseconds, 
+	** at two times the wait on moptop2 can timeout for the first frame
 	** as it starts earlier than that on moptop1 (as moptop1 is also starting the rotator etc...) */
 	timeout_ms = (int)(4.0*(Moptop_Multrun_Rotator_Step_Angle_Get()/Moptop_Multrun_Rotator_Run_Velocity_Get()))*
 		MOPTOP_GENERAL_ONE_SECOND_MS;
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("multrun","moptop_multrun.c","Multrun_Acquire_Images",LOG_VERBOSITY_VERBOSE,
+				  "MULTRUN","Using acquire timeout of %d ms.",timeout_ms);
+#endif
 	images_per_cycle = (int)(360.0 / Moptop_Multrun_Rotator_Step_Angle_Get());
 	/* acquire frames */
 	for(Multrun_Data.Image_Index=0;Multrun_Data.Image_Index < Multrun_Data.Image_Count; Multrun_Data.Image_Index++)
 	{
 		/* get exposure start timestamp */
 		clock_gettime(CLOCK_REALTIME,&(Multrun_Data.Exposure_Start_Time));
-		/* If this is the first exposure in the multrun, the exposure start time is also the multrun start time. */
+		/* If this is the first exposure in the multrun, 
+		** the exposure start time is also the multrun start time. */
 		if(Multrun_Data.Image_Index == 0)
 			Multrun_Data.Multrun_Start_Time = Multrun_Data.Exposure_Start_Time;
 		rotator_start_angle = fmod(requested_rotator_angle, 360.0);
 		Multrun_Data.Rotation_Number = (Multrun_Data.Image_Index / images_per_cycle) + 1;
 		Multrun_Data.Sequence_Number = (Multrun_Data.Image_Index % images_per_cycle) + 1;
 		/* get an acquired image buffer */
-		if(!CCD_Command_Grabber_Acquire_Image_Async_Wait(CCD_Buffer_Get_Image_Buffer()))
+		if(!CCD_Command_Grabber_Acquire_Image_Async_Wait_Timeout(CCD_Buffer_Get_Image_Buffer(),timeout_ms))
 		{
 			Moptop_General_Error_Number = 611;
 			sprintf(Moptop_General_Error_String,"Multrun_Acquire_Images:Failed to retrieve image buffer.");
