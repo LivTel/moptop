@@ -278,6 +278,7 @@ static int Parse_Arguments(int argc, char *argv[])
 					fprintf(stderr,"Parse_Arguments:Failed to parse temperature set-point %s.\n",argv[i+1]);
 					return FALSE;
 				}
+				Set_Temperature = TRUE;
 				i++;
 			}
 			else
