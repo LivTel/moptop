@@ -19,7 +19,6 @@ extern int CCD_Setup_Shutdown(void);
 extern int CCD_Setup_Dimensions(int bin);
 extern int CCD_Setup_Get_Binning(void);
 extern int CCD_Setup_Get_Serial_Number(int *serial_number);
-extern int CCD_Setup_Get_Bytes_Per_Pixel(void);
 extern float CCD_Setup_Get_Pixel_Width(void);
 extern float CCD_Setup_Get_Pixel_Height(void);
 extern int CCD_Setup_Get_Sensor_Width(void);

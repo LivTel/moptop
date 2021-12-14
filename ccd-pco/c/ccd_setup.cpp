@@ -43,8 +43,6 @@
  * <dt>Binning</dt> <dd>The readout binning, stored as an integer. Can be one of 1,2,3,4,8. </dd>
  * <dt>Serial_Number</dt> <dd>An integer containing the serial number retrieved from the camera head
  *                            Retrieved from the camera library during CCD_Setup_Startup.</dd>
- * <dt>Bytes_Per_Pixel</dt> <dd>An integer storing the bytes per pixel retrieved from the camera during startup 
- *                          using CCD_Command_Get_Bytes_Per_Pixel, and converted to an integer.</dd>
  * <dt>Pixel_Width</dt> <dd>A double storing the pixel width in micrometers retrieved from the camera 
  *                          during CCD_Setup_Startup.</dd>
  * <dt>Pixel_Height</dt> <dd>A double storing the pixel height in micrometers retrieved from the camera 
@@ -62,7 +60,6 @@ struct Setup_Struct
 	int Camera_Board;
 	int Binning;
 	int Serial_Number;
-	int Bytes_Per_Pixel;
 	double Pixel_Width;
 	double Pixel_Height;
 	int Sensor_Width;
@@ -81,7 +78,6 @@ static char rcsid[] = "$Id$";
  * <dt>Camera_Board</dt> <dd>0</dd>
  * <dt>Binning</dt> <dd>1</dd>
  * <dt>Serial_Number</dt> <dd>-1</dd>
- * <dt>Bytes_Per_Pixel</dt> <dd>-1</dd>
  * <dt>Pixel_Width</dt> <dd>0.0</dd>
  * <dt>Pixel_Height</dt> <dd>0.0</dd>
  * <dt>Sensor_Width</dt> <dd>0</dd>
@@ -91,7 +87,7 @@ static char rcsid[] = "$Id$";
  */
 static struct Setup_Struct Setup_Data = 
 {
-	0,1,-1,-1,0.0,0.0,0,0,0
+	0,1,-1,0.0,0.0,0,0,0
 };
 
 /**
@@ -480,18 +476,6 @@ int CCD_Setup_Get_Serial_Number(int *serial_number)
 	}
 	(*serial_number) = Setup_Data.Serial_Number;
 	return TRUE;
-}
-
-/**
- * Return the bytes per pixel returned during a readout, as previously retrieved from the camera head
- * and stored in Setup_Data.
- * @return The number of bytes per pixel.
- * @see #Setup_Data
- */
-int CCD_Setup_Get_Bytes_Per_Pixel(void)
-{
-	/* diddly */
-	return Setup_Data.Bytes_Per_Pixel;
 }
 
 /**
