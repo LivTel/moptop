@@ -1,6 +1,9 @@
 /* ccd_setup.h */
 #ifndef CCD_SETUP_H
 #define CCD_SETUP_H
+
+#include "ccd_command.h" /* for CCD_COMMAND_TIMESTAMP_MODE declaration */
+
 /**
  * Is the specified binning value valid. Valid binning numbers are: 1,2,?. 
  * @param b The binning value to test.
@@ -13,7 +16,8 @@
 extern "C" {
 #endif
 
-extern int CCD_Setup_Set_Board(int board);
+extern void CCD_Setup_Set_Board(int board);
+extern void CCD_Setup_Set_Timestamp_Mode(enum CCD_COMMAND_TIMESTAMP_MODE mode);
 extern int CCD_Setup_Startup(void);
 extern int CCD_Setup_Shutdown(void);
 extern int CCD_Setup_Dimensions(int bin);

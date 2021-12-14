@@ -518,12 +518,7 @@ static int Moptop_Startup_CCD(void)
 		return FALSE;
 	}
 	/* tell the CCD library which camera to connect to */
-	if(!CCD_Setup_Set_Board(board_number))
-	{
-		Moptop_General_Error_Number = 28;
-		sprintf(Moptop_General_Error_String,"Moptop_Startup_CCD:Failed to set camera to board number %d.",board_number);
-		return FALSE;
-	}	
+	CCD_Setup_Set_Board(board_number);
 	/* actually do initialisation of the CCD/Andor library */
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",

@@ -40,6 +40,7 @@
  * Data type holding local data to ccd_setup. This consists of the following:
  * <dl>
  * <dt>Camera_Board</dt> <dd>The board parameter passed to Open_Cam, to determine which camera to connect to.</dd>
+ * <dt>Timestamp_Mode</dt> <dd>What kind of timestamp to include in the read out image data.</dd>
  * <dt>Binning</dt> <dd>The readout binning, stored as an integer. Can be one of 1,2,3,4,8. </dd>
  * <dt>Serial_Number</dt> <dd>An integer containing the serial number retrieved from the camera head
  *                            Retrieved from the camera library during CCD_Setup_Startup.</dd>
@@ -53,11 +54,12 @@
  *                       CCD_Setup_Startup.</dd>
  * <dt>Image_Size_Bytes</dt> <dd>An integer storing the image size in bytes.</dd>
  * </dl>
- * @see #SETUP_ENUM_VALUE_STRING_LENGTH
+ * @see ccd_command.html#CCD_COMMAND_TIMESTAMP_MODE
  */
 struct Setup_Struct
 {
 	int Camera_Board;
+	enum CCD_COMMAND_TIMESTAMP_MODE Timestamp_Mode;
 	int Binning;
 	int Serial_Number;
 	double Pixel_Width;
@@ -76,6 +78,7 @@ static char rcsid[] = "$Id$";
  * The instance of Setup_Struct that contains local data for this module. This is initialised as follows:
  * <dl>
  * <dt>Camera_Board</dt> <dd>0</dd>
+ * <dt>Timestamp_Mode</dt> <dd>CCD_COMMAND_TIMESTAMP_MODE_BINARY_ASCII</dd>
  * <dt>Binning</dt> <dd>1</dd>
  * <dt>Serial_Number</dt> <dd>-1</dd>
  * <dt>Pixel_Width</dt> <dd>0.0</dd>
@@ -84,10 +87,11 @@ static char rcsid[] = "$Id$";
  * <dt>Sensor_Height</dt> <dd>0</dd>
  * <dt>Image_Size_Bytes</dt> <dd>0</dd>
  * </dl>
+ * @see ccd_command.html#CCD_COMMAND_TIMESTAMP_MODE
  */
 static struct Setup_Struct Setup_Data = 
 {
-	0,1,-1,0.0,0.0,0,0,0
+	0,CCD_COMMAND_TIMESTAMP_MODE_BINARY_ASCII,1,-1,0.0,0.0,0,0,0
 };
 
 /**
@@ -112,7 +116,7 @@ static char Setup_Error_String[CCD_GENERAL_ERROR_STRING_LENGTH] = "";
  * @see #Setup_Error_String
  * @see #Setup_Data
  */
-int CCD_Setup_Set_Board(int board)
+void CCD_Setup_Set_Board(int board)
 {
 	Setup_Error_Number = 0;
 #if LOGGING > 0
@@ -122,7 +126,26 @@ int CCD_Setup_Set_Board(int board)
 #if LOGGING > 0
 	CCD_General_Log(LOG_VERBOSITY_TERSE,"CCD_Setup_Set_Board: Finished.");
 #endif /* LOGGING */
-	return TRUE;
+}
+
+/**
+ * Set what timestamp data is included in the read-out.
+ * @param board An CCD_COMMAND_TIMESTAMP_MODE enum, the timestamp mode.
+ * @see #Setup_Error_Number
+ * @see #Setup_Error_String
+ * @see #Setup_Data
+ * @see ccd_command.html#CCD_COMMAND_TIMESTAMP_MODE
+ */
+void CCD_Setup_Set_Timestamp_Mode(enum CCD_COMMAND_TIMESTAMP_MODE mode)
+{
+	Setup_Error_Number = 0;
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Setup_Set_Timestamp_Mode(%d): Started.",mode);
+#endif /* LOGGING */
+	Setup_Data.Timestamp_Mode = mode;
+#if LOGGING > 0
+	CCD_General_Log(LOG_VERBOSITY_TERSE,"CCD_Setup_Set_Timestamp_Mode: Finished.");
+#endif /* LOGGING */
 }
 
 /**
@@ -135,7 +158,8 @@ int CCD_Setup_Set_Board(int board)
  * <li>We set the PCO camera to use the current time by calling CCD_Command_Set_Camera_To_Current_Time.
  * <li>We stop any ongoing image acquisitions by calling CCD_Command_Set_Recording_State(FALSE).
  * <li>We reset the camera to a known state by calling CCD_Command_Reset_Settings.
- * <li>We set the camera timestamps to be binary and ASCII using CCD_Command_Set_Timestamp_Mode(2).
+ * <li>We set the camera timestamps using CCD_Command_Set_Timestamp_Mode, 
+ *     with the previously configured Setup_Data.Timestamp_Mode as a parameter.
  * <li>We set the camera exposure and delay timebase to microseconds using 
  *     CCD_Command_Set_Timebase(CCD_COMMAND_TIMEBASE_US,CCD_COMMAND_TIMEBASE_US).
  * <li>We set an initial delay and exposure time by calling CCD_Command_Set_Delay_Exposure_Time(0,50);
@@ -222,11 +246,12 @@ int CCD_Setup_Startup(void)
 		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Reset_Settings failed.");
 		return FALSE;
 	}
-	/* set timestamps to be binary and ASCII */
-	if(!CCD_Command_Set_Timestamp_Mode(CCD_COMMAND_TIMESTAMP_MODE_BINARY_ASCII))
+	/* set what timestamp data to include in the read out image */
+	if(!CCD_Command_Set_Timestamp_Mode(Setup_Data.Timestamp_Mode))
 	{
 		Setup_Error_Number = 7;
-		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_Timestamp_Mode(CCD_COMMAND_TIMESTAMP_MODE_BINARY_ASCII) failed.");
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_Timestamp_Mode(mode=%d) failed.",
+			Setup_Data.Timestamp_Mode);
 		return FALSE;
 	}
 	/* set exposure and delay timebase to microseconds */

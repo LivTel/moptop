@@ -34,7 +34,7 @@ enum CCD_COMMAND_TIMEBASE
 };
 
 /**
- * Timestamp mode, used to determine how what timestamp data is included in the read-out.
+ * Timestamp mode, used to determine what timestamp data is included in the read-out.
  * <ul>
  * <li><b>CCD_COMMAND_TIMESTAMP_MODE_OFF</b> No timestamp data in the image.
  * <li><b>CCD_COMMAND_TIMESTAMP_MODE_BINARY</b> A BCD encoded timestamp is in the first 14 pixels of the image.
