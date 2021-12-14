@@ -506,15 +506,16 @@ int CCD_Command_Reset_Settings(void)
 
 /**
  * Set how the camera records timestamps. 
- * @param mode An integer: 0x0 (off), 0x1 (binary), 0x2 (binary+ASCII), 0x3 (ASCII).
+ * @param mode An CCD_COMMAND_TIMESTAMP_MODE enum: 0x0 (off), 0x1 (binary), 0x2 (binary+ASCII), 0x3 (ASCII).
  * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #CCD_COMMAND_TIMESTAMP_MODE
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String 
  * @see #Command_PCO_Get_Error_Text
  * @see ccd_general.html#CCD_General_Log_Format
  */
-int CCD_Command_Set_Timestamp_Mode(int mode)
+int CCD_Command_Set_Timestamp_Mode(enum CCD_COMMAND_TIMESTAMP_MODE mode)
 {
 	DWORD pco_err;
 

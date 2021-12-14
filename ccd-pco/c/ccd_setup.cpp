@@ -232,10 +232,10 @@ int CCD_Setup_Startup(void)
 		return FALSE;
 	}
 	/* set timestamps to be binary and ASCII */
-	if(!CCD_Command_Set_Timestamp_Mode(2))
+	if(!CCD_Command_Set_Timestamp_Mode(CCD_COMMAND_TIMESTAMP_MODE_BINARY_ASCII))
 	{
 		Setup_Error_Number = 7;
-		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_Timestamp_Mode(2) failed.");
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_Timestamp_Mode(CCD_COMMAND_TIMESTAMP_MODE_BINARY_ASCII) failed.");
 		return FALSE;
 	}
 	/* set exposure and delay timebase to microseconds */

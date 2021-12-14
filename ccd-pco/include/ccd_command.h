@@ -5,7 +5,7 @@
 
 /* enumerations */
 /**
- * Trigger mode, used to deremine how exposures are started by the camera head.
+ * Trigger mode, used to determine how exposures are started by the camera head.
  * <ul>
  * <li><b>CCD_COMMAND_TRIGGER_MODE_INTERNAL</b> The camera head internally triggers (software/auto sequence).
  * <li><b>CCD_COMMAND_TRIGGER_MODE_EXTERNAL</b> The exposures are externally triggered.
@@ -33,6 +33,26 @@ enum CCD_COMMAND_TIMEBASE
 	CCD_COMMAND_TIMEBASE_MS = 0x2
 };
 
+/**
+ * Timestamp mode, used to determine how what timestamp data is included in the read-out.
+ * <ul>
+ * <li><b>CCD_COMMAND_TIMESTAMP_MODE_OFF</b> No timestamp data in the image.
+ * <li><b>CCD_COMMAND_TIMESTAMP_MODE_BINARY</b> A BCD encoded timestamp is in the first 14 pixels of the image.
+ * <li><b>CCD_COMMAND_TIMESTAMP_MODE_BINARY_ASCII</b> A BCD encoded timestamp is in the first 14 pixels of the image,
+ *                                                  and an ASCII representation as well.
+ * <li><b>CCD_COMMAND_TIMESTAMP_MODE_ASCII</b> An ASCII representation of the timestamp is 
+ *                                            in the top corner of the image.
+ * </ul>
+ * There is also an 0x3 option (external exposure control) which we don't use.
+ */
+enum CCD_COMMAND_TIMESTAMP_MODE
+{
+	CCD_COMMAND_TIMESTAMP_MODE_OFF          = 0x0000,
+	CCD_COMMAND_TIMESTAMP_MODE_BINARY       = 0x0001,
+	CCD_COMMAND_TIMESTAMP_MODE_BINARY_ASCII = 0x0002,
+	CCD_COMMAND_TIMESTAMP_MODE_ASCII        = 0x0003
+};
+
 /*  the following 3 lines are needed to support C++ compilers */
 #ifdef __cplusplus
 extern "C" {
@@ -48,7 +68,7 @@ extern int CCD_Command_Close(void);
 	extern int CCD_Command_Set_Camera_To_Current_Time(void);
 	extern int CCD_Command_Set_Recording_State(int rec_state);
 	extern int CCD_Command_Reset_Settings(void);
-	extern int CCD_Command_Set_Timestamp_Mode(int mode);
+	extern int CCD_Command_Set_Timestamp_Mode(enum CCD_COMMAND_TIMESTAMP_MODE mode);
 	extern int CCD_Command_Set_Timebase(enum CCD_COMMAND_TIMEBASE delay_timebase,
 					    enum CCD_COMMAND_TIMEBASE exposure_timebase);
 	extern int CCD_Command_Set_Delay_Exposure_Time(int delay_time,int exposure_time);
