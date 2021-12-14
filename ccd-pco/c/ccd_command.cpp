@@ -1512,7 +1512,7 @@ int CCD_Command_Description_Get_Sensor_Type(int *sensor_type,int *sensor_subtype
 	(*sensor_subtype) = Command_Data.Description.wSensorSubTypeDESC;
 #if LOGGING > 5
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Description_Get_Sensor_Type "
-			       "returned sensor type code %d and sensor sub-type code %d.",
+			       "returned sensor type code 0x%x and sensor sub-type code %d.",
 			       (*sensor_type),(*sensor_subtype));
 #endif /* LOGGING */
 	return TRUE;
