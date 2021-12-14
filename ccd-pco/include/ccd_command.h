@@ -71,6 +71,7 @@ extern int CCD_Command_Close(void);
 	extern int CCD_Command_Description_Get_Default_Cooling_Setpoint(int *temperature);
 	extern int CCD_Command_Description_Get_Min_Cooling_Setpoint(int *temperature);
 	extern int CCD_Command_Description_Get_Max_Cooling_Setpoint(int *temperature);
+	extern int CCD_Command_Description_Get_Sensor_Type(int *sensor_type,int *sensor_subtype);
 	extern int CCD_Command_Get_Camera_Type(int *camera_type,int *serial_number);
 	extern int CCD_Command_Get_ROI(int *start_x,int *start_y,int *end_x,int *end_y);
 	extern int CCD_Command_Get_Actual_Size(int *image_width,int *image_height);

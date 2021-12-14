@@ -157,6 +157,7 @@ int CCD_Setup_Set_Board(int board)
  * <li>We call CCD_Command_Description_Get_Max_Vertical_Size to get Setup_Data.Sensor_Height from the camera
  *     description.
  * <li>We call CCD_Command_Get_Camera_Type to get the camera's serial number from it's head.
+ * <li>We call CCD_Command_Description_Get_Sensor_Type to get the camera's sensor type number from it's description.
  * <li>We call CCD_Command_Arm_Camera to update the cameras internal state to take account of the new settings.
  * <li>We call CCD_Command_Grabber_Post_Arm to update the grabber's state to match the camera's state.
  * <ul>
@@ -180,6 +181,7 @@ int CCD_Setup_Set_Board(int board)
  * @see ccd_command.html#CCD_Command_Description_Get_Max_Horizontal_Size
  * @see ccd_command.html#CCD_Command_Description_Get_Max_Vertical_Size
  * @see ccd_command.html#CCD_Command_Get_Camera_Type
+ * @see ccd_command.html#CCD_Command_Description_Get_Sensor_Type
  * @see ccd_command.html#CCD_Command_Arm_Camera
  * @see ccd_command.html#CCD_Command_Grabber_Post_Arm
  * @see ccd_general.html#CCD_General_Log_Format
@@ -187,7 +189,7 @@ int CCD_Setup_Set_Board(int board)
  */
 int CCD_Setup_Startup(void)
 {
-	int adc_count,camera_type;
+	int adc_count,camera_type,sensor_type,sensor_subtype;
 
 	Setup_Error_Number = 0;
 #if LOGGING > 0
@@ -301,9 +303,19 @@ int CCD_Setup_Startup(void)
 	{
 		Setup_Error_Number = 22;
 		sprintf(Setup_Error_String,
-			"CCD_Setup_Startup: Failed to get camera type / serial number..");
+			"CCD_Setup_Startup: Failed to get camera type / serial number.");
 		return FALSE;
 	}
+	/* get the camera sensor type and subtype */
+	if(!CCD_Command_Description_Get_Sensor_Type(&sensor_type,&sensor_subtype))
+	{
+		Setup_Error_Number = 24;
+		sprintf(Setup_Error_String,
+			"CCD_Setup_Startup: Failed to get camera sensor type / subtype numbers.");
+		return FALSE;
+	}
+	/* based on sensor type, figure out pixel sizes - PCO library cannot do this directly */
+	
 	/* prepare camera for taking data */
 	if(!CCD_Command_Arm_Camera())
 	{
@@ -411,7 +423,7 @@ int CCD_Setup_Dimensions(int bin)
 	end_y = Setup_Data.Sensor_Height/bin;
 	if(!CCD_Command_Set_ROI(start_x,start_y,end_x,end_y))
 	{
-		Setup_Error_Number = 18;
+		Setup_Error_Number = 23;
 		sprintf(Setup_Error_String,"CCD_Setup_Dimensions: CCD_Command_Set_ROI failed.");
 		return FALSE;
 	}		

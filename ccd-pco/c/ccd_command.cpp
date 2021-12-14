@@ -1467,6 +1467,57 @@ int CCD_Command_Description_Get_Max_Cooling_Setpoint(int *temperature)
 }
 
 /**
+ * Get the type and sub-type of the camera sensor, as returned from it's description
+ * (retrieved from the camera head when opening a connection to the camera, and stored in Command_Data.Description).
+ * The numbers are described in the MA_PCOSDK_V127.pdf SDK manual, Section 2.2.2.3 'Sensor Type Codes', P28.
+ * @param sensor_type The address of an integer to store the sensor type code.
+ * @param sensor_subtype The address of an integer to store the sensor sub-type code.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see ccd_general.html#CCD_General_Log
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Description_Get_Sensor_Type(int *sensor_type,int *sensor_subtype)
+{
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Description_Get_Sensor_Type: Started.");
+#endif /* LOGGING */
+	if(sensor_type == NULL)
+	{
+		Command_Error_Number = 94;
+		sprintf(Command_Error_String,
+			"CCD_Command_Description_Get_Sensor_Type:sensor_type was NULL.");
+		return FALSE;
+	}
+	if(sensor_subtype == NULL)
+	{
+		Command_Error_Number = 95;
+		sprintf(Command_Error_String,
+			"CCD_Command_Description_Get_Sensor_Type:sensor_subtype was NULL.");
+		return FALSE;
+	}
+	/* check camera instance has been created, if so open should have been called,
+	** and the Description field retrieved from the camera head. */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 96;
+		sprintf(Command_Error_String,
+			"CCD_Command_Description_Get_Sensor_Type:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	(*sensor_type) = Command_Data.Description.wSensorTypeDESC;
+	(*sensor_subtype) = Command_Data.Description.wSensorSubTypeDESC;
+#if LOGGING > 5
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Description_Get_Sensor_Type "
+			       "returned sensor type code %d and sensor sub-type code %d.",
+			       (*sensor_type),(*sensor_subtype));
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
  * Get the camera type and serial number of the currently connected camera.
  * @param camera_type The address of an integer to store the camera type number.
  * @param serial_number The address of an integer to store the serial number of the camera.
