@@ -43,9 +43,6 @@
  * <dt>Binning</dt> <dd>The readout binning, stored as an integer. Can be one of 1,2,3,4,8. </dd>
  * <dt>Serial_Number</dt> <dd>An integer containing the serial number retrieved from the camera head
  *                            Retrieved from the camera library during CCD_Setup_Startup.</dd>
- * <dt>Firmware_Version</dt> <dd>A character string containing the firmware version retrieved from the 
- *                             camera head, of length SETUP_ENUM_VALUE_STRING_LENGTH. 
- *                            Retrieved from the camera library during CCD_Setup_Startup.</dd>
  * <dt>Readout_Time</dt> <dd>An integer storing the length of time to readout the camera in milliseconds. 
  *                       This is retrieved from the camera during startup using CCD_Command_Get_Readout_Time, 
  *                       and converted from decimal seconds to milliseconds.</dd>
@@ -68,7 +65,6 @@ struct Setup_Struct
 	int Camera_Board;
 	int Binning;
 	int Serial_Number;
-	char Firmware_Version[SETUP_ENUM_VALUE_STRING_LENGTH];
 	int Readout_Time;
 	int Bytes_Per_Pixel;
 	double Pixel_Width;
@@ -89,7 +85,6 @@ static char rcsid[] = "$Id$";
  * <dt>Camera_Board</dt> <dd>0</dd>
  * <dt>Binning</dt> <dd>1</dd>
  * <dt>Serial_Number</dt> <dd>-1</dd>
- * <dt>Firmware_Version</dt> <dd>""</dd>
  * <dt>Readout_Time</dt> <dd>-1</dd>
  * <dt>Bytes_Per_Pixel</dt> <dd>-1</dd>
  * <dt>Pixel_Width</dt> <dd>0.0</dd>
@@ -101,7 +96,7 @@ static char rcsid[] = "$Id$";
  */
 static struct Setup_Struct Setup_Data = 
 {
-	0,1,-1,"",-1,-1,0.0,0.0,0,0,0
+	0,1,-1,-1,-1,0.0,0.0,0,0,0
 };
 
 /**
@@ -477,33 +472,6 @@ int CCD_Setup_Get_Serial_Number(int *serial_number)
 		return FALSE;
 	}
 	(*serial_number) = Setup_Data.Serial_Number;
-	return TRUE;
-}
-
-/**
- * Routine to retrieve the camera firmware version string, saved from the camera in CCD_Setup_Startup to Setup_Data.
- * @param firmware_version_string A string of length string_length bytes to copy the camera firmware version string 
- *        stored in Setup_Data.Serial_Number into. Ideally should be of length SETUP_ENUM_VALUE_STRING_LENGTH.
- * @param string_length The maximum length of characters that can be stored in firmware_version_string.
- * @return The string returns TRUE on success and FALSE on failure 
- *         (the firmware_version_string is not long enough to store the firmware version string).
- * @see #Setup_Data
- * @see #SETUP_ENUM_VALUE_STRING_LENGTH
- * @see #Setup_Error_Number
- * @see #Setup_Error_String
- */
-int CCD_Setup_Get_Firmware_Version(char *firmware_version_string,int string_length)
-{
-	/* diddly */
-	if(strlen(Setup_Data.Firmware_Version) >= string_length)
-	{
-		Setup_Error_Number = 32;
-		sprintf(Setup_Error_String,
-			"CCD_Setup_Get_Serial_Number: firmware_version_string length too short (%lu vs %d).",
-			strlen(Setup_Data.Firmware_Version),string_length);
-		return FALSE;
-	}
-	strcpy(firmware_version_string,Setup_Data.Firmware_Version);
 	return TRUE;
 }
 
