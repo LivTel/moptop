@@ -455,7 +455,10 @@ static void Moptop_Shutdown_Mechanisms(void)
  * <ul>
  * <li>Use Moptop_Config_Get_Boolean to get "ccd.enable" to see whether the CCD is enabled for initialisation.
  * <li>If it is _not_ enabled, log and return success.
- * <li>We retrieve the "ccd.board_number" configuration, and call CCD_Setup_Set_Board to setup which camera to connect to.
+ * <li>We retrieve the "ccd.board_number" configuration, 
+ *     and call CCD_Setup_Set_Board to setup which camera to connect to.
+ * <li>We retrieve the "ccd.timestamp_mode" configuration, 
+ *     and call CCD_Setup_Set_Timestamp_Mode to setup how the timestamp is represented in the read out data.
  * <li>Call CCD_Setup_Startup to initialise the CCD.
  * <li>We retrieve the "ccd.serial_number" configuration, and test it against the camera serial number retrieved during startup
  *     (CCD_Setup_Get_Serial_Number), to ensure we are talking to the right camera head.
@@ -480,12 +483,13 @@ static void Moptop_Shutdown_Mechanisms(void)
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Initialise
  * @see ../ccd/cdocs/ccd_fits_header.html#CCD_Fits_Header_Initialise
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Set_Board
+ * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Set_Timestamp_Mode
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Startup
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Serial_Number
  */
 static int Moptop_Startup_CCD(void)
 {
-	int enabled,board_number,test_serial_number,camera_serial_number;
+	int enabled,board_number,timestamp_mode,test_serial_number,camera_serial_number;
 	char instrument_code;
 	char* data_dir = NULL;
 
@@ -519,6 +523,14 @@ static int Moptop_Startup_CCD(void)
 	}
 	/* tell the CCD library which camera to connect to */
 	CCD_Setup_Set_Board(board_number);
+	/* configure the timestamp mode the setup routine will configure */
+	if(!Moptop_Config_Get_Integer("ccd.timestamp_mode",&timestamp_mode))
+	{
+		Moptop_General_Error_Number = 28;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_CCD:Failed to get timestamp mode.");
+		return FALSE;
+	}
+	CCD_Setup_Set_Timestamp_Mode(timestamp_mode);
 	/* actually do initialisation of the CCD/Andor library */
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
