@@ -516,26 +516,24 @@ int CCD_Setup_Get_Serial_Number(int *serial_number)
 }
 
 /**
- * Return the physical width of a pixel, as previously retrieved from the camera head
+ * Return the physical width of a pixel, as previously configured from the camera sensor type
  * and stored in Setup_Data.
  * @return The physical width of a pixel in micrometers.
  * @see #Setup_Data
  */
 float CCD_Setup_Get_Pixel_Width(void)
 {
-	/* diddly */
 	return Setup_Data.Pixel_Width;
 }
 
 /**
- * Return the physical height of a pixel, as previously retrieved from the camera head
+ * Return the physical height of a pixel, as previously configured from the camera sensor type
  * and stored in Setup_Data.
  * @return The physical height of a pixel in micrometers.
  * @see #Setup_Data
  */
 float CCD_Setup_Get_Pixel_Height(void)
 {
-	/* diddly */
 	return Setup_Data.Pixel_Height;
 }
 
