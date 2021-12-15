@@ -25,7 +25,8 @@ INTERRUPT_IMPL_SRCS 	= ABORTImplementation.java GET_STATUSImplementation.java RE
 SETUP_IMPL_SRCS		= CONFIGImplementation.java
 OBJS 		= $(SRCS:%.java=$(BINDIR)/%.class)
 
-CONFIG_SRCS	= moptop1.moptop.net.properties moptop1.moptop.properties moptop1.fits.properties
+CONFIG_SRCS	= moptop1.moptop.net.properties moptop1.moptop.properties moptop1.fits.properties \
+		  moptop3.moptop.net.properties moptop3.moptop.properties moptop3.fits.properties
 
 CONFIG_OBJS	= $(CONFIG_SRCS:%.properties=$(CONFIG_BINDIR)/%.properties)
 SCRIPT_SRCS	= 
