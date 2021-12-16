@@ -346,10 +346,10 @@ if ( "${machine_name}" == "moptop3" ) then
     set file_count = 0
     cd ${dev_dir}
     foreach file ( ${file_list} )
-	cp ${dev_bin_dir}/${file} ${deployment_bin_dir}/
+	cp ${dev_bin_dir}/${file} ${deployment_bin_dir}/${file}
 	set cp_status = $status
 	if( ${cp_status} != 0 ) then
-	    echo "Copy failed: ${dev_bin_dir}/${file} to ${deployment_bin_dir}/"
+	    echo "Copy failed: ${dev_bin_dir}/${file} to ${deployment_bin_dir}/${file}"
 	    exit 5
 	endif
 	@ file_count ++
