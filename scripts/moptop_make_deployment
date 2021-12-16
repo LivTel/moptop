@@ -203,7 +203,7 @@ echo "${java_class_dir_count} Java class directories copied with ${java_class_fi
 echo "Copying C libraries..."
 # The C layer on moptop2 will still need access to the rotator and filter wheel libraries 
 # unless they are dynamically (at run time) linked
-set clib_list = "libcfitsio.so libngatastro.so libngatutil.so libestar_config.so liblog_udp.so libcommandserver.so libmoptop_ccd.so libpirot.so libmoptop_filter_wheel.so"
+set clib_list = "libcfitsio.so libngatastro.so libngatutil.so libestar_config.so liblog_udp.so libcommandserver.so libmoptop_ccd-pco.so libpirot.so libmoptop_filter_wheel.so"
 set clib_count = 0
 foreach clib ( ${clib_list} )
 	echo "C Library : ${clib}"
