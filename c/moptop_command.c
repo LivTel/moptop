@@ -1237,6 +1237,7 @@ int Moptop_Command_MultDark(char *command_string,char **reply_string)
  * @see moptop_bias_dark.html#Moptop_Bias_Dark_Exposure_Index_Get
  * @see moptop_bias_dark.html#Moptop_Bias_Dark_Multrun_Get
  * @see moptop_bias_dark.html#Moptop_Bias_Dark_Run_Get
+ * @see moptop_config.html#Moptop_Config_Filter_Wheel_Is_Enabled
  * @see moptop_general.html#Moptop_General_Log
  * @see moptop_general.html#Moptop_General_Error_Number
  * @see moptop_general.html#Moptop_General_Error_String
@@ -1385,20 +1386,28 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 	}
 	else if(strncmp(subsystem_string,"filterwheel",11) == 0)
 	{
-		if(!Filter_Wheel_Command_Get_Position(&filter_wheel_position))
+		if(Moptop_Config_Filter_Wheel_Is_Enabled())
 		{
-			Moptop_General_Error_Number = 509;
-			sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
-				"Failed to get filter wheel position.");
-			Moptop_General_Error("command","moptop_command.c","Moptop_Command_Status",
-					     LOG_VERBOSITY_TERSE,"COMMAND");
+			if(!Filter_Wheel_Command_Get_Position(&filter_wheel_position))
+			{
+				Moptop_General_Error_Number = 509;
+				sprintf(Moptop_General_Error_String,"Moptop_Command_Status:"
+					"Failed to get filter wheel position.");
+				Moptop_General_Error("command","moptop_command.c","Moptop_Command_Status",
+						     LOG_VERBOSITY_TERSE,"COMMAND");
 #if MOPTOP_DEBUG > 1
-			Moptop_General_Log("command","moptop_command.c","Moptop_Command_Status",
-					   LOG_VERBOSITY_TERSE,"COMMAND","Failed to get filter wheel position.");
+				Moptop_General_Log("command","moptop_command.c","Moptop_Command_Status",
+						   LOG_VERBOSITY_TERSE,"COMMAND","Failed to get filter wheel position.");
 #endif
-			if(!Moptop_General_Add_String(reply_string,"1 Failed to get filter wheel position."))
-				return FALSE;
-			return TRUE;
+				if(!Moptop_General_Add_String(reply_string,"1 Failed to get filter wheel position."))
+					return FALSE;
+				return TRUE;
+			}/* end if filter wheel is enabled */
+			else
+			{
+				/* we pretend the filter wheel is moving when it is not enabled */
+				filter_wheel_position = 0;
+			}
 		}
 		if(strncmp(command_string+command_string_index,"filter",6)==0)
 		{
