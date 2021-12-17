@@ -1403,11 +1403,16 @@ int Moptop_Command_Status(char *command_string,char **reply_string)
 					return FALSE;
 				return TRUE;
 			}/* end if filter wheel is enabled */
-			else
-			{
-				/* we pretend the filter wheel is moving when it is not enabled */
-				filter_wheel_position = 0;
-			}
+		}
+		else
+		{
+#if MOPTOP_DEBUG > 5
+			Moptop_General_Log("command","moptop_command.c","Moptop_Command_Status",
+					   LOG_VERBOSITY_VERBOSE,"COMMAND",
+					   "Moptop filter wheel is NOT enabled, faking filter wheel position to 0 (moving).");
+#endif
+			/* we pretend the filter wheel is moving when it is not enabled */
+			filter_wheel_position = 0;
 		}
 		if(strncmp(command_string+command_string_index,"filter",6)==0)
 		{
