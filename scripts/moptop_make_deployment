@@ -321,7 +321,7 @@ echo "${file_count} scripts copied."
 #
 # in bin sub-directories
 echo "Copying machine configuration files..."
-set file_list = "autobooter/java/${machine_name}.autobooter.properties {file_list} moptop/c/${HOSTTYPE}/${machine_name}.moptop.c.properties"
+set file_list = "autobooter/java/${machine_name}.autobooter.properties moptop/c/${HOSTTYPE}/${machine_name}.moptop.c.properties"
 if( ${install_java_software} ) then
     set file_list = "${file_list} moptop/java/${machine_name}.fits.properties moptop/java/${machine_name}.moptop.net.properties moptop/java/${machine_name}.moptop.properties ics_gui/java/${machine_name}.ics_gui.properties ics_gui/java/${machine_name}.ics_gui_config.properties ics_gui/java/${machine_name}.ics_gui.fits.properties"
 endif

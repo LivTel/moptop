@@ -58,7 +58,7 @@ OBJS			= $(SRCS:%.c=$(BINDIR)/%.o)
 EXES			= $(BINDIR)/moptop
 DOCS 			= $(SRCS:%.c=$(DOCSDIR)/%.html)
 CONFIG_SRCS		= moptop1.moptop.c.properties moptop2.moptop.c.properties \
-			  moptop3-1.moptop.c.properties moptop3-2.moptop.c.properties
+			  moptop3.moptop.c.properties moptop4.moptop.c.properties
 CONFIG_BINS		= $(CONFIG_SRCS:%.properties=$(BINDIR)/%.properties)
 
 top: $(EXES) $(CONFIG_BINS) docs
