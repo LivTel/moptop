@@ -30,6 +30,7 @@ switch ( ${machine_name} )
 	setenv HOSTTYPE "x86_64-linux"
 	breaksw
     case "moptop2":
+    case "moptop4":
 	set install_java_software = 0
 	set install_filter_wheel_software = 0
 	set install_rotator_software = 0
@@ -320,10 +321,7 @@ echo "${file_count} scripts copied."
 #
 # in bin sub-directories
 echo "Copying machine configuration files..."
-set file_list = "autobooter/java/${machine_name}.autobooter.properties"
-if ( "${machine_name}" != "moptop3" ) then
-    set file_list = "${file_list} moptop/c/${HOSTTYPE}/${machine_name}.moptop.c.properties"
-endif
+set file_list = "autobooter/java/${machine_name}.autobooter.properties {file_list} moptop/c/${HOSTTYPE}/${machine_name}.moptop.c.properties"
 if( ${install_java_software} ) then
     set file_list = "${file_list} moptop/java/${machine_name}.fits.properties moptop/java/${machine_name}.moptop.net.properties moptop/java/${machine_name}.moptop.properties ics_gui/java/${machine_name}.ics_gui.properties ics_gui/java/${machine_name}.ics_gui_config.properties ics_gui/java/${machine_name}.ics_gui.fits.properties"
 endif
@@ -340,22 +338,6 @@ foreach file ( ${file_list} )
     @ file_count ++
 end
 echo "${file_count} configuration files copied."
-# Special case for moptop3, where multiple C layer config files have to be handled.
-if ( "${machine_name}" == "moptop3" ) then
-    set file_list = "moptop/c/${HOSTTYPE}/moptop3-1.moptop.c.properties moptop/c/${HOSTTYPE}/moptop3-2.moptop.c.properties"
-    set file_count = 0
-    cd ${dev_dir}
-    foreach file ( ${file_list} )
-	cp ${dev_bin_dir}/${file} ${deployment_bin_dir}/${file}
-	set cp_status = $status
-	if( ${cp_status} != 0 ) then
-	    echo "Copy failed: ${dev_bin_dir}/${file} to ${deployment_bin_dir}/${file}"
-	    exit 5
-	endif
-	@ file_count ++
-    end
-    echo "${file_count} moptop3 C layer configuration files copied."
-endif
 echo "Copying camera configuration files..."
 set file_list = "config/${camera_name}.current.filter.properties"
 set file_count = 0
