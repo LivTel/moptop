@@ -1,0 +1,210 @@
+#!/bin/csh
+# Script to check the inter-frame timings of an internal triggered multrun for one camera
+if ( $#argv != 3 ) then
+   echo "moptop_analyse_frame_timings <camera number> <date> <multrun>"
+   exit 1
+endif
+set camera_number = $1
+set date_string = $2
+set multrun_number = $3
+# Find fits_get_keyword_value
+if ( -x /home/dev/bin/ccd/misc/${HOSTTYPE}/fits_get_keyword_value ) then
+   alias fits_get_keyword_value "/home/dev/bin/ccd/misc/${HOSTTYPE}/fits_get_keyword_value"
+else if ( -x /icc/bin/ccd/misc/${HOSTTYPE}/fits_get_keyword_value ) then
+   alias fits_get_keyword_value "/icc/bin/ccd/misc/${HOSTTYPE}/fits_get_keyword_value"
+else
+   echo "Failed to find fits_get_keyword_value."
+endif
+# find date_to_ms
+if ( -x /home/dev/bin/ngatastro/test/${HOSTTYPE}/date_to_ms ) then
+   alias date_to_ms "/home/dev/bin/ngatastro/test/${HOSTTYPE}/date_to_ms"
+else if ( -x /icc/bin/ngatastro/test/${HOSTTYPE}/date_to_ms ) then
+   alias date_to_ms "/icc/bin/ngatastro/test/${HOSTTYPE}/date_to_ms"
+else
+   echo "Failed to find date_to_ms."
+endif
+set dir = "./"
+set rotation_number = 1
+set frame_number = 1
+set reduction_number = 0
+set filename_list = ""
+set date_obs_list = ""
+set date_end_list =  ""
+set telapse_list = ""
+set moprmode_list = ""
+set exptime_list = ""
+set moprnum_list = ""
+set moprpos_list = ""
+set picnum_list = ""
+set camtime_list =  ""
+set filename_number = 1
+set done = 0
+while ( ${done} == 0 )
+    set filename = "${dir}/${camera_number}_e_${date_string}_${multrun_number}_${rotation_number}_${frame_number}_${reduction_number}.fits"
+    if ( -r ${filename} ) then
+        # Process frame
+	echo "Processing ${filename}."
+	# DATE-OBS= '2021-12-21T16:58:26.449'
+	# DATE-END= '2021-12-21T16:58:30.447'
+	# TELAPSE =           129.196566
+	# MOPRMODE= 'slow    '
+	# EXPTIME =             4.000002
+	# MOPRNUM =                    2
+	# MOPRPOS =                   16
+	# PICNUM  =                   32
+	# CAMTIME = '2021-12-21T16:58:30.066'
+	set date_obs = `fits_get_keyword_value ${filename} DATE-OBS STRING`
+	set date_end = `fits_get_keyword_value ${filename} DATE-END STRING`
+	set telapse = `fits_get_keyword_value ${filename} TELAPSE DOUBLE`
+	set moprmode = `fits_get_keyword_value ${filename} MOPRMODE STRING`
+	set exptime = `fits_get_keyword_value ${filename} EXPTIME DOUBLE`
+ 	set moprnum = `fits_get_keyword_value ${filename} MOPRNUM INT`
+ 	set moprpos = `fits_get_keyword_value ${filename} MOPRPOS INT`
+	set picnum = `fits_get_keyword_value ${filename} PICNUM INT`
+	set camtime = `fits_get_keyword_value ${filename} CAMTIME STRING`
+	echo "${filename} ${date_obs} ${date_end} ${telapse} ${moprmode} ${exptime} ${moprnum} ${moprpos} ${picnum} ${camtime}"
+	set filename_list = ( ${filename_list} ${filename} )
+	set date_obs_list = ( ${date_obs_list} ${date_obs} )
+ 	set date_end_list = ( ${date_end_list} ${date_end} )
+	set telapse_list = ( ${telapse_list} ${telapse} )
+	set moprmode_list = ( ${moprmode_list} ${moprmode} )
+	set exptime_list = ( ${exptime_list} ${exptime} )
+	set moprnum_list = ( ${moprnum_list} ${moprnum} )
+	set moprpos_list = ( ${moprpos_list} ${moprpos} ) 
+	set picnum_list = ( ${picnum_list} ${picnum} )
+	set camtime_list = ( ${camtime_list} ${camtime} )
+	# per frame checks
+	# filename_number == picnum
+	if( ${picnum} != ${filename_number} ) then
+	    echo "${filename} : picnum ${picnum} != filename number ${filename_number}."
+	    exit 2
+	endif
+	# rotation_number == moprnum
+	if( ${moprnum} != ${rotation_number} ) then
+	    echo "${filename} : moprnum ${moprnum} != rotation number ${rotation_number}."
+	    exit 3
+	endif
+	# frame_number == moprpos
+	if( ${moprpos} != ${frame_number} ) then
+	    echo "${filename} : moprpos ${moprpos} != frame number ${frame_number}."
+	    exit 4
+	endif
+        # Sort out next frame
+	@ filename_number ++
+        @ frame_number ++
+    	if( ${frame_number} == 17 ) then
+    	    set frame_number = 1
+	    @ rotation_number ++
+    	endif
+    else
+	# Failed to find file, stop processing
+	echo "Failed to find ${filename}."
+	set done = 1
+    endif
+end
+echo "Finished processing at filename number ${filename_number}, rotation ${rotation_number}, frame ${frame_number}."
+if ( ${filename_number} == 1 ) then
+   echo "No frames found, stopping now."
+   exit 5
+endif
+set filename_count = ${filename_number}
+# Determine rotations speed and check consistent
+set index = 1
+#echo "moprmode_list = ${moprmode_list}"
+set rotation_speed = ${moprmode_list[${index}]}
+echo "This multrun has rotation speed ${rotation_speed}."
+while ( ${index} < ${filename_count} )
+#      echo "index = ${index}"
+#      set test_moprmode = ${moprmode_list[${index}]}
+#      echo "Testing moprmode ${index} = ${test_moprmode}."
+      if( ${moprmode_list[${index}]} != "${rotation_speed}" ) then
+      	  echo "Filename ${filename_list[${index}]} at index ${index} has mismatched rotation speed (${moprmode_list[${index}]} vs ${rotation_speed})."
+	  exit 6
+      endif
+      @ index ++
+end
+if( ${rotation_speed} == "slow" ) then
+    set interframe_time_s = 5.0
+    set interframe_time_ms = 5000
+else if( ${rotation_speed} == "fast" ) then
+    set interframe_time_s = 0.5
+    set interframe_time_ms = 500
+else
+    echo "Unknown rotation speed {rotation_speed}."
+    exit 7
+endif
+# inter-frame checks
+# inter-frame check : DATE-OBS
+set index = 1
+set last_date_obs = ""
+while ( ${index} < ${filename_count} )
+    set date_obs = ${date_obs_list[${index}]}
+    if( ${index} > 1 ) then
+	# find time difference between date_obs @ ${index} and ${last_date_obs}
+	set date_obs_ms = `date_to_ms ${date_obs}`
+	set last_date_obs_ms = `date_to_ms ${last_date_obs}`
+	#echo "DATE-OBS Index ${index} : date_obs_ms = ${date_obs_ms}, last_date_obs_ms = ${last_date_obs_ms}"
+	set delta_date_obs_ms = `echo "( ${date_obs_ms} - ${last_date_obs_ms} )" | /usr/bin/bc`
+	echo "DATE-OBS Index ${index} : The difference between ${last_date_obs} and ${date_obs} is ${delta_date_obs_ms} ms."
+	set delta_date_obs_s = `echo "scale = 3; ( ${delta_date_obs_ms} / 1000.0 )" | /usr/bin/bc`
+	#echo "DATE-OBS Index ${index} : The difference between ${last_date_obs} and ${date_obs} is ${delta_date_obs_s} s."
+	
+    endif
+    set last_date_obs = ${date_obs}
+    @ index ++
+end
+# inter-frame check : DATE-END
+set index = 1
+set last_date_end = ""
+while ( ${index} < ${filename_count} )
+    set date_end = ${date_end_list[${index}]}
+    if( ${index} > 1 ) then
+	# find time difference between date_end @ ${index} and ${last_date_end}
+	set date_end_ms = `date_to_ms ${date_end}`
+	set last_date_end_ms = `date_to_ms ${last_date_end}`
+	#echo "DATE-END Index ${index} : date_end_ms = ${date_end_ms}, last_date_end_ms = ${last_date_end_ms}"
+	set delta_date_end_ms = `echo "( ${date_end_ms} - ${last_date_end_ms} )" | /usr/bin/bc`
+	echo "DATE-END Index ${index} : The difference between ${last_date_end} and ${date_end} is ${delta_date_end_ms} ms."
+	set delta_date_end_s = `echo "scale = 3; ( ${delta_date_end_ms} / 1000.0 )" | /usr/bin/bc`
+	#echo "DATE-END Index ${index} : The difference between ${last_date_end} and ${date_end} is ${delta_date_end_s} s."
+	
+    endif
+    set last_date_end = ${date_end}
+    @ index ++
+end
+# inter-frame check : TELAPSE
+set index = 1
+set last_telapse = ""
+while ( ${index} < ${filename_count} )
+    set telapse = ${telapse_list[${index}]}
+    if( ${index} > 1 ) then
+	# find time difference between telapse @ ${index} and ${last_telapse}
+	#echo "TELAPSE Index ${index} : telapse = ${telapse}, last_telapse = ${last_telapse}"
+	set delta_telapse_s = `echo "scale = 6; ( ${telapse} - ${last_telapse} )" | /usr/bin/bc`
+	echo "TELAPSE Index ${index} : The difference between ${last_telapse} and ${telapse} is ${delta_telapse_s} s."
+	set delta_telapse_ms = `echo "( ${delta_telapse_s} * 1000.0 )" | /usr/bin/bc`
+	#echo "TELAPSE Index ${index} : The difference between ${last_telapse} and ${telapse} is ${delta_telapse_ms} ms."
+	
+    endif
+    set last_telapse = ${telapse}
+    @ index ++
+end
+# inter-frame check : CAMTIME
+set index = 1
+set last_camtime = ""
+while ( ${index} < ${filename_count} )
+    set camtime = ${camtime_list[${index}]}
+    if( ${index} > 1 ) then
+	# find time difference between camtime @ ${index} and ${last_camtime}
+	set camtime_ms = `date_to_ms ${camtime}`
+	set last_camtime_ms = `date_to_ms ${last_camtime}`
+	#echo "CAMTIME Index ${index} : camtime_ms = ${camtime_ms}, last_camtime_ms = ${last_camtime_ms}"
+	set delta_camtime_ms = `echo "( ${camtime_ms} - ${last_camtime_ms} )" | /usr/bin/bc`
+	echo "CAMTIME Index ${index} : The difference between ${last_camtime} and ${camtime} is ${delta_camtime_ms} ms."
+	set delta_camtime_s = `echo "scale = 3; ( ${delta_camtime_ms} / 1000.0 )" | /usr/bin/bc`
+	#echo "CAMTIME Index ${index} : The difference between ${last_camtime} and ${camtime} is ${delta_camtime_s} s."
+	
+    endif
+    set last_camtime = ${camtime}
+    @ index ++
+end
