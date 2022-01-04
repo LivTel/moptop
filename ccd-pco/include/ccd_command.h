@@ -43,7 +43,6 @@ enum CCD_COMMAND_TIMEBASE
  * <li><b>CCD_COMMAND_TIMESTAMP_MODE_ASCII</b> An ASCII representation of the timestamp is 
  *                                            in the top corner of the image.
  * </ul>
- * There is also an 0x3 option (external exposure control) which we don't use.
  */
 enum CCD_COMMAND_TIMESTAMP_MODE
 {

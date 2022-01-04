@@ -408,9 +408,11 @@ int CCD_Setup_Shutdown(void)
  * <li>We use CCD_SETUP_BINNING_IS_VALID to check the binning parameter is a supported binning.
  * <li>We store the binning in Setup_Data.Binning.
  * <li>We call CCD_Command_Set_Binning to set the binning.
+ * <li>We call CCD_Command_Set_ROI to set the region of interest to match the binning,
+ *     with the end positions computed from Setup_Data.Sensor_Width / Setup_Data.Sensor_Height.
  * <li>We call CCD_Command_Arm_Camera to update the camera's internal settings to use the new binning.
  * <li>We call CCD_Command_Grabber_Post_Arm to update the grabber's internal settings to use the new binning.
- * <li>
+ * <li>We call CCD_Command_Get_Image_Size_Bytes to update the Setup_Data.Image_Size_Bytes data.
  * </ul>
  * @param bin The binning to apply to the readout. 
  * @return The routine returns TRUE on success and FALSE on failure.
@@ -419,8 +421,10 @@ int CCD_Setup_Shutdown(void)
  * @see #Setup_Error_String
  * @see #Setup_Data
  * @see ccd_command.html#CCD_Command_Set_Binning
+ * @see ccd_command.html#CCD_Command_Set_ROI
  * @see ccd_command.html#CCD_Command_Arm_Camera
  * @see ccd_command.html#CCD_Command_Grabber_Post_Arm
+ * @see ccd_command.html#CCD_Command_Get_Image_Size_Bytes
  */
 int CCD_Setup_Dimensions(int bin)
 {

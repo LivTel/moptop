@@ -86,7 +86,7 @@ static char rcsid[] = "$Id$";
  */
 static struct Command_Struct Command_Data = 
 {
-	NULL,NULL,NULL,0,40000,{}
+	NULL,NULL,NULL,0,40000,
 };
 
 /**
@@ -306,7 +306,7 @@ int CCD_Command_Close(void)
 }
 
 /**
- * Prepare the camera to start taking data. All previous ettings are validated and the internal settings of the camera
+ * Prepare the camera to start taking data. All previous settings are validated and the internal settings of the camera
  * updated.
  * @return The routine returns TRUE on success and FALSE if an error occurs.
  * @see #Command_PCO_Get_Error_Text
@@ -344,7 +344,7 @@ int CCD_Command_Arm_Camera(void)
 }
 
 /**
- * Prepare the camera to start taking data. All previous ettings are validated and the internal settings of the camera
+ * Prepare the camera to start taking data. All previous settings are validated and the internal settings of the camera
  * updated.
  * @return The routine returns TRUE on success and FALSE if an error occurs.
  * @see #Command_Data
@@ -913,12 +913,8 @@ int CCD_Command_Set_ROI(int start_x,int start_y,int end_x,int end_y)
 }
 
 /**
- * Get the current 'region of interest', given the current binning settings. This is the area of the detector
- * to read out, in binned pixels.
- * @param start_x The address of an integer to store the first pixel in x on the detector to read out.
- * @param start_y The address of an integer to store the first pixel in y on the detector to read out.
- * @param end_x The address of an integer to store the last pixel in x on the detector to read out.
- * @param end_y The address of an integer to store the last pixel in y on the detector to read out.
+ * Set the temperature the camera head will try and attain.
+ * @param temperature The temperature to try and cool the sensor to.
  * @return The routine returns TRUE on success and FALSE if an error occurs.
  * @see #Command_Data
  * @see #Command_Error_Number
@@ -2103,7 +2099,7 @@ static char *Command_PCO_Get_Error_Text(DWORD pco_err)
 
 /**
  * Routine to convert the BCD (binary coded decimal) number to a normal integer.
- * @param x An unisgned char containing the BCD number (0..100). This is noamlly passed in a WORD, and we take
+ * @param x An unisgned char containing the BCD number (0..100). This is normally passed in a WORD, and we take
  *        the lower byte which contains the encoded number.
  * @return The decoded integer (0..100).
  */
