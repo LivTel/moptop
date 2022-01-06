@@ -557,7 +557,7 @@ static int Moptop_Startup_CCD(void)
 		return FALSE;
 	}
 #if MOPTOP_DEBUG > 1
-	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
+	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Startup_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
 				  "Camera board %d has serial number %d.",board_number,camera_serial_number);
 #endif
 	/* check we are talking to the right camera */
@@ -571,7 +571,7 @@ static int Moptop_Startup_CCD(void)
 	}
 	/* allocate space for image buffer */
 #if MOPTOP_DEBUG > 1
-	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
+	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Startup_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
 				  "Calling CCD_Buffer_Initialise.");
 #endif
 	if(!CCD_Buffer_Initialise())
@@ -586,7 +586,7 @@ static int Moptop_Startup_CCD(void)
 	if(!Moptop_Config_Get_String("file.fits.path",&data_dir))
 		return FALSE;
 #if MOPTOP_DEBUG > 1
-	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
+	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Startup_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
 				  "Calling CCD_Fits_Filename_Initialise(%c,%s).",instrument_code,data_dir);
 #endif
 	if(!CCD_Fits_Filename_Initialise(instrument_code,data_dir))
@@ -601,7 +601,7 @@ static int Moptop_Startup_CCD(void)
 	if(data_dir != NULL)
 		free(data_dir);
 #if MOPTOP_DEBUG > 1
-	Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
+	Moptop_General_Log("main","moptop_main.c","Moptop_Startup_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
 			   "Calling CCD_Fits_Header_Initialise.");
 #endif
 	if(!CCD_Fits_Header_Initialise())
