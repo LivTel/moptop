@@ -164,7 +164,7 @@ int Moptop_Command_Abort(char *command_string,char **reply_string)
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Step_Angle_Get
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Dimensions
  * @see ../filter_wheel/cdocs/filter_wheel_config.html#Filter_Wheel_Config_Name_To_Position
- * @see ../filter_wheel/cdocs/filter_wheel_config.html#Filter_Wheel_Command_Move
+ * @see ../filter_wheel/cdocs/filter_wheel_command.html#Filter_Wheel_Command_Move
  * @see ../pirot/cdocs/pirot_setup.html#PIROT_Setup_Rotator_Run_Velocity
  * @see ../pirot/cdocs/pirot_setup.html#PIROT_Setup_Trigger_Step_Angle
  */
