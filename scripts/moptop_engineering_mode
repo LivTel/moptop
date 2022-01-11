@@ -8,6 +8,7 @@
 # To return to robotic control, reboot the icc.
 echo "Switching to engineering mode."
 echo "This will only succeed if you are root."
+set hostname = `/usr/bin/hostname`
 #
 # Kill any running processes
 #
@@ -30,18 +31,24 @@ end
 # Send a shutdown command to moptop C layer, after killing the autobooter
 if ( -x /icc/bin/commandserver/test/x86_64-linux/send_command  ) then
     echo "Sending shutdown to moptop C layer."
-    /icc/bin/commandserver/test/x86_64-linux/send_command -h moptop1 -p 1111 -c "shutdown"
-    /icc/bin/commandserver/test/x86_64-linux/send_command -h moptop2 -p 1111 -c "shutdown"
+    if( "${hostname}" == "moptop3" ) then
+	/icc/bin/commandserver/test/x86_64-linux/send_command -h moptop3 -p 1111 -c "shutdown"
+    else if( "${hostname}" == "moptop4" ) then
+	/icc/bin/commandserver/test/x86_64-linux/send_command -h moptop4 -p 1112 -c "shutdown"
+    else
+	echo "Unknown machine ${hostname} - cannot shutdown moptop process."
+	exit 1
+    endif
     echo "Waiting to see if that worked..."
     /bin/sleep 5
 else
     echo "send_command not found:FAILED to stop running moptop."
 endif
 if ( -x /icc/bin/scripts/killhup.csh ) then
-    echo "Trying to kill Moptop."
-    /icc/bin/scripts/killhup.csh Moptop
-#    echo "Trying to kill DpRt."
-#    /icc/bin/scripts/killhup.csh DpRt
+    if( "${hostname}" == "moptop3" ) then
+	echo "Trying to kill Moptop."
+	/icc/bin/scripts/killhup.csh Moptop
+    endif
     echo "Trying to kill icsd_inet."
     /icc/bin/scripts/killhup.csh icsd_inet
 # kill this last, as it probably kills the moptop_engineering_mode script as well.
