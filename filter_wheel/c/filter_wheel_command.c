@@ -36,6 +36,10 @@
  */
 #define STRING_LENGTH                (256)
 /**
+ * The default filter wheel count timeout in milliseconds.
+ */
+#define DEFAULT_COUNT_TIMEOUT_MS     (60000)
+/**
  * The default filter wheel move timeout in milliseconds.
  * 10000 milliseconds was too short and caused timeouts, now try 20000.
  */
@@ -46,6 +50,7 @@
  * Data type holding local data to filter_wheel_command. This consists of the following:
  * <dl>
  * <dt>Fd</dt> <dd>The file descriptor of the Linux ioctl device opened to connect with the filter wheel.</dd>
+ * <dt>Count_Timeout_Ms</dt> <dd>How long to attempt a filter count operation, in ms, before timing out with an error.</dd>
  * <dt>Move_Timeout_Ms</dt> <dd>How long to attempt a move, in ms, before timing out with an error.</dd>
  * <dt>Raw_Name</dt> <dd>The raw name of the HID (filter wheel) device, of length STRING_LENGTH.</dd>
  * <dt>Filter_Count</dt> <dd>The number of filters in the wheel.</dd>
@@ -55,6 +60,7 @@
 struct Command_Struct
 {
 	int Fd;
+	int Count_Timeout_Ms;
 	int Move_Timeout_Ms;
 	char Raw_Name[STRING_LENGTH];
 	int Filter_Count;
@@ -70,17 +76,19 @@ static char rcsid[] = "$Id$";
  * This is statically initialised to the following:
  * <dl>
  * <dt>Fd</dt> <dd>-1</dd>
+ * <dt>Count_Timeout_Ms</dt> <dd>DEFAULT_COUNT_TIMEOUT_MS</dd>
  * <dt>Move_Timeout_Ms</dt> <dd>DEFAULT_MOVE_TIMEOUT_MS</dd>
  * <dt>Raw_Name</dt> <dd>""</dd>
  * <dt>Filter_Count</dt> <dd>FILTER_WHEEL_COMMAND_FILTER_COUNT</dd>
  * </dl>
+ * @see #DEFAULT_COUNT_TIMEOUT_MS
  * @see #DEFAULT_MOVE_TIMEOUT_MS
  * @see #FILTER_WHEEL_COMMAND_FILTER_COUNT
  * @see #Command_Struct
  */
 static struct Command_Struct Command_Data = 
 {
-	-1,DEFAULT_MOVE_TIMEOUT_MS,"",FILTER_WHEEL_COMMAND_FILTER_COUNT
+	-1,DEFAULT_COUNT_TIMEOUT_MS,DEFAULT_MOVE_TIMEOUT_MS,"",FILTER_WHEEL_COMMAND_FILTER_COUNT
 };
 
 /**
@@ -540,6 +548,185 @@ int Filter_Wheel_Command_Get_Position(int *position)
 	(*position) = current_filter_position;
 #if LOGGING > 0
 	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Get_Position: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Get the number of filters in the filter wheel.
+ * This physically moves the filter wheel between one and two complete rotations to count the filter positions, and
+ * can take several seconds.
+ * <ul>
+ * <li>We check the input parameter is OK.
+ * <li>We set the current filter count to zero.
+ * <li>We set the current time, and loopt start time, to now.
+ * <li>We enter a while loop, until the current filter count is  non-zero or we time out.
+ *     <ul>
+ *     <li>If compiled in we lock a mutex over sending the "Get filter total" command and receiving a reply.
+ *     <li>We setup a data packet to write.
+ *     <li>We write the data packet to the filter wheel file descriptor (Command_Data.Fd).
+ *     <li>We sleep for a while (10ms). 
+ *     <li>We read the reply data packet from the file descriptor (Command_Data.Fd).
+ *     <li>If compiled in we unlock the mutex.
+ *     <li>We extract the returned data (current filter count) from the returned reply data packet.
+ *     <li>We update the current time to now.
+ *     <li>If the returned current filter count is still 0 (i.e. the filter wheel is still moving) we sleep for a second.
+ *     <li>
+ *     <ul>
+ * <li>We set the filter count to be the current filter count returned in the reply data packet.
+ * <li>If the loop timed out we return an error.
+ * <li>If we exited the loop with current filter count still 0 we return an error. This should never happen, 
+ *     as we have already tested for a timeout.
+ * </ul>
+ * @param position The address of an integer to store the current position. The returned value will be
+ *        the current filter position (1 to the number of filters in the wheel) or 0 if the wheel is moving.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see filter_wheel_general.html#Filter_Wheel_General_Log_Format
+ * @see filter_wheel_general.html#Filter_Wheel_General_Mutex_Lock
+ * @see filter_wheel_general.html#Filter_Wheel_General_Mutex_Unlock
+ */
+int Filter_Wheel_Command_Get_Filter_Count(int *filter_count)
+{
+	struct timespec loop_start_time,current_time,sleep_time;
+	char write_data_packet[2];
+	char read_data_packet[2];
+	int byte_count,retval,write_errno,read_errno,current_filter_count;
+
+#if LOGGING > 0
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Get_Filter_Count: Started.");
+#endif /* LOGGING */
+	if(filter_count == NULL)
+	{
+		Command_Error_Number = 20;
+		sprintf(Command_Error_String,"Filter_Wheel_Command_Get_Filter_Count: filter_count was NULL.");
+		return FALSE;
+	}
+	/* initialise error number */
+	Command_Error_Number = 0;
+	/* setup loop exit variable and timeout timestamps */
+	clock_gettime(CLOCK_REALTIME,&loop_start_time);
+	clock_gettime(CLOCK_REALTIME,&current_time);
+	current_filter_count = 0;
+	while((current_filter_count == 0) && (fdifftime(current_time,loop_start_time) < 
+					      ((double)(Command_Data.Count_Timeout_Ms/FILTER_WHEEL_GENERAL_ONE_SECOND_MS))))
+	{
+#ifdef MUTEXED
+		if(!Filter_Wheel_General_Mutex_Lock())
+		{
+			Command_Error_Number = 21;
+			sprintf(Command_Error_String,"Filter_Wheel_Command_Get_Filter_Count: failed to lock mutex.");
+			return FALSE;
+		}
+#endif /* MUTEXED */
+		/* setup data packet to write. {0,1} is "Get Filter Total" */
+		write_data_packet[0] = 0;
+		write_data_packet[1] = 1;	
+		/* write request to filter wheel */
+#if LOGGING > 5
+		Filter_Wheel_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
+					"Filter_Wheel_Command_Get_Filter_Count: Writing command bytes {%d,%d}.",
+						write_data_packet[0],write_data_packet[1]);
+#endif /* LOGGING */
+		byte_count = write(Command_Data.Fd,write_data_packet,2);
+		if(byte_count != 2)
+		{
+			write_errno = errno;
+#ifdef MUTEXED
+			Filter_Wheel_General_Mutex_Unlock();
+#endif /* MUTEXED */
+			Command_Error_Number = 22;
+			sprintf(Command_Error_String,
+				"Filter_Wheel_Command_Get_Filter_Count: write(%d,{%d,%d},2) failed with errno %d.",
+				Command_Data.Fd,write_data_packet[0],write_data_packet[1],write_errno);
+			return FALSE;
+		}
+#if LOGGING > 5
+		Filter_Wheel_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
+						"Filter_Wheel_Command_Get_Filter_Count: Sleeping for 1s.");
+#endif /* LOGGING */
+		/* wait a bit (10ms) before reading a response */
+		sleep_time.tv_sec = 0;
+		sleep_time.tv_nsec = 10*FILTER_WHEEL_GENERAL_ONE_MILLISECOND_NS;
+		nanosleep(&sleep_time,&sleep_time);
+		/* read reply from filter wheel */
+#if LOGGING > 5
+		Filter_Wheel_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
+						"Filter_Wheel_Command_Get_Filter_Count: Reading reply from filter wheel.");
+#endif /* LOGGING */
+		byte_count = read(Command_Data.Fd,read_data_packet,2);
+		if(byte_count != 2)
+		{
+			read_errno = errno;
+#ifdef MUTEXED
+			Filter_Wheel_General_Mutex_Unlock();
+#endif /* MUTEXED */
+			Command_Error_Number = 23;
+			sprintf(Command_Error_String,
+				"Filter_Wheel_Command_Get_Filter_Count: read(%d,{%d,%d},2) failed with errno %d.",
+				Command_Data.Fd,read_data_packet[0],read_data_packet[1],read_errno);
+			return FALSE;
+		}
+#ifdef MUTEXED
+		if(!Filter_Wheel_General_Mutex_Unlock())
+		{
+			Command_Error_Number = 24;
+			sprintf(Command_Error_String,"Filter_Wheel_Command_Filter_Count: failed to unlock mutex.");
+			return FALSE;
+		}
+#endif /* MUTEXED */
+		/* extract returned data from filer wheel */
+		current_filter_count = read_data_packet[0];
+#if LOGGING > 0
+		Filter_Wheel_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+						"Filter_Wheel_Command_Filter_Count: current filter count = %d (0 = moving).",
+						current_filter_count);
+#endif /* LOGGING */
+		/* update current time - don't take the long sleep into account as we havn't tested the result after it. */
+		clock_gettime(CLOCK_REALTIME,&current_time);
+		/* sleep for a second before reading the count again */
+		if(current_filter_count == 0)
+		{
+#if LOGGING > 5
+			Filter_Wheel_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
+							"Filter_Wheel_Command_Get_Filter_Count: Sleeping for 1s.");
+#endif /* LOGGING */
+			/* wait a bit (1s) before reading a response */
+			sleep_time.tv_sec = 1;
+			sleep_time.tv_nsec = 0;
+			nanosleep(&sleep_time,&sleep_time);
+		}
+	}/* end while */
+#if LOGGING > 0
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,
+				"Filter_Wheel_Command_Get_Filter_Count: final filter count = %d (0 = moving).",
+					current_filter_count);
+#endif /* LOGGING */
+	/* return filter count */
+	(*filter_count) = current_filter_count;
+	/* check whether we timed out and return an error if so */
+	if(fdifftime(current_time,loop_start_time) >=
+	   ((double)(Command_Data.Count_Timeout_Ms/FILTER_WHEEL_GENERAL_ONE_SECOND_MS)))
+	{
+		Command_Error_Number = 25;
+		sprintf(Command_Error_String,
+			"Filter_Wheel_Command_Get_Filter_Count: Get Count timed out after %.2f seconds.",
+			fdifftime(current_time,loop_start_time));
+		return FALSE;
+	}
+	/* check whether we found the filter count.
+	** As we have already checked for a timeout this should _never_ happen. */
+	if(current_filter_count == 0)
+	{
+		Command_Error_Number = 26;
+		sprintf(Command_Error_String,
+			"Filter_Wheel_Command_Get_Filter_Count: Get Count finished with filter count 0.");
+		return FALSE;		
+	}
+#if LOGGING > 0
+	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Get_Filter_Count: Finished.");
 #endif /* LOGGING */
 	return TRUE;
 }

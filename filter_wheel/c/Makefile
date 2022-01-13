@@ -51,74 +51,170 @@ tidy:
 # DO NOT DELETE
 
 filter_wheel_general.o: /usr/include/errno.h /usr/include/features.h
-filter_wheel_general.o: /usr/include/stdc-predef.h /usr/include/sys/cdefs.h
-filter_wheel_general.o: /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h
-filter_wheel_general.o: /usr/include/bits/errno.h /usr/include/linux/errno.h
-filter_wheel_general.o: /usr/include/asm/errno.h
+filter_wheel_general.o: /usr/include/stdc-predef.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/sys/cdefs.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/wordsize.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/long-double.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/gnu/stubs.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/errno.h
+filter_wheel_general.o: /usr/include/linux/errno.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/asm/errno.h
 filter_wheel_general.o: /usr/include/asm-generic/errno.h
 filter_wheel_general.o: /usr/include/asm-generic/errno-base.h
 filter_wheel_general.o: /usr/include/stdio.h
-filter_wheel_general.o: /usr/lib/gcc/x86_64-redhat-linux/4.8.2/include/stddef.h
-filter_wheel_general.o: /usr/include/bits/types.h
-filter_wheel_general.o: /usr/include/bits/typesizes.h /usr/include/libio.h
-filter_wheel_general.o: /usr/include/_G_config.h /usr/include/wchar.h
-filter_wheel_general.o: /usr/lib/gcc/x86_64-redhat-linux/4.8.2/include/stdarg.h
-filter_wheel_general.o: /usr/include/bits/stdio_lim.h
-filter_wheel_general.o: /usr/include/bits/sys_errlist.h /usr/include/stdlib.h
-filter_wheel_general.o: /usr/include/bits/stdlib-float.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/libc-header-start.h
+filter_wheel_general.o: /usr/lib/gcc/x86_64-linux-gnu/7.5.0/include/stddef.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/types.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/typesizes.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/types/__FILE.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/types/FILE.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/libio.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/_G_config.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/types/__mbstate_t.h
+filter_wheel_general.o: /usr/lib/gcc/x86_64-linux-gnu/7.5.0/include/stdarg.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/stdio_lim.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/sys_errlist.h
+filter_wheel_general.o: /usr/include/stdlib.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/floatn.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/floatn-common.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/stdlib-float.h
 filter_wheel_general.o: /usr/include/string.h /usr/include/time.h
-filter_wheel_general.o: /usr/include/bits/time.h /usr/include/unistd.h
-filter_wheel_general.o: /usr/include/bits/posix_opt.h
-filter_wheel_general.o: /usr/include/bits/confname.h /usr/include/getopt.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/time.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/types/clock_t.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/types/time_t.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/types/struct_tm.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/types/timer_t.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h
+filter_wheel_general.o: /usr/include/unistd.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/posix_opt.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/confname.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/getopt_posix.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/getopt_core.h
 filter_wheel_general.o: /usr/include/pthread.h /usr/include/endian.h
-filter_wheel_general.o: /usr/include/bits/endian.h /usr/include/sched.h
-filter_wheel_general.o: /usr/include/bits/sched.h
-filter_wheel_general.o: /usr/include/bits/pthreadtypes.h
-filter_wheel_general.o: /usr/include/bits/setjmp.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/endian.h
+filter_wheel_general.o: /usr/include/sched.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/sched.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/cpu-set.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h
+filter_wheel_general.o: /usr/include/x86_64-linux-gnu/bits/setjmp.h
 filter_wheel_general.o: /home/dev/src/moptop/filter_wheel/include/filter_wheel_general.h
 filter_wheel_general.o: /home/dev/src/moptop/filter_wheel/include/filter_wheel_command.h
 filter_wheel_command.o: /usr/include/errno.h /usr/include/features.h
-filter_wheel_command.o: /usr/include/stdc-predef.h /usr/include/sys/cdefs.h
-filter_wheel_command.o: /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h
-filter_wheel_command.o: /usr/include/bits/errno.h /usr/include/linux/errno.h
-filter_wheel_command.o: /usr/include/asm/errno.h
+filter_wheel_command.o: /usr/include/stdc-predef.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/sys/cdefs.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/wordsize.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/long-double.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/gnu/stubs.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/errno.h
+filter_wheel_command.o: /usr/include/linux/errno.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/asm/errno.h
 filter_wheel_command.o: /usr/include/asm-generic/errno.h
 filter_wheel_command.o: /usr/include/asm-generic/errno-base.h
-filter_wheel_command.o: /usr/include/fcntl.h /usr/include/bits/types.h
-filter_wheel_command.o: /usr/include/bits/typesizes.h
-filter_wheel_command.o: /usr/include/bits/fcntl.h
-filter_wheel_command.o: /usr/include/bits/fcntl-linux.h /usr/include/stdio.h
-filter_wheel_command.o: /usr/lib/gcc/x86_64-redhat-linux/4.8.2/include/stddef.h
-filter_wheel_command.o: /usr/include/libio.h /usr/include/_G_config.h
-filter_wheel_command.o: /usr/include/wchar.h
-filter_wheel_command.o: /usr/lib/gcc/x86_64-redhat-linux/4.8.2/include/stdarg.h
-filter_wheel_command.o: /usr/include/bits/stdio_lim.h
-filter_wheel_command.o: /usr/include/bits/sys_errlist.h /usr/include/stdlib.h
-filter_wheel_command.o: /usr/include/bits/stdlib-float.h
+filter_wheel_command.o: /usr/include/fcntl.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/types.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/typesizes.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/fcntl.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/fcntl-linux.h
+filter_wheel_command.o: /usr/include/stdio.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/libc-header-start.h
+filter_wheel_command.o: /usr/lib/gcc/x86_64-linux-gnu/7.5.0/include/stddef.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/types/__FILE.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/types/FILE.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/libio.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/_G_config.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/types/__mbstate_t.h
+filter_wheel_command.o: /usr/lib/gcc/x86_64-linux-gnu/7.5.0/include/stdarg.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/stdio_lim.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/sys_errlist.h
+filter_wheel_command.o: /usr/include/stdlib.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/floatn.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/floatn-common.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/stdlib-float.h
 filter_wheel_command.o: /usr/include/string.h /usr/include/time.h
-filter_wheel_command.o: /usr/include/bits/time.h /usr/include/unistd.h
-filter_wheel_command.o: /usr/include/bits/posix_opt.h
-filter_wheel_command.o: /usr/include/bits/confname.h /usr/include/getopt.h
-filter_wheel_command.o: /usr/include/sys/ioctl.h /usr/include/bits/ioctls.h
-filter_wheel_command.o: /usr/include/asm/ioctls.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/time.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/types/clock_t.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/types/time_t.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/types/struct_tm.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/types/timer_t.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h
+filter_wheel_command.o: /usr/include/unistd.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/posix_opt.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/confname.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/getopt_posix.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/getopt_core.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/sys/ioctl.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/ioctls.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/asm/ioctls.h
 filter_wheel_command.o: /usr/include/asm-generic/ioctls.h
-filter_wheel_command.o: /usr/include/linux/ioctl.h /usr/include/asm/ioctl.h
+filter_wheel_command.o: /usr/include/linux/ioctl.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/asm/ioctl.h
 filter_wheel_command.o: /usr/include/asm-generic/ioctl.h
-filter_wheel_command.o: /usr/include/bits/ioctl-types.h
-filter_wheel_command.o: /usr/include/sys/ttydefaults.h
-filter_wheel_command.o: /usr/include/sys/stat.h /usr/include/bits/stat.h
-filter_wheel_command.o: /usr/include/sys/types.h /usr/include/linux/hidraw.h
-filter_wheel_command.o: /usr/include/linux/hid.h /usr/include/linux/types.h
-filter_wheel_command.o: /usr/include/asm/types.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/ioctl-types.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/sys/ttydefaults.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/sys/stat.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/stat.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/sys/types.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/bits/stdint-intn.h
+filter_wheel_command.o: /usr/include/linux/hidraw.h /usr/include/linux/hid.h
+filter_wheel_command.o: /usr/include/linux/types.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/asm/types.h
 filter_wheel_command.o: /usr/include/asm-generic/types.h
 filter_wheel_command.o: /usr/include/asm-generic/int-ll64.h
-filter_wheel_command.o: /usr/include/asm/bitsperlong.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/asm/bitsperlong.h
 filter_wheel_command.o: /usr/include/asm-generic/bitsperlong.h
 filter_wheel_command.o: /usr/include/linux/posix_types.h
 filter_wheel_command.o: /usr/include/linux/stddef.h
-filter_wheel_command.o: /usr/include/asm/posix_types.h
-filter_wheel_command.o: /usr/include/asm/posix_types_64.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/asm/posix_types.h
+filter_wheel_command.o: /usr/include/x86_64-linux-gnu/asm/posix_types_64.h
 filter_wheel_command.o: /usr/include/asm-generic/posix_types.h
 filter_wheel_command.o: /home/dev/src/log_udp/include/log_udp.h
 filter_wheel_command.o: /home/dev/src/moptop/filter_wheel/include/filter_wheel_general.h
 filter_wheel_command.o: /home/dev/src/moptop/filter_wheel/include/filter_wheel_command.h
+filter_wheel_config.o: /usr/include/errno.h /usr/include/features.h
+filter_wheel_config.o: /usr/include/stdc-predef.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/sys/cdefs.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/wordsize.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/long-double.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/gnu/stubs.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/errno.h
+filter_wheel_config.o: /usr/include/linux/errno.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/asm/errno.h
+filter_wheel_config.o: /usr/include/asm-generic/errno.h
+filter_wheel_config.o: /usr/include/asm-generic/errno-base.h
+filter_wheel_config.o: /usr/include/stdio.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/libc-header-start.h
+filter_wheel_config.o: /usr/lib/gcc/x86_64-linux-gnu/7.5.0/include/stddef.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/types.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/typesizes.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/types/__FILE.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/types/FILE.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/libio.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/_G_config.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/types/__mbstate_t.h
+filter_wheel_config.o: /usr/lib/gcc/x86_64-linux-gnu/7.5.0/include/stdarg.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/stdio_lim.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/sys_errlist.h
+filter_wheel_config.o: /usr/include/stdlib.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/floatn.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/floatn-common.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/stdlib-float.h
+filter_wheel_config.o: /usr/include/string.h /usr/include/time.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/time.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/types/clock_t.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/types/time_t.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/types/struct_tm.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/types/timer_t.h
+filter_wheel_config.o: /usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h
+filter_wheel_config.o: /home/dev/src/log_udp/include/log_udp.h
+filter_wheel_config.o: /home/dev/src/moptop/filter_wheel/include/filter_wheel_general.h
+filter_wheel_config.o: /home/dev/src/moptop/filter_wheel/include/filter_wheel_command.h
+filter_wheel_config.o: /home/dev/src/moptop/filter_wheel/include/filter_wheel_config.h
+filter_wheel_config.o: /home/dev/src/estar/config/include/estar_config.h
