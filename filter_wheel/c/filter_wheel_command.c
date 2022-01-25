@@ -258,8 +258,11 @@ int Filter_Wheel_Command_Close(void)
  *     <li>We update the current time (used for timeout calculations).
  *     <li>We read two bytes from the file descriptor Command_Data.Fd into a read data packet.
  *     <li>If compiled in we unlock the mutex.
- *     <li>We extract the current position from the read data packet. Note the current position returned is 0
+ *     <li>We extract the current position and filter countfrom the read data packet. Note the current position returned is 0
  *         if the wheel is moving.
+ *     <li>We check returned count is Command_Data.Filter_Count.
+ *         If the wheel returns '7' instead of '5' this means it has got confused during initialisation and the 
+ *         position returned will likely be 2 positions out from the actual position.
  *     <li>We check whether the current position is the target position, and set a variable used to
  *         determine whether to exit the loop.
  *     <li>We increment a loop counter (used to moderate logging).
@@ -284,7 +287,7 @@ int Filter_Wheel_Command_Move(int position)
 	struct timespec loop_start_time,current_time,sleep_time;
 	char write_data_packet[2];
 	char read_data_packet[2];
-	int byte_count,retval,in_position,current_position,write_errno,read_errno,loop_count;
+	int byte_count,retval,in_position,current_position,write_errno,read_errno,loop_count,filter_count;
 
 #if LOGGING > 0
 	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Move: Started.");
@@ -383,6 +386,17 @@ int Filter_Wheel_Command_Move(int position)
 #endif /* MUTEXED */
 		/* retrieve current position from the read data packet, byte 0 */
 		current_position = read_data_packet[0];
+		filter_count = read_data_packet[1];
+		/* check returned count is Command_Data.Filter_Count.
+		** If the wheel returns '7' instead of '5' this means it has got confused during initialisation and the 
+		** position returned will likely be 2 positions out from the actual position. */
+		if(filter_count != Command_Data.Filter_Count)
+		{
+			Command_Error_Number = 28;
+			sprintf(Command_Error_String,"Filter_Wheel_Command_Move: Returned count was '%d' rather than '%d'.",
+				filter_count,Command_Data.Filter_Count);
+			return FALSE;
+		}
 		/* are we in the requested position? */
 		in_position = (position == current_position);
 #if LOGGING > 0
@@ -443,6 +457,9 @@ int Filter_Wheel_Command_Move(int position)
  * <li>If compiled in we unlock the mutex.
  * <li>We extract the returned data from the returned reply data packet.
  * <li>We set the returned position to be the current position returned in the reply data packet.
+ * <li>We check the returned count is Command_Data.Filter_Count.
+ *     If the wheel returns '7' instead of '5' this means it has got confused during initialisation and the 
+ *      position returned will likely be 2 positions out from the actual position.
  * </ul>
  * @param position The address of an integer to store the current position. The returned value will be
  *        the current filter position (1 to the number of filters in the wheel) or 0 if the wheel is moving.
@@ -546,6 +563,16 @@ int Filter_Wheel_Command_Get_Position(int *position)
 #endif /* LOGGING */
 	/* return current position */
 	(*position) = current_filter_position;
+	/* check returned count is Command_Data.Filter_Count.
+	** If the wheel returns '7' instead of '5' this means it has got confused during initialisation and the 
+	** position returned will likely be 2 positions out from the actual position. */
+	if(filter_count != Command_Data.Filter_Count)
+	{
+		Command_Error_Number = 27;
+		sprintf(Command_Error_String,"Filter_Wheel_Command_Get_Position: Returned count was '%d' rather than '%d'.",
+			filter_count,Command_Data.Filter_Count);
+		return FALSE;		
+	}
 #if LOGGING > 0
 	Filter_Wheel_General_Log_Format(LOG_VERBOSITY_TERSE,"Filter_Wheel_Command_Get_Position: Finished.");
 #endif /* LOGGING */
