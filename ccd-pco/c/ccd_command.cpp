@@ -1088,6 +1088,11 @@ int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *
 			Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
+#if LOGGING > 9
+	CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
+			       "CCD_Command_Get_Temperature: PCO_GetTemperature returns sensor temperature %d, "
+			       "camera temperature %d, PSU temperature %d.",ccd_temp_s,cam_temp_s,psu_temp_s);
+#endif /* LOGGING */
 	/* PCO_GetTemperature returns:
 	** A short for the CCD temperature in tenths of degree centigrade, 
 	**          which is (SHORT)(-32768) when reading the temperature fails.
@@ -1102,7 +1107,7 @@ int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *
 			(*sensor_temp) = ((double)ccd_temp_s)/10.0;
 #if LOGGING > 9
 			CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
-					       "CCD_Command_Get_Temperature: Valid Sensor temperature = %.3f C.",(*sensor_temp));
+					       "CCD_Command_Get_Temperature: Valid Sensor temperature = %d C.",(*sensor_temp));
 #endif /* LOGGING */
 		}
 		else
@@ -1116,7 +1121,7 @@ int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *
 		(*camera_temp) = (int)cam_temp_s;
 #if LOGGING > 9
 		CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
-				       "CCD_Command_Get_Temperature: Camera temperature = %.3f C.",(*camera_temp));
+				       "CCD_Command_Get_Temperature: Camera temperature = %d C.",(*camera_temp));
 #endif /* LOGGING */
 	}
 	if((valid_psu_temp != NULL)&&(psu_temp != NULL))
@@ -1127,7 +1132,7 @@ int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *
 			(*psu_temp) = (int)psu_temp_s;
 #if LOGGING > 9
 			CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
-					       "CCD_Command_Get_Temperature: Valid PSU temperature = %.3f C.",(*psu_temp));
+					       "CCD_Command_Get_Temperature: Valid PSU temperature = %d C.",(*psu_temp));
 #endif /* LOGGING */
 		}
 		else
