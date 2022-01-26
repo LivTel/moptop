@@ -1100,6 +1100,10 @@ int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *
 		{
 			(*valid_sensor_temp) = TRUE;
 			(*sensor_temp) = ((double)ccd_temp_s)/10.0;
+#if LOGGING > 9
+			CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
+					       "CCD_Command_Get_Temperature: Valid Sensor temperature = %.3f C.",(*sensor_temp));
+#endif /* LOGGING */
 		}
 		else
 		{
@@ -1110,6 +1114,10 @@ int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *
 	if(camera_temp != NULL)
 	{
 		(*camera_temp) = (int)cam_temp_s;
+#if LOGGING > 9
+		CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
+				       "CCD_Command_Get_Temperature: Camera temperature = %.3f C.",(*camera_temp));
+#endif /* LOGGING */
 	}
 	if((valid_psu_temp != NULL)&&(psu_temp != NULL))
 	{
@@ -1117,6 +1125,10 @@ int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *
 		{
 			(*valid_psu_temp) = TRUE;
 			(*psu_temp) = (int)psu_temp_s;
+#if LOGGING > 9
+			CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
+					       "CCD_Command_Get_Temperature: Valid PSU temperature = %.3f C.",(*psu_temp));
+#endif /* LOGGING */
 		}
 		else
 		{
