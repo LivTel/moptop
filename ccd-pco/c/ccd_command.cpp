@@ -1107,7 +1107,7 @@ int CCD_Command_Get_Temperature(int *valid_sensor_temp,double *sensor_temp,int *
 			(*sensor_temp) = ((double)ccd_temp_s)/10.0;
 #if LOGGING > 9
 			CCD_General_Log_Format(LOG_VERBOSITY_VERY_VERBOSE,
-					       "CCD_Command_Get_Temperature: Valid Sensor temperature = %d C.",(*sensor_temp));
+					       "CCD_Command_Get_Temperature: Valid Sensor temperature = %.3f C.",(*sensor_temp));
 #endif /* LOGGING */
 		}
 		else
