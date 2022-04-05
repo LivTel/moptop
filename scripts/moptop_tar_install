@@ -110,7 +110,7 @@ rm -f ${deployment_tar}
 # Init script setup
 #
 # Init script already copied as /etc/init.d/autobooter
-# Ubuntu 10.04 uses runlevel 2: runlevels 2345 are all multi-user 
+# Ubuntu 20.04 uses runlevel 2: runlevels 2345 are all multi-user 
 echo "Setting up autobooter initialisation script."
 set dir_list = "/etc/rc0.d /etc/rc1.d /etc/rc6.d"
 foreach dir ( ${dir_list} )
