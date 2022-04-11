@@ -61,6 +61,7 @@ extern "C" {
 extern int CCD_Command_Initialise_Camera(void);
 extern int CCD_Command_Finalise(void);
 extern int CCD_Command_Open(int board);
+extern int CCD_Command_Initialise_Grabber(void);
 extern int CCD_Command_Close(void);
 	extern int CCD_Command_Set_Camera_Setup(int setup_flags);
 	extern int CCD_Command_Reboot_Camera(void);

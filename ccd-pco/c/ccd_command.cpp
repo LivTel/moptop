@@ -191,10 +191,6 @@ int CCD_Command_Finalise(void)
  * <li>We check the Camera CPco_com_usb instance has been created.
  * <li>We set Command_Data.Camera_Board to the board parameter.
  * <li>We call the Camera's Open_Cam method with the board parameter to open a connection to the board.
- * <li>We construct an instance of CPco_grab_usb attached to the opened camera and assign it to Command_Data.Grabber.
- * <li>We set the Grabber's log instance to Command_Data.PCO_Logger.
- * <li>We open a conenction to the grabber by calling the Grabber's Open_Grabber method with the board parameter.
- * <li>We set the Grabber's timeout to Command_Data.Grabber_Timeout.
  * <li>We get the camera's description by calling PCO_GetCameraDescriptor and store it in Command_Data.Description.
  * </ul>
  * @param board Which camera to connect to.
@@ -235,33 +231,6 @@ int CCD_Command_Open(int board)
 			Command_Data.Camera_Board,pco_err,Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
-	
-	/* create grabber for opened camera */
-#if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Open: Creating Grabber for camera.");
-#endif /* LOGGING */
-	Command_Data.Grabber = new CPco_grab_usb((CPco_com_usb*)(Command_Data.Camera));
-	if(Command_Data.Grabber == NULL)
-	{
-		Command_Error_Number = 6;
-		sprintf(Command_Error_String,"CCD_Command_Open:Creating CPco_grab_usb instance failed.");
-		return FALSE;
-	}
-	Command_Data.Grabber->SetLog(Command_Data.PCO_Logger);
-#if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Open: Opening Grabber with board ID %d.",
-			       Command_Data.Camera_Board);
-#endif /* LOGGING */
-	pco_err = Command_Data.Grabber->Open_Grabber(Command_Data.Camera_Board);
-	if(pco_err != PCO_NOERROR)
-	{
-		Command_Error_Number = 64;
-		sprintf(Command_Error_String,
-			"CCD_Command_Open:Grabber Open_Grabber(board=%d) failed with PCO error code 0x%x (%s).",
-			Command_Data.Camera_Board,pco_err,Command_PCO_Get_Error_Text(pco_err));
-		return FALSE;
-	}
-	Command_Data.Grabber->Set_Grabber_Timeout(Command_Data.Grabber_Timeout);
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Open: Getting camera description.");
 #endif /* LOGGING */
@@ -302,6 +271,69 @@ int CCD_Command_Close(void)
 	Command_Data.Camera->Close_Cam();
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Close: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * Routine to initialise the PCO Grabber object reference, which handles the downloading of image data.
+ * This needs to be initialised after the PCO camera object has been initialised (CCD_Command_Initialise_Camera) and opened 
+ * (CCD_Command_Open).
+ * <ul>
+ * <li>We construct an instance of CPco_grab_usb attached to the opened camera and assign it to Command_Data.Grabber.
+ * <li>We set the Grabber's log instance to Command_Data.PCO_Logger.
+ * <li>We open a connection to the grabber by calling the Grabber's Open_Grabber method with the board parameter.
+ * <li>We set the Grabber's timeout to Command_Data.Grabber_Timeout.
+ * </ul>
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see #CCD_Command_Initialise_Camera
+ * @see #CCD_Command_Open
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Initialise_Grabber(void)
+{
+	DWORD pco_err;
+
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Initialise_Grabber: Started.");
+#endif /* LOGGING */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 101;
+		sprintf(Command_Error_String,"CCD_Command_Initialise_Grabber:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	/* create grabber for opened camera */
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Initialise_Grabber: Creating Grabber for camera.");
+#endif /* LOGGING */
+	Command_Data.Grabber = new CPco_grab_usb((CPco_com_usb*)(Command_Data.Camera));
+	if(Command_Data.Grabber == NULL)
+	{
+		Command_Error_Number = 6;
+		sprintf(Command_Error_String,"CCD_Command_Initialise_Grabber:Creating CPco_grab_usb instance failed.");
+		return FALSE;
+	}
+	Command_Data.Grabber->SetLog(Command_Data.PCO_Logger);
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Initialise_Grabber: Opening Grabber with board ID %d.",
+			       Command_Data.Camera_Board);
+#endif /* LOGGING */
+	pco_err = Command_Data.Grabber->Open_Grabber(Command_Data.Camera_Board);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 64;
+		sprintf(Command_Error_String,
+			"CCD_Command_Initialise_Grabber:Grabber Open_Grabber(board=%d) failed with PCO error code 0x%x (%s).",
+			Command_Data.Camera_Board,pco_err,Command_PCO_Get_Error_Text(pco_err));
+		return FALSE;
+	}
+	Command_Data.Grabber->Set_Grabber_Timeout(Command_Data.Grabber_Timeout);
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Initialise_Grabber: Finished.");
 #endif /* LOGGING */
 	return TRUE;
 }

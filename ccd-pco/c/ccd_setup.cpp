@@ -155,6 +155,7 @@ void CCD_Setup_Set_Timestamp_Mode(enum CCD_COMMAND_TIMESTAMP_MODE mode)
  * <li>We initialise the PCO camera library reference object using CCD_Command_Initialise_Camera.
  * <li>We open a connection to the CCD camera using CCD_Command_Open. 
  *     We connect to the camera specified by Setup_Data.Camera_Board.
+ * <li>We initialise the PCO camera library grabber reference by calling CCD_Command_Initialise_Grabber.
  * <li>We set the PCO camera to use the current time by calling CCD_Command_Set_Camera_To_Current_Time.
  * <li>We stop any ongoing image acquisitions by calling CCD_Command_Set_Recording_State(FALSE).
  * <li>We reset the camera to a known state by calling CCD_Command_Reset_Settings.
@@ -183,6 +184,7 @@ void CCD_Setup_Set_Timestamp_Mode(enum CCD_COMMAND_TIMESTAMP_MODE mode)
  * @see #CCD_Setup_Set_Board
  * @see ccd_command.html#CCD_Command_Initialise_Camera
  * @see ccd_command.html#CCD_Command_Open
+ * @see ccd_command.html#CCD_Command_Initialise_Grabber
  * @see ccd_command.html#CCD_Command_Set_Camera_To_Current_Time
  * @see ccd_command.html#CCD_Command_Set_Recording_State
  * @see ccd_command.html#CCD_Command_Reset_Settings
@@ -222,6 +224,13 @@ int CCD_Setup_Startup(void)
 	{
 		Setup_Error_Number = 3;
 		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Open(%d) failed.",Setup_Data.Camera_Board);
+		return FALSE;
+	}
+	/* initialise the PCO camera library grabber reference */
+	if(!CCD_Command_Initialise_Grabber())
+	{
+		Setup_Error_Number = 26;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Initialise_Grabber failed.");
 		return FALSE;
 	}
 	/* initial configuration of the camera */
