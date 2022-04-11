@@ -58,7 +58,7 @@ extern "C" {
 #endif
 
 /* functions */
-extern int CCD_Command_Initialise(void);
+extern int CCD_Command_Initialise_Camera(void);
 extern int CCD_Command_Finalise(void);
 extern int CCD_Command_Open(int board);
 extern int CCD_Command_Close(void);

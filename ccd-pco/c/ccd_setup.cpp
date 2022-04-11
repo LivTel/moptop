@@ -152,7 +152,7 @@ void CCD_Setup_Set_Timestamp_Mode(enum CCD_COMMAND_TIMESTAMP_MODE mode)
  * Do the initial setup for a PCO camera (specified by the previously set Setup_Data.Camera_Board, 
  * see CCD_Setup_Set_Board).
  * <ul>
- * <li>We initialise the libraries used using CCD_Command_Initialise.
+ * <li>We initialise the PCO camera library reference object using CCD_Command_Initialise_Camera.
  * <li>We open a connection to the CCD camera using CCD_Command_Open. 
  *     We connect to the camera specified by Setup_Data.Camera_Board.
  * <li>We set the PCO camera to use the current time by calling CCD_Command_Set_Camera_To_Current_Time.
@@ -181,7 +181,7 @@ void CCD_Setup_Set_Timestamp_Mode(enum CCD_COMMAND_TIMESTAMP_MODE mode)
  * @see #Setup_Error_String
  * @see #Setup_Data
  * @see #CCD_Setup_Set_Board
- * @see ccd_command.html#CCD_Command_Initialise
+ * @see ccd_command.html#CCD_Command_Initialise_Camera
  * @see ccd_command.html#CCD_Command_Open
  * @see ccd_command.html#CCD_Command_Set_Camera_To_Current_Time
  * @see ccd_command.html#CCD_Command_Set_Recording_State
@@ -210,11 +210,11 @@ int CCD_Setup_Startup(void)
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Setup_Startup: Started.");
 #endif /* LOGGING */
-	/* initialise the PCO libraries */
-	if(!CCD_Command_Initialise())
+	/* initialise the PCO camera library reference */
+	if(!CCD_Command_Initialise_Camera())
 	{
 		Setup_Error_Number = 1;
-		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Initialise failed.");
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Initialise_Camera failed.");
 		return FALSE;
 	}
 	/* open a connection to the CCD camera */

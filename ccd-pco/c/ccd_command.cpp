@@ -112,7 +112,7 @@ static int Command_BCD_To_Decimal(unsigned char x);
 ** External Functions
 ** -------------------------------------------------------- */
 /**
- * Initialise the CCD library. 
+ * Initialise the PCO library Camera reference. 
  * @return The routine returns TRUE on success and FALSE if an error occurs.
  * @see #Command_Data
  * @see #Command_Error_Number
@@ -120,42 +120,42 @@ static int Command_BCD_To_Decimal(unsigned char x);
  * @see ccd_general.html#CCD_General_Log
  * @see ccd_general.html#CCD_General_Log_Format
  */
-int CCD_Command_Initialise(void)
+int CCD_Command_Initialise_Camera(void)
 {
 #if LOGGING > 0
-	CCD_General_Log(LOG_VERBOSITY_TERSE,"CCD_Command_Initialise: Started.");
+	CCD_General_Log(LOG_VERBOSITY_TERSE,"CCD_Command_Initialise_Camera: Started.");
 #endif /* LOGGING */
 	Command_Error_Number = 0;
 #if LOGGING > 1
-	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Initialise: Creating CPco_com_usb instance.");
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Initialise_Camera: Creating CPco_com_usb instance.");
 #endif /* LOGGING */
 	Command_Data.Camera = new CPco_com_usb();
 	if(Command_Data.Camera == NULL)
 	{
 		Command_Error_Number = 1;
-		sprintf(Command_Error_String,"CCD_Command_Initialise:Creating CPco_com_usb instance failed.");
+		sprintf(Command_Error_String,"CCD_Command_Initialise_Camera:Creating CPco_com_usb instance failed.");
 		return FALSE;
 	}
 #if LOGGING > 1
-	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Initialise: Creating CPco_Log instance.");
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Initialise_Camera: Creating CPco_Log instance.");
 #endif /* LOGGING */
 	Command_Data.PCO_Logger = new CPco_Log("pco_camera_grab.log");
 	if(Command_Data.PCO_Logger == NULL)
 	{
 		Command_Error_Number = 2;
-		sprintf(Command_Error_String,"CCD_Command_Initialise:Creating CPco_Log instance failed.");
+		sprintf(Command_Error_String,"CCD_Command_Initialise_Camera:Creating CPco_Log instance failed.");
 		return FALSE;
 	}
 #if LOGGING > 1
-	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Initialise: Initialising CPco_Log instance.");
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Initialise_Camera: Initialising CPco_Log instance.");
 #endif /* LOGGING */
 	Command_Data.PCO_Logger->set_logbits(0x3);
 	Command_Data.Camera->SetLog(Command_Data.PCO_Logger);
 #if LOGGING > 1
-	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Initialise: Creating CPco_Log instance.");
+	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Initialise_Camera: Creating CPco_Log instance.");
 #endif /* LOGGING */
 #if LOGGING > 0
-	CCD_General_Log(LOG_VERBOSITY_TERSE,"CCD_Command_Initialise: Finished.");
+	CCD_General_Log(LOG_VERBOSITY_TERSE,"CCD_Command_Initialise_Camera: Finished.");
 #endif /* LOGGING */
 	return TRUE;
 }
@@ -235,6 +235,7 @@ int CCD_Command_Open(int board)
 			Command_Data.Camera_Board,pco_err,Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
+	
 	/* create grabber for opened camera */
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Open: Creating Grabber for camera.");

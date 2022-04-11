@@ -55,7 +55,8 @@ static void Help(void);
  * <li>We setup the CCD library's logging with calls to CCD_General_Set_Log_Filter_Level, 
  *     CCD_General_Set_Log_Filter_Function, CCD_General_Log_Filter_Level_Absolute, 
  *     CCD_General_Set_Log_Handler_Function, CCD_General_Log_Handler_Stdout.
- * <li>We initialise the command library by calling CCD_Command_Initialise, and open a connection to the specified
+ * <li>We initialise the PCO camera reference by calling CCD_Command_Initialise_Camera, 
+ *     and open a connection to the specified
  *     camera board by calling CCD_Command_Open with the specified Camera_Board as argument.
  * <li>If Get_Temperature is set, we call CCD_Command_Get_Temperature and CCD_Command_Get_Cooling_Setpoint_Temperature
  *     and print the results.
@@ -75,7 +76,7 @@ static void Help(void);
  * @see #Get_Temperature
  * @see #Set_Temperature
  * @see #Temperature_Setpoint
- * @see ../cdocs/ccd_command.html#CCD_Command_Initialise
+ * @see ../cdocs/ccd_command.html#CCD_Command_Initialise_Camera
  * @see ../cdocs/ccd_command.html#CCD_Command_Open
  * @see ../cdocs/ccd_command.html#CCD_Command_Set_Cooling_Setpoint_Temperature
  * @see ../cdocs/ccd_command.html#CCD_Command_Description_Get_Default_Cooling_Setpoint
@@ -105,8 +106,8 @@ int main(int argc, char *argv[])
 	CCD_General_Set_Log_Filter_Level(Log_Level);
 	CCD_General_Set_Log_Filter_Function(CCD_General_Log_Filter_Level_Absolute);
 	CCD_General_Set_Log_Handler_Function(CCD_General_Log_Handler_Stdout);
-	/* initialise ccd library */
-	if(!CCD_Command_Initialise())
+	/* initialise PCO camera library reference */
+	if(!CCD_Command_Initialise_Camera())
 	{
 		CCD_General_Error();
 		return 2;
