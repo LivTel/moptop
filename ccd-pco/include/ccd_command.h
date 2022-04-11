@@ -62,6 +62,8 @@ extern int CCD_Command_Initialise(void);
 extern int CCD_Command_Finalise(void);
 extern int CCD_Command_Open(int board);
 extern int CCD_Command_Close(void);
+	extern int CCD_Command_Set_Camera_Setup(int setup_flags);
+	extern int CCD_Command_Reboot_Camera(void);
 	extern int CCD_Command_Arm_Camera(void);
 	extern int CCD_Command_Grabber_Post_Arm(void);
 	extern int CCD_Command_Set_Camera_To_Current_Time(void);

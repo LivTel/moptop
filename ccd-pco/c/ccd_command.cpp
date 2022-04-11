@@ -306,6 +306,94 @@ int CCD_Command_Close(void)
 }
 
 /**
+ * Setup the camera. This changes some settings (notably shutter readout mode) which then requires a camera reboot
+ * (and associated re-connect/open) to cause the camera head to pick up the new settings.
+ * @param setup_flags The flags to setup. These are currently the shutter mode, set as follows:
+ *                    <ul>
+ *                    <li>0x00000001 = PCO_EDGE_SETUP_ROLLING_SHUTTER = Rolling Shutter
+ *                    <li>0x00000002 = PCO_EDGE_SETUP_GLOBAL_SHUTTER  = Global Shutter
+ *                    <li>0x00000004 = PCO_EDGE_SETUP_GLOBAL_RESET    = Global Reset 
+ *                    </ul>
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_PCO_Get_Error_Text
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see #CCD_Command_Reboot_Camera
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Set_Camera_Setup(int setup_flags)
+{
+	DWORD setup_flags_dword;
+	DWORD pco_err;
+
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Camera_Setup: Started.");
+#endif /* LOGGING */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 97;
+		sprintf(Command_Error_String,"CCD_Command_Set_Camera_Setup:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	/* To set the current shutter mode input index setup_id must be set to 0. 
+	** The new shutter mode should be set in setup_flags[0]. */
+	setup_flags_dword = setup_flags;
+	pco_err = Command_Data.Camera->PCO_SetCameraSetup(0,&setup_flags_dword,1);
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 98;
+		sprintf(Command_Error_String,"CCD_Command_Set_Camera_Setup:"
+			"Camera PCO_SetCameraSetup(0,0x%x,1) failed with PCO error code 0x%x (%s).",setup_flags_dword,pco_err,
+			Command_PCO_Get_Error_Text(pco_err));
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Camera_Setup: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
+ * This function reboots the PCO camera head. The function returns as soon as the reboot process has started. 
+ * After calling this function the camera handle should be closed using CCD_Command_Close. The reboot can take 6-10 seconds.
+ * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #Command_PCO_Get_Error_Text
+ * @see #Command_Data
+ * @see #Command_Error_Number
+ * @see #Command_Error_String
+ * @see #CCD_Command_Close
+ * @see ccd_general.html#CCD_General_Log_Format
+ */
+int CCD_Command_Reboot_Camera(void)
+{
+	DWORD pco_err;
+
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Reboot_Camera: Started.");
+#endif /* LOGGING */
+	if(Command_Data.Camera == NULL)
+	{
+		Command_Error_Number = 99;
+		sprintf(Command_Error_String,"CCD_Command_Reboot_Camera:Camera CPco_com_usb instance not created.");
+		return FALSE;
+	}
+	pco_err = Command_Data.Camera->PCO_RebootCamera();
+	if(pco_err != PCO_NOERROR)
+	{
+		Command_Error_Number = 100;
+		sprintf(Command_Error_String,"CCD_Command_Reboot_Camera:"
+			"Camera PCO_ArmCamera failed with PCO error code 0x%x (%s).",pco_err,
+			Command_PCO_Get_Error_Text(pco_err));
+		return FALSE;
+	}
+#if LOGGING > 5
+	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Reboot_Camera: Finished.");
+#endif /* LOGGING */
+	return TRUE;
+}
+
+/**
  * Prepare the camera to start taking data. All previous settings are validated and the internal settings of the camera
  * updated.
  * @return The routine returns TRUE on success and FALSE if an error occurs.
