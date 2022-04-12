@@ -44,6 +44,21 @@
 #include "ccd_general.h"
 #include "ccd_command.h"
 
+/* check CCD_COMMAND_SETUP_FLAG enums match PCO_EDGE_SETUP #defines.
+** We create our own enum so we don't have to include PCO SDK headers outside ccd_command.cpp, for better
+** code separation from the SDK */
+/* THESE TESTS DON'T WORK, probably because one in an enumeration and one is an int.
+#if CCD_COMMAND_SETUP_FLAG_ROLLING_SHUTTER != PCO_EDGE_SETUP_ROLLING_SHUTTER
+#error "CCD_COMMAND_SETUP_FLAG_ROLLING_SHUTTER does not match PCO_EDGE_SETUP_ROLLING_SHUTTER declaration"
+#endif
+#if CCD_COMMAND_SETUP_FLAG_GLOBAL_SHUTTER != PCO_EDGE_SETUP_GLOBAL_SHUTTER
+#error "CCD_COMMAND_SETUP_FLAG_GLOBAL_SHUTTER does not match PCO_EDGE_SETUP_GLOBAL_SHUTTER declaration"
+#endif
+#if CCD_COMMAND_SETUP_FLAG_GLOBAL_RESET != PCO_EDGE_SETUP_GLOBAL_RESET
+#error "CCD_COMMAND_SETUP_FLAG_GLOBAL_RESET does not match PCO_EDGE_SETUP_GLOBAL_RESET declaration"
+#endif
+*/
+
 /* data types */
 /**
  * Data type holding local data to ccd_command. This consists of the following:
@@ -356,13 +371,14 @@ int CCD_Command_Initialise_Grabber(void)
 /**
  * Setup the camera. This changes some settings (notably shutter readout mode) which then requires a camera reboot
  * (and associated re-connect/open) to cause the camera head to pick up the new settings.
- * @param setup_flags The flags to setup. These are currently the shutter mode, set as follows:
- *                    <ul>
- *                    <li>0x00000001 = PCO_EDGE_SETUP_ROLLING_SHUTTER = Rolling Shutter
- *                    <li>0x00000002 = PCO_EDGE_SETUP_GLOBAL_SHUTTER  = Global Shutter
- *                    <li>0x00000004 = PCO_EDGE_SETUP_GLOBAL_RESET    = Global Reset 
- *                    </ul>
+ * @param setup_flag The flag to setup. These are currently the shutter mode, set as follows:
+ *        <ul>
+ *        <li>0x00000001 = CCD_COMMAND_SETUP_FLAG_ROLLING_SHUTTER = PCO_EDGE_SETUP_ROLLING_SHUTTER = Rolling Shutter
+ *        <li>0x00000002 = CCD_COMMAND_SETUP_FLAG_GLOBAL_SHUTTER  = PCO_EDGE_SETUP_GLOBAL_SHUTTER  = Global Shutter
+ *        <li>0x00000004 = CCD_COMMAND_SETUP_FLAG_GLOBAL_RESET    = PCO_EDGE_SETUP_GLOBAL_RESET    = Global Reset 
+ *        </ul>
  * @return The routine returns TRUE on success and FALSE if an error occurs.
+ * @see #CCD_COMMAND_SETUP_FLAG
  * @see #Command_PCO_Get_Error_Text
  * @see #Command_Data
  * @see #Command_Error_Number
@@ -370,13 +386,13 @@ int CCD_Command_Initialise_Grabber(void)
  * @see #CCD_Command_Reboot_Camera
  * @see ccd_general.html#CCD_General_Log_Format
  */
-int CCD_Command_Set_Camera_Setup(int setup_flags)
+int CCD_Command_Set_Camera_Setup(enum CCD_COMMAND_SETUP_FLAG setup_flag)
 {
-	DWORD setup_flags_dword;
+	DWORD setup_flag_dword;
 	DWORD pco_err;
 
 #if LOGGING > 5
-	CCD_General_Log(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Camera_Setup: Started.");
+	CCD_General_Log_Format(LOG_VERBOSITY_VERBOSE,"CCD_Command_Set_Camera_Setup: Started with setup flag 0x%x.",setup_flag);
 #endif /* LOGGING */
 	if(Command_Data.Camera == NULL)
 	{
@@ -385,14 +401,14 @@ int CCD_Command_Set_Camera_Setup(int setup_flags)
 		return FALSE;
 	}
 	/* To set the current shutter mode input index setup_id must be set to 0. 
-	** The new shutter mode should be set in setup_flags[0]. */
-	setup_flags_dword = setup_flags;
-	pco_err = Command_Data.Camera->PCO_SetCameraSetup(0,&setup_flags_dword,1);
+	** The new shutter mode should be set in setup_flag[0]. */
+	setup_flag_dword = setup_flag;
+	pco_err = Command_Data.Camera->PCO_SetCameraSetup(0,&setup_flag_dword,1);
 	if(pco_err != PCO_NOERROR)
 	{
 		Command_Error_Number = 98;
 		sprintf(Command_Error_String,"CCD_Command_Set_Camera_Setup:"
-			"Camera PCO_SetCameraSetup(0,0x%x,1) failed with PCO error code 0x%x (%s).",setup_flags_dword,pco_err,
+			"Camera PCO_SetCameraSetup(0,0x%x,1) failed with PCO error code 0x%x (%s).",setup_flag_dword,pco_err,
 			Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}

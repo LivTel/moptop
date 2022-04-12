@@ -5,6 +5,22 @@
 
 /* enumerations */
 /**
+ * Setup flags used as a parameter to CCD_Command_Set_Camera_Setup - mainly used to control the shutter readout mode.
+ * <ul>
+ * <li><b>CCD_COMMAND_SETUP_FLAG_ROLLING_SHUTTER</b> Rolling shutter (the default).
+ * <li><b>CCD_COMMAND_SETUP_FLAG_GLOBAL_SHUTTER</b> Global shutter mode.
+ * <li><b>CCD_COMMAND_SETUP_FLAG_GLOBAL_RESET</b> Global reset mode.
+ * </ul>
+ * @see #CCD_Command_Set_Camera_Setup
+ */
+enum CCD_COMMAND_SETUP_FLAG
+{
+	CCD_COMMAND_SETUP_FLAG_ROLLING_SHUTTER = 0x00000001,
+	CCD_COMMAND_SETUP_FLAG_GLOBAL_SHUTTER  = 0x00000002,
+	CCD_COMMAND_SETUP_FLAG_GLOBAL_RESET    = 0x00000004
+};
+
+/**
  * Trigger mode, used to determine how exposures are started by the camera head.
  * <ul>
  * <li><b>CCD_COMMAND_TRIGGER_MODE_INTERNAL</b> The camera head internally triggers (software/auto sequence).
@@ -63,7 +79,7 @@ extern int CCD_Command_Finalise(void);
 extern int CCD_Command_Open(int board);
 extern int CCD_Command_Initialise_Grabber(void);
 extern int CCD_Command_Close(void);
-	extern int CCD_Command_Set_Camera_Setup(int setup_flags);
+	extern int CCD_Command_Set_Camera_Setup(enum CCD_COMMAND_SETUP_FLAG setup_flag);
 	extern int CCD_Command_Reboot_Camera(void);
 	extern int CCD_Command_Arm_Camera(void);
 	extern int CCD_Command_Grabber_Post_Arm(void);
