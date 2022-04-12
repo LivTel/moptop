@@ -351,7 +351,10 @@ int Moptop_Bias_Dark_MultDark(int exposure_length_ms,int exposure_count,
 #endif
 	/* convert exposure length to seconds */
 	exposure_length_s = ((double)exposure_length_ms)/((double)MOPTOP_GENERAL_ONE_SECOND_MS);
-	if((exposure_length_s < minimum_exposure_length_s)||(exposure_length_s > maximum_exposure_length_s))
+	/* with global reset camera setup selected, the pco.edge 4.2 USB 3.0 camera is not allowed to do exposures
+	** longer than 2s. (MA_PCOEDGE_V225.pdf, P20). This causes maximum_exposure_length_s to be 2.0,
+	** which means we can't take slow mode darks (4s). Try ignoring this test to see if it works anyway... */
+	if((exposure_length_s < minimum_exposure_length_s)/*||(exposure_length_s > maximum_exposure_length_s)*/)
 	{
 		Bias_Dark_In_Progress = FALSE;
 		Moptop_General_Error_Number = 756;
