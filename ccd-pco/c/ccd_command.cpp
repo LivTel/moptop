@@ -151,9 +151,6 @@ int CCD_Command_Initialise_Camera(void)
 #endif /* LOGGING */
 	Command_Data.PCO_Logger->set_logbits(0x3);
 	Command_Data.Camera->SetLog(Command_Data.PCO_Logger);
-#if LOGGING > 1
-	CCD_General_Log(LOG_VERBOSITY_INTERMEDIATE,"CCD_Command_Initialise_Camera: Creating CPco_Log instance.");
-#endif /* LOGGING */
 #if LOGGING > 0
 	CCD_General_Log(LOG_VERBOSITY_TERSE,"CCD_Command_Initialise_Camera: Finished.");
 #endif /* LOGGING */
@@ -166,21 +163,39 @@ int CCD_Command_Initialise_Camera(void)
  * @see #Command_Data
  * @see #Command_Error_Number
  * @see #Command_Error_String
- * @see ccd_general.html#CCD_General_Log_Format
+ * @see ccd_general.html#CCD_General_Log
  */
 int CCD_Command_Finalise(void)
 {
 #if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Finalise: Started.");
+	CCD_General_Log(LOG_VERBOSITY_TERSE,"CCD_Command_Finalise: Started.");
 #endif /* LOGGING */
 	if(Command_Data.Grabber != NULL)
+	{
+#if LOGGING > 5
+		CCD_General_Log(LOG_VERBOSITY_VERY_VERBOSE,"CCD_Command_Finalise: deleting Grabber object.");
+#endif /* LOGGING */
 		delete Command_Data.Grabber;
+	}
+	Command_Data.Grabber = NULL;
 	if(Command_Data.Camera != NULL)
+	{
+#if LOGGING > 5
+		CCD_General_Log(LOG_VERBOSITY_VERY_VERBOSE,"CCD_Command_Finalise: deleting Camera object.");
+#endif /* LOGGING */
 		delete Command_Data.Camera;
+	}
+	Command_Data.Camera = NULL;
 	if(Command_Data.PCO_Logger != NULL)
+	{
+#if LOGGING > 5
+		CCD_General_Log(LOG_VERBOSITY_VERY_VERBOSE,"CCD_Command_Finalise: deleting PCO_Logger object.");
+#endif /* LOGGING */
 		delete Command_Data.PCO_Logger;
+	}
+	Command_Data.PCO_Logger = NULL;
 #if LOGGING > 0
-	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Command_Finalise: Finished.");
+	CCD_General_Log(LOG_VERBOSITY_TERSE,"CCD_Command_Finalise: Finished.");
 #endif /* LOGGING */
 	return TRUE;
 }
