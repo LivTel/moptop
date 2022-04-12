@@ -51,6 +51,7 @@ static int Moptop_Startup_Filter_Wheel(void);
 static int Moptop_Shutdown_Filter_Wheel(void);
 static int Parse_Arguments(int argc, char *argv[]);
 static void Help(void);
+static int Parse_Camera_Setup_Flag_String(char *camera_setup_flag_string,enum CCD_COMMAND_SETUP_FLAG *camera_setup_flag);
 
 /* ------------------------------------------------------------------
 ** External functions 
@@ -457,6 +458,9 @@ static void Moptop_Shutdown_Mechanisms(void)
  * <li>If it is _not_ enabled, log and return success.
  * <li>We retrieve the "ccd.board_number" configuration, 
  *     and call CCD_Setup_Set_Board to setup which camera to connect to.
+ * <li>We retrieve the "ccd.camera_setup_flag" configuration, 
+ *     use Parse_Camera_Setup_Flag_String to convert the string into a flag,
+ *     and call CCD_Setup_Set_Camera_Setup to configure the camera shutter/reset operation (in CCD_Setup_Startup).
  * <li>We retrieve the "ccd.timestamp_mode" configuration, 
  *     and call CCD_Setup_Set_Timestamp_Mode to setup how the timestamp is represented in the read out data.
  * <li>Call CCD_Setup_Startup to initialise the CCD.
@@ -471,6 +475,7 @@ static void Moptop_Shutdown_Mechanisms(void)
  * <li>We call CCD_Fits_Header_Initialise to initialise FITS header data.
  * </ul>
  * @return The routine returns TRUE on success and FALSE on failure.
+ * @see #Parse_Camera_Setup_Flag_String
  * @see moptop_config.html#Moptop_Config_Get_Integer
  * @see moptop_config.html#Moptop_Config_Get_Boolean
  * @see moptop_config.html#Moptop_Config_Get_Character
@@ -483,14 +488,17 @@ static void Moptop_Shutdown_Mechanisms(void)
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Initialise
  * @see ../ccd/cdocs/ccd_fits_header.html#CCD_Fits_Header_Initialise
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Set_Board
+ * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Set_Camera_Setup
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Set_Timestamp_Mode
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Startup
  * @see ../ccd/cdocs/ccd_setup.html#CCD_Setup_Get_Serial_Number
  */
 static int Moptop_Startup_CCD(void)
 {
+	enum CCD_COMMAND_SETUP_FLAG camera_setup_flag;
 	int enabled,board_number,timestamp_mode,test_serial_number,camera_serial_number;
 	char instrument_code;
+	char* camera_setup_flag_string = NULL;
 	char* data_dir = NULL;
 
 #if MOPTOP_DEBUG > 1
@@ -510,7 +518,7 @@ static int Moptop_Startup_CCD(void)
 	{
 #if MOPTOP_DEBUG > 1
 		Moptop_General_Log("main","moptop_main.c","Moptop_Startup_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
-				   "Finished (rotator NOT enabled).");
+				   "Finished (CCD NOT enabled).");
 #endif
 		return TRUE;
 	}
@@ -523,6 +531,23 @@ static int Moptop_Startup_CCD(void)
 	}
 	/* tell the CCD library which camera to connect to */
 	CCD_Setup_Set_Board(board_number);
+	/* configure the camera shutter/reset operation the setup routine will configure */
+	if(!Moptop_Config_Get_String("ccd.camera_setup_flag",&camera_setup_flag_string))
+	{
+		Moptop_General_Error_Number = 32;
+		sprintf(Moptop_General_Error_String,"Moptop_Startup_CCD:Failed to get camera setup flag.");
+		return FALSE;
+	}
+	if(!Parse_Camera_Setup_Flag_String(camera_setup_flag_string,&camera_setup_flag))
+	{
+		/* Parse_Camera_Setup_Flag_String already sets error number/string */
+		if(camera_setup_flag_string != NULL)
+			free(camera_setup_flag_string);
+		return FALSE;
+	}		
+	if(camera_setup_flag_string != NULL)
+		free(camera_setup_flag_string);
+	CCD_Setup_Set_Camera_Setup(camera_setup_flag);
 	/* configure the timestamp mode the setup routine will configure */
 	if(!Moptop_Config_Get_Integer("ccd.timestamp_mode",&timestamp_mode))
 	{
@@ -971,7 +996,6 @@ static int Moptop_Shutdown_Filter_Wheel(void)
 	Moptop_General_Log("main","moptop_main.c","Moptop_Shutdown_Filter_Wheel",LOG_VERBOSITY_TERSE,"STARTUP",
 			   "Finished.");
 #endif
-
 	return TRUE;
 }
 
@@ -994,6 +1018,7 @@ static void Help(void)
  * Routine to parse command line arguments.
  * @param argc The number of arguments sent to the program.
  * @param argv An array of argument strings.
+ * @return The routine returns TRUE on success and FALSE on failure.
  * @see #Help
  * @see moptop_general.html#Moptop_General_Set_Config_Filename
  * @see moptop_general.html#Moptop_General_Set_Log_Filter_Level
@@ -1135,3 +1160,51 @@ static int Parse_Arguments(int argc, char *argv[])
 	return TRUE;
 }
 
+/**
+ * Parse a camera setup flag string into a flag belonging to the CCD_COMMAND_SETUP_FLAG enum.
+ * @param camera_setup_flag_string The string to parse, should be one of: "ROLLING_SHUTTER", "GLOBAL_SHUTTER", "GLOBAL_RESET".
+ * @param camera_setup_flag The address of an enum CCD_COMMAND_SETUP_FLAG, on a successful return this will be filled in
+ *       with the flag equivalent of camera_setup_flag_string.
+ * @return The routine returns TRUE on success and FALSE on failure.
+ * @see moptop_general.html#Moptop_General_Error_Number
+ * @see moptop_general.html#Moptop_General_Error_String
+ * @see moptop_general.html#Moptop_General_Log
+ * @see ../ccd-pco/cdocs/ccd_command.html#CCD_COMMAND_SETUP_FLAG
+ */
+static int Parse_Camera_Setup_Flag_String(char *camera_setup_flag_string,enum CCD_COMMAND_SETUP_FLAG *camera_setup_flag)
+{
+	if(camera_setup_flag_string == NULL)
+	{
+		Moptop_General_Error_Number = 33;
+		sprintf(Moptop_General_Error_String,"Parse_Camera_Setup_Flag_String:camera_setup_flag_string was NULL.");
+		return FALSE;
+	}
+	if(camera_setup_flag == NULL)
+	{
+		Moptop_General_Error_Number = 34;
+		sprintf(Moptop_General_Error_String,"Parse_Camera_Setup_Flag_String:camera_setup_flag was NULL.");
+		return FALSE;
+	}
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("main","moptop_main.c","Parse_Camera_Setup_Flag_String",LOG_VERBOSITY_INTERMEDIATE,"STARTUP",
+				  "Started to parse '%s'.",camera_setup_flag_string);
+#endif
+	if(strcmp(camera_setup_flag_string,"ROLLING_SHUTTER") == 0)
+		(*camera_setup_flag) = CCD_COMMAND_SETUP_FLAG_ROLLING_SHUTTER;
+	else if(strcmp(camera_setup_flag_string,"GLOBAL_SHUTTER") == 0)
+		(*camera_setup_flag) = CCD_COMMAND_SETUP_FLAG_GLOBAL_SHUTTER;
+	else if(strcmp(camera_setup_flag_string,"GLOBAL_RESET") == 0)
+		(*camera_setup_flag) = CCD_COMMAND_SETUP_FLAG_GLOBAL_RESET;
+	else
+	{
+		Moptop_General_Error_Number = 35;
+		sprintf(Moptop_General_Error_String,"Parse_Camera_Setup_Flag_String:Illegal camera setup flag string '%s'.",
+			camera_setup_flag_string);
+		return FALSE;
+	}
+#if MOPTOP_DEBUG > 1
+	Moptop_General_Log_Format("main","moptop_main.c","Parse_Camera_Setup_Flag_String",LOG_VERBOSITY_INTERMEDIATE,"STARTUP",
+				  "Camera setup flag '%s' returned flag 0x%x.",camera_setup_flag_string,(*camera_setup_flag));
+#endif	
+	return TRUE;
+}
