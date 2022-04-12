@@ -22,6 +22,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdarg.h>
+#include <unistd.h>
 #include "log_udp.h"
 #include "ccd_general.h"
 #include "ccd_command.h"
@@ -155,6 +156,14 @@ void CCD_Setup_Set_Timestamp_Mode(enum CCD_COMMAND_TIMESTAMP_MODE mode)
  * <li>We initialise the PCO camera library reference object using CCD_Command_Initialise_Camera.
  * <li>We open a connection to the CCD camera using CCD_Command_Open. 
  *     We connect to the camera specified by Setup_Data.Camera_Board.
+ * <li>We set the camera shutter readout mode to be global reset, by calling CCD_Command_Set_Camera_Setup(PCO_EDGE_SETUP_GLOBAL_RESET).
+ * <li>We reboot the camera head, to make the camera setup change take effect, by calling CCD_Command_Reboot_Camera.
+ * <li>We close the open connection to the camera head by calling CCD_Command_Close.
+ * <li>We delete the camer and logger object reference create in CCD_Command_Initialise_Camera by calling CCD_Command_Finalise.
+ * <li>We sleep for 10 seconds whilst the camera reboots.
+ * <li>We initialise the PCO camera library reference object again using CCD_Command_Initialise_Camera.
+ * <li>We open a connection to the CCD camera again using CCD_Command_Open. 
+ *     We connect to the camera specified by Setup_Data.Camera_Board.
  * <li>We initialise the PCO camera library grabber reference by calling CCD_Command_Initialise_Grabber.
  * <li>We set the PCO camera to use the current time by calling CCD_Command_Set_Camera_To_Current_Time.
  * <li>We stop any ongoing image acquisitions by calling CCD_Command_Set_Recording_State(FALSE).
@@ -184,6 +193,10 @@ void CCD_Setup_Set_Timestamp_Mode(enum CCD_COMMAND_TIMESTAMP_MODE mode)
  * @see #CCD_Setup_Set_Board
  * @see ccd_command.html#CCD_Command_Initialise_Camera
  * @see ccd_command.html#CCD_Command_Open
+ * @see ccd_command.html#CCD_Command_Set_Camera_Setup
+ * @see ccd_command.html#CCD_Command_Reboot_Camera
+ * @see ccd_command.html#CCD_Command_Close
+ * @see ccd_command.html#CCD_Command_Finalise
  * @see ccd_command.html#CCD_Command_Initialise_Grabber
  * @see ccd_command.html#CCD_Command_Set_Camera_To_Current_Time
  * @see ccd_command.html#CCD_Command_Set_Recording_State
@@ -212,17 +225,64 @@ int CCD_Setup_Startup(void)
 #if LOGGING > 0
 	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Setup_Startup: Started.");
 #endif /* LOGGING */
-	/* initialise the PCO camera library reference */
+	/* initialise the PCO camera library reference - first time */
 	if(!CCD_Command_Initialise_Camera())
 	{
 		Setup_Error_Number = 1;
 		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Initialise_Camera failed.");
 		return FALSE;
 	}
-	/* open a connection to the CCD camera */
+	/* open a connection to the CCD camera - first time */
 	if(!CCD_Command_Open(Setup_Data.Camera_Board))
 	{
 		Setup_Error_Number = 3;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Open(%d) failed.",Setup_Data.Camera_Board);
+		return FALSE;
+	}
+	/* set the camera shutter readout mode to be global reset */
+	if(!CCD_Command_Set_Camera_Setup(CCD_COMMAND_SETUP_FLAG_GLOBAL_RESET))
+	{
+		Setup_Error_Number = 27;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_Camera_Setup(0x%x) failed.",CCD_COMMAND_SETUP_FLAG_GLOBAL_RESET);
+		return FALSE;
+	}
+	/* reboot the camera head, to make the camera setup change take effect */
+	if(!CCD_Command_Reboot_Camera())
+	{
+		Setup_Error_Number = 28;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Reboot_Camera failed.");
+		return FALSE;
+	}	
+	/* close camera connection after reboot */
+	if(!CCD_Command_Close())
+	{
+		Setup_Error_Number = 30;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Close failed.");
+		return FALSE;
+	}
+	/* delete camera and logger object reference before recreating */
+	if(!CCD_Command_Finalise())
+	{
+		Setup_Error_Number = 32;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Finalise failed.");
+		return FALSE;
+	}
+	/* wait 10 seconds before attempting to re-connect. See MA_PCOSDK_V127.pdf,  Section 2.4.8, PCO_SetCameraSetup, P52 */
+#if LOGGING > 0
+	CCD_General_Log_Format(LOG_VERBOSITY_TERSE,"CCD_Setup_Startup: Sleeping for 10 seconds whilst the camera reboots.");
+#endif /* LOGGING */
+	sleep(10);
+	/* initialise the PCO camera library reference - second time */
+	if(!CCD_Command_Initialise_Camera())
+	{
+		Setup_Error_Number = 33;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Initialise_Camera failed.");
+		return FALSE;
+	}
+	/* open a connection to the CCD camera - second time */
+	if(!CCD_Command_Open(Setup_Data.Camera_Board))
+	{
+		Setup_Error_Number = 34;
 		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Open(%d) failed.",Setup_Data.Camera_Board);
 		return FALSE;
 	}
@@ -342,7 +402,7 @@ int CCD_Setup_Startup(void)
 	/* based on sensor type, figure out pixel sizes - PCO library cannot do this directly */
 	switch(sensor_type)
 	{
-		case 0x2002: /* sCMOS CIS1042_V1_FI_BW, as present in out pco.edge 4.2 */
+		case 0x2002: /* sCMOS CIS1042_V1_FI_BW, as present in our pco.edge 4.2 */
 			/* according to the PCO Edge manual MA_PCOEDGE_V225.pdf, P27 */
 			Setup_Data.Pixel_Width = 6.5;
 			Setup_Data.Pixel_Height = 6.5;
@@ -350,7 +410,7 @@ int CCD_Setup_Startup(void)
 		default:
 			Setup_Error_Number = 25;
 			sprintf(Setup_Error_String,"CCD_Setup_Startup: Unknown sensor type 0x%x : "
-				"unable to set pixel size.",0x2002);
+				"unable to set pixel size.",sensor_type);
 			return FALSE;
 	}
 	/* prepare camera for taking data */
