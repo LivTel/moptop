@@ -53,9 +53,9 @@ end
 #
 # Ensure LD_LIBRARY_PATH includes moptop libraries dir so send_command below works.
 #
-if ( -d /icc/bin/moptop/lib/${HOSTTYPE} ) then
-    echo "Adding /icc/bin/moptop/lib/${HOSTTYPE} to LD_LIBRARY_PATH."
-    setenv LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/icc/bin/moptop/lib/${HOSTTYPE}"
+if ( -d /icc/bin/lib/${HOSTTYPE} ) then
+    echo "Adding /icc/bin/lib/${HOSTTYPE} to LD_LIBRARY_PATH."
+    setenv LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/icc/bin/lib/${HOSTTYPE}"
 endif
 #
 # Kill any running processes
@@ -127,7 +127,7 @@ foreach dir ( ${dir_list} )
     endif
 end
 echo "Setting up autobooter script."
-# Ubuntu 10.04
+# Ubuntu 20.04
 chmod ugo+x /etc/init.d/autobooter
 chmod go-w /etc/init.d/autobooter
 chown root:root /etc/init.d/autobooter
