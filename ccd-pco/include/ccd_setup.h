@@ -17,6 +17,7 @@ extern "C" {
 #endif
 
 extern void CCD_Setup_Set_Board(int board);
+extern void CCD_Setup_Set_Camera_Setup(enum CCD_COMMAND_SETUP_FLAG setup_flag);
 extern void CCD_Setup_Set_Timestamp_Mode(enum CCD_COMMAND_TIMESTAMP_MODE mode);
 extern int CCD_Setup_Startup(void);
 extern int CCD_Setup_Shutdown(void);

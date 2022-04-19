@@ -38,7 +38,7 @@ static void Help(void);
  * <li>We setup the CCD library's logging with calls to CCD_General_Set_Log_Filter_Level, 
  *     CCD_General_Set_Log_Filter_Function, CCD_General_Log_Filter_Level_Absolute, 
  *     CCD_General_Set_Log_Handler_Function, CCD_General_Log_Handler_Stdout.
- * <li>We initialise the library by calling CCD_Command_Initialise.
+ * <li>We initialise the PCO camera library reference by calling CCD_Command_Initialise_Camera.
  * <li>We open a connection to the camera specified by Camera_Board, by calling CCD_Command_Open.
  * <li>We get a print the camera type/serial number by calling CCD_Command_Get_Camera_Type.
  * <li>We close the camera connection by calling CCD_Command_Close.
@@ -56,7 +56,7 @@ static void Help(void);
  * @see ../cdocs/ccd_general.html#CCD_General_Set_Log_Handler_Function
  * @see ../cdocs/ccd_general.html#CCD_General_Error
  * @see ../cdocs/ccd_general.html#CCD_General_Log_Handler_Stdout
- * @see ../cdocs/ccd_command.html#CCD_Command_Initialise
+ * @see ../cdocs/ccd_command.html#CCD_Command_Initialise_Camera
  * @see ../cdocs/ccd_command.html#CCD_Command_Open
  * @see ../cdocs/ccd_command.html#CCD_Command_Get_Camera_Type
  * @see ../cdocs/ccd_command.html#CCD_Command_Close
@@ -73,8 +73,8 @@ int main(int argc, char *argv[])
 	CCD_General_Set_Log_Filter_Level(Log_Level);
 	CCD_General_Set_Log_Filter_Function(CCD_General_Log_Filter_Level_Absolute);
 	CCD_General_Set_Log_Handler_Function(CCD_General_Log_Handler_Stdout);
-	/* initialise the command module */
-	if(!CCD_Command_Initialise())
+	/* initialise the command module PCO camera object reference */
+	if(!CCD_Command_Initialise_Camera())
 	{
 		CCD_General_Error();
 		return 2;
