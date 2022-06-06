@@ -980,7 +980,7 @@ void Moptop_Multrun_Flip_Y(int ncols,int nrows,unsigned short *exposure_data)
  *     <li>We compute which rotation we are on and store it in Multrun_Data.Rotation_Number.
  *     <li>We compute the image we are taking within the current rotation and store it in Multrun_Data.Sequence_Number.
  *     <li>We wait for a readout by calling CCD_Command_Grabber_Acquire_Image_Async_Wait_Timeout with a timeout
- *         for times the time between two triggers.
+ *         four times the time between two triggers.
  *     <li>If the rotator is configured (Moptop_Config_Rotator_Is_Enabled) we retrieve the actual final rotator 
  *         position using PIROT_Command_Query_POS, and use it compute the rotator_difference and the
  *         rotator_end_angle (the curent position in the current rotation).
@@ -989,7 +989,7 @@ void Moptop_Multrun_Flip_Y(int ncols,int nrows,unsigned short *exposure_data)
  *     <li>We get the camera image timestamp from the image metadata using CCD_Command_Get_Timestamp_From_Metadata.
  *     <li>We get an exposure end timestamp and store it in exposure_end_time.
  *     <li>We call Multrun_Get_Fits_Filename to generate a new FITS filename.
- *     <li>We call Multrun_Write_Fits_Image to write the image data to the generated FTYS filename.
+ *     <li>We call Multrun_Write_Fits_Image to write the image data to the generated FITS filename.
  *     <li>We add the generated filename to the filename list using CCD_Fits_Filename_List_Add.
  *     <li>We increment requested_rotator_angle to the theoretical rotator start angle of the next image.
  *     <li>We check whether the multrun has been aborted (Moptop_Abort).

@@ -186,7 +186,7 @@ void CCD_Setup_Set_Timestamp_Mode(enum CCD_COMMAND_TIMESTAMP_MODE mode)
  *     by calling CCD_Command_Set_Camera_Setup with the previously configured Setup_Data.Camera_Setup_Flag as a parameter.
  * <li>We reboot the camera head, to make the camera setup change take effect, by calling CCD_Command_Reboot_Camera.
  * <li>We close the open connection to the camera head by calling CCD_Command_Close.
- * <li>We delete the camer and logger object reference create in CCD_Command_Initialise_Camera by calling CCD_Command_Finalise.
+ * <li>We delete the camera and logger object reference create in CCD_Command_Initialise_Camera by calling CCD_Command_Finalise.
  * <li>We sleep for 10 seconds whilst the camera reboots.
  * <li>We initialise the PCO camera library reference object again using CCD_Command_Initialise_Camera.
  * <li>We open a connection to the CCD camera again using CCD_Command_Open. 
