@@ -259,7 +259,7 @@ void Moptop_General_Error(char *sub_system,char *source_filename,char *function,
  * A general error routine.
  * <b>Note</b> you cannot call both Moptop_General_Error and Moptop_General_Error_To_String 
  * to print the error string and 
- * get a string copy of it, only one of the error routines can be called after libccd has generated an error.
+ * get a string copy of it, only one of the error routines can be called after an error has been generated.
  * A second call to one of these routines will generate a 'Error not found' error!.
  * @param sub_system The sub system. Can be NULL.
  * @param source_file The source filename. Can be NULL.
@@ -719,7 +719,7 @@ void Moptop_General_Log_Handler_Log_Hourly_File(char *sub_system,char *source_fi
  * @see ../../log_udp/cdocs/log_udp.html#Log_UDP_Open
  * @see ../../log_udp/cdocs/log_udp.html#Log_UDP_Send
  * @see ../../log_udp/cdocs/log_create.html#Log_Create_Record
- * @see ../../log_udp/cdocs/log_general.htmlLog_General_Error
+ * @see ../../log_udp/cdocs/log_general.html#Log_General_Error
  */
 void Moptop_General_Log_Handler_Log_UDP(char *sub_system,char *source_filename,char *function,
 						    int level,char *category,char *message)

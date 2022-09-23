@@ -447,7 +447,7 @@ int Moptop_Config_Rotator_Is_Enabled(void)
 
 /**
  * Wrapper routine to make testing whether the filter wheel is enabled easier.
- * @return The routine returns TRUE if the rotator is enabled (filter_wheel.enable=true) and FALSE if it is not enabled,
+ * @return The routine returns TRUE if the filter wheel is enabled (filter_wheel.enable=true) and FALSE if it is not enabled,
  *         or an error occurs.
  * @see #Moptop_Config_Get_Boolean
  * @see moptop_general.html#Moptop_General_Error
