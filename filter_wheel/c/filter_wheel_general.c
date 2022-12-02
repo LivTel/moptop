@@ -193,7 +193,7 @@ int Filter_Wheel_General_Get_Error_Number(void)
 
 /**
  * Routine to get the current time in a string. The string is returned in the format
- * '01/01/2000 13:59:59.123 UTC'.
+ * '01-01-2000T13:59:59.123 UTC'.
  * The time is in UTC.
  * @param time_string The string to fill with the current time.
  * @param string_length The length of the buffer passed in. It is recommended the length is at least 20 characters.

@@ -175,6 +175,7 @@ int Filter_Wheel_Command_Open(char *device_name)
 #endif /* LOGGING */
 	return TRUE;
 }
+
 /**
  * Close the previously opened connection to the filter wheel. 
  * <ul>
