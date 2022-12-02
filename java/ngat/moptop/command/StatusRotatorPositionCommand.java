@@ -53,7 +53,6 @@ public class StatusRotatorPositionCommand extends DoubleReplyCommand implements 
 
 	/**
 	 * Get the rotator position, in degrees. 
-	 * This is either the per-frame length of one exposure in milliseconds.
 	 * @return A double, the rotator position, in degrees. 
 	 * @exception Exception Thrown if getting the data fails, either the run method failed to communicate
 	 *         with the server in some way, or the method was called before the command had completed.
