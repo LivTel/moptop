@@ -86,11 +86,7 @@ int main(int argc, char *argv[])
 	CCD_General_Set_Log_Filter_Function(CCD_General_Log_Filter_Level_Absolute);
 	CCD_General_Set_Log_Handler_Function(CCD_General_Log_Handler_Stdout);
 	/* set camera */
-	if(!CCD_Setup_Set_Board(Camera_Board))
-	{
-		CCD_General_Error();
-		return 2;
-	}		
+	CCD_Setup_Set_Board(Camera_Board);
 	/* do startup */
 	if(!CCD_Setup_Startup())
 	{

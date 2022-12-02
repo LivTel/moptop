@@ -1,5 +1,5 @@
 #!/bin/csh
-# Script to check the inter-frame timings of an internal triggered multrun for one camera
+# Script to check the inter-frame timings of an external triggered multrun for one camera
 if ( $#argv != 3 ) then
    echo "moptop_analyse_frame_timings <camera number> <date> <multrun>"
    exit 1

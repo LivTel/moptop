@@ -531,7 +531,7 @@ static int Moptop_Startup_CCD(void)
 		return FALSE;
 	}
 	CCD_Setup_Set_Timestamp_Mode(timestamp_mode);
-	/* actually do initialisation of the CCD/Andor library */
+	/* actually do initialisation of the CCD library */
 #if MOPTOP_DEBUG > 1
 	Moptop_General_Log_Format("main","moptop_main.c","Moptop_Shutdown_CCD",LOG_VERBOSITY_TERSE,"STARTUP",
 				  "Calling CCD_Setup_Startup for camera board %d.",board_number);

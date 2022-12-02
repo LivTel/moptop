@@ -351,7 +351,7 @@ int Moptop_Multrun_Setup(int *multrun_number)
 	/* else do nothing, the config filter command should have updated Multrun_Data.Filter_Name */
 	/* Convert the filter name Multrun_Data.Filter_Name into an Id Multrun_Data.Filter_Id.
 	** We do the conversion here rather than Moptop_Multrun_Filter_Name_Set, as
-	** Moptop_Multrun_Filter_Name_Set only gets called on C layers that have no filter wheel (moptop2).
+	** Moptop_Multrun_Filter_Name_Set only gets called on C layers that have no filter wheel (moptop2/moptop4).
 	** We have also modified Moptop_Config_Load to _always_ call Filter_Wheel_Config_Initialise so we can
 	** use the name -> id mapping here. */
 	if(!Filter_Wheel_Config_Name_To_Id(Multrun_Data.Filter_Name,Multrun_Data.Filter_Id))
@@ -400,13 +400,11 @@ int Moptop_Multrun_Setup(int *multrun_number)
  * <li>We compute the number of exposures (Multrun_Data.Image_Count) = rotation_count*(360.0/trigger_step_angle).
  * <li>We compute the rotator_end_position = (360.0 * rotation_count)-PIROT_SETUP_ROTATOR_TOLERANCE. 
  *     We stop short on the last exposure to avoid an extra trigger/frame.
- * <li>We queue the image buffers for the acquisitions using CCD_Buffer_Queue_Images.
- * <li>We reset the cameras internal timestamp clock using CCD_Command_Timestamp_Clock_Reset.
- * <li>We set the camera shutter to open and close automatially using CCD_Command_Set_Shutter_Mode.
- * <li>We set the camera to trigger externally (from the rotator) using CCD_Command_Set_Trigger_Mode.
- * <li>We set the camera to continuously take images using CCD_Command_Set_Cycle_Mode to set the cycle mode
- *     to CCD_COMMAND_CYCLE_MODE_CONTINUOUS.
- * <li>We enable the camera for acquisitions using CCD_Command_Acquisition_Start.
+ * <li>We set the camera to externally trigger by calling CCD_Command_Set_Trigger_Mode with parameter
+ *     CCD_COMMAND_TRIGGER_MODE_EXTERNAL.
+ * <li>We update the cameras internal settings with it's previously configured data by calling CCD_Command_Arm_Camera.
+ * <li>We update the image grabbers internal data to match by calling CCD_Command_Grabber_Post_Arm.
+ * <li>We tell the camera to start responding to triggers by calling CCD_Command_Set_Recording_State(TRUE).
  * <li>If the rotator is enabled (Moptop_Config_Rotator_Is_Enabled):
  *     <ul>
  *     <li>We enable the rotator hardware triggers using PIROT_Command_TRO.
@@ -414,9 +412,9 @@ int Moptop_Multrun_Setup(int *multrun_number)
  *         PIROT_Command_MOV(rotator_end_position).
  *     </ul>
  * <li>We acquire the image date using  Multrun_Acquire_Images.
- * <li>We disable the camera for acquisition using CCD_Command_Acquisition_Stop.
- * <li>We set the camera to trigger from software using CCD_Command_Set_Trigger_Mode.
- * <li>We flush the camera (and associated queued image buffers) using CCD_Command_Flush.
+ * <li>We stop the camera recording image by calling CCD_Command_Set_Recording_State(FALSE).
+ * <li>We set the camera back to internal triggers by calling CCD_Command_Set_Trigger_Mode with parameter
+ *     CCD_COMMAND_TRIGGER_MODE_INTERNAL.
  * <li>If the rotator is enabled (Moptop_Config_Rotator_Is_Enabled):
  *     <ul>
  *     <li>We disable the rotator hardware triggers using PIROT_Command_TRO.
@@ -444,6 +442,8 @@ int Moptop_Multrun_Setup(int *multrun_number)
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Run_Velocity_Get
  * @see moptop_multrun.html#Moptop_Multrun_Rotator_Step_Angle_Get
  * @see ../ccd/cdocs/ccd_command.html#CCD_COMMAND_TRIGGER_MODE
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Arm_Camera
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Grabber_Post_Arm
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Recording_State
  * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Trigger_Mode
  * @see ../pirot/cdocs/pirot_command.html#PIROT_Command_TRO
@@ -985,7 +985,7 @@ void Moptop_Multrun_Flip_Y(int ncols,int nrows,unsigned short *exposure_data)
  *         position using PIROT_Command_Query_POS, and use it compute the rotator_difference and the
  *         rotator_end_angle (the curent position in the current rotation).
  *     <li>If the rotator is _not_ configured  we compute a theoretical rotator_difference and rotator_end_angle.
- *     <li>We get the camera image number from the image metadata usingCCD_Command_Get_Image_Number_From_Metadata.
+ *     <li>We get the camera image number from the image metadata using CCD_Command_Get_Image_Number_From_Metadata.
  *     <li>We get the camera image timestamp from the image metadata using CCD_Command_Get_Timestamp_From_Metadata.
  *     <li>We get an exposure end timestamp and store it in exposure_end_time.
  *     <li>We call Multrun_Get_Fits_Filename to generate a new FITS filename.
