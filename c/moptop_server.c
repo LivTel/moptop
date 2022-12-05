@@ -58,7 +58,7 @@ static int Send_Binary_Reply_Error(Command_Server_Handle_T connection_handle);
 /**
  * Moptop server initialisation routine. Assumes Moptop_Config_Load has previously been called
  * to load the configuration file.
- * It loads the unsigned short with key ""command.server.port_number" into the Command_Server_Port_Number variable
+ * It loads the unsigned short with key "command.server.port_number" into the Command_Server_Port_Number variable
  * for use in Moptop_Server_Start.
  * @return The routine returns TRUE if successfull, and FALSE if an error occurs.
  * @see #Moptop_Server_Start
@@ -618,7 +618,7 @@ static void Server_Connection_Callback(Command_Server_Handle_T connection_handle
 
 /**
  * Send a message back to the client.
- * @param connection_handle Globus_io connection handle for this thread.
+ * @param connection_handle The command server connection handle for this thread.
  * @param reply_message The message to send.
  * @return The routine returns TRUE on success and FALSE on failure.
  * @see moptop_general.html#Moptop_General_Error_Number
