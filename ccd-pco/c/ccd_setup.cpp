@@ -266,6 +266,13 @@ int CCD_Setup_Startup(void)
 		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Open(%d) failed.",Setup_Data.Camera_Board);
 		return FALSE;
 	}
+	/* stop any ongoing exposures */
+	if(!CCD_Command_Set_Recording_State(FALSE))
+	{
+		Setup_Error_Number = 35;
+		sprintf(Setup_Error_String,"CCD_Setup_Startup: CCD_Command_Set_Recording_State(FALSE) failed.");
+		return FALSE;
+	}
 	/* set the camera shutter readout/reset mode */
 	if(!CCD_Command_Set_Camera_Setup(Setup_Data.Camera_Setup_Flag))
 	{
