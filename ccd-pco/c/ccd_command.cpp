@@ -447,7 +447,7 @@ int CCD_Command_Reboot_Camera(void)
 	{
 		Command_Error_Number = 100;
 		sprintf(Command_Error_String,"CCD_Command_Reboot_Camera:"
-			"Camera PCO_ArmCamera failed with PCO error code 0x%x (%s).",pco_err,
+			"Camera PCO_RebootCamera failed with PCO error code 0x%x (%s).",pco_err,
 			Command_PCO_Get_Error_Text(pco_err));
 		return FALSE;
 	}
