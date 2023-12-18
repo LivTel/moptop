@@ -16,7 +16,7 @@ import ngat.util.logging.*;
  * This class provides the implementation for the ABORT command sent to a server using the
  * Java Message System.
  * @author Chris Mottram
- * @version $Revision: 1.1 $
+ * @version $Revision$
  */
 public class ABORTImplementation extends CommandImplementation implements JMSCommandImplementation
 {

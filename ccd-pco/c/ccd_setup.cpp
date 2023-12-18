@@ -47,9 +47,9 @@
  * <dt>Binning</dt> <dd>The readout binning, stored as an integer. Can be one of 1,2,3,4,8. </dd>
  * <dt>Serial_Number</dt> <dd>An integer containing the serial number retrieved from the camera head
  *                            Retrieved from the camera library during CCD_Setup_Startup.</dd>
- * <dt>Pixel_Width</dt> <dd>A double storing the pixel width in micrometers. Setup from the sensot type 
+ * <dt>Pixel_Width</dt> <dd>A double storing the pixel width in micrometers. Setup from the sensor type 
  *                          during CCD_Setup_Startup.</dd>
- * <dt>Pixel_Height</dt> <dd>A double storing the pixel height in micrometers. Setup from the sensot type 
+ * <dt>Pixel_Height</dt> <dd>A double storing the pixel height in micrometers. Setup from the sensor type 
  *                          during CCD_Setup_Startup.</dd>
  * <dt>Sensor_Width</dt> <dd>An integer storing the sensor width in pixels retrieved from the camera during 
  *                       CCD_Setup_Startup.</dd>

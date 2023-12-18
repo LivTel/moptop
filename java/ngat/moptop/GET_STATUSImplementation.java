@@ -481,7 +481,7 @@ public class GET_STATUSImplementation extends CommandImplementation implements J
 	/**
 	 * Get the exposure length. An instance of StatusExposureLengthCommand is used to send the command
 	 * to each C layer. The returned value is stored in
-	 * the hashTable, under the "Exposure Length,"+cLayerIndex key.
+	 * the hashTable, under the "Exposure Length."+cLayerIndex key.
 	 * @exception Exception Thrown if an error occurs.
 	 * @see #hashTable
 	 * @see #cLayerCount

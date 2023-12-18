@@ -6,8 +6,8 @@
 # to print line 1 of the file.
 # Note does NOT work by default under Solaris, as /bin/awk does not support -v
 # Use /usr/xpg4/bin/awk instead: i.e. : /usr/xpg4/bin/awk -f print_line.awk
-# $Author: cjm $
-# $Revision: 1.1 $
+# $Author$
+# $Revision$
 BEGIN {
     lineno=1
 }

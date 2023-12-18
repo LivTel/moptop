@@ -1877,7 +1877,7 @@ int CCD_Command_Get_Actual_Size(int *image_width,int *image_height)
 
 /**
  * Get the size of the image in bytes.
- * @param image_size The address opf an integer to return the image size, in bytes.
+ * @param image_size The address of an integer to return the image size, in bytes.
  * @return The routine returns TRUE on success and FALSE if an error occurs.
  * @see #Command_Error_Number
  * @see #Command_Error_String
