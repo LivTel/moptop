@@ -279,6 +279,8 @@ int Moptop_Multrun_Flip_Set(int flip_x,int flip_y)
  *     Multrun_Data.CCD_Temperature.
  * <li>We get and cache the current CCD temperature status string using CCD_Temperature_Get_Temperature_Status_String 
  *     to store the temperature in Multrun_Data.CCD_Temperature_Status_String.
+ * <li>We set the PCO camera to use the current time by calling CCD_Command_Set_Camera_To_Current_Time.
+ *     We must do this every multrun as the internal camera clocks drift with respect to real time, see Fault 2745.
  * <li>We configure whether to flip the output image data before writing to disk. We use Moptop_Config_Get_Boolean
  *     to retrieve the 'moptop.multrun.image.flip.x' and 'moptop.multrun.image.flip.y' config from the config file,
  *     and then call Moptop_Multrun_Flip_Set to set the flip flags for later use in the readout code.
@@ -293,7 +295,7 @@ int Moptop_Multrun_Flip_Set(int flip_x,int flip_y)
  * @see moptop_general.html#Moptop_General_Error_String
  * @see moptop_config.html#Moptop_Config_Rotator_Is_Enabled
  * @see moptop_config.html#Moptop_Config_Filter_Wheel_Is_Enabled
- * @see moptop_config.html#
+ * @see ../ccd/cdocs/ccd_command.html#CCD_Command_Set_Camera_To_Current_Time
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Next_Multrun
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Multrun_Get
  * @see ../ccd/cdocs/ccd_fits_filename.html#CCD_Fits_Filename_Next_Run
@@ -373,6 +375,15 @@ int Moptop_Multrun_Setup(int *multrun_number)
 		Moptop_General_Error_Number = 629;
 		sprintf(Moptop_General_Error_String,"Moptop_Multrun_Setup: Failed to get CCD temperature status string.");
 		return FALSE;		
+	}
+	/* set the camera's internal clock to the current system time.
+	** We do this for every multrun as the camera's internal clock drifts with respect to real time, see
+	** Fault #2745 for details */
+	if(!CCD_Command_Set_Camera_To_Current_Time())
+	{
+		Moptop_General_Error_Number = 621;
+		sprintf(Moptop_General_Error_String,"Moptop_Multrun_Setup: Failed to set the camera to the current time.");
+		return FALSE;
 	}
 	/* configure flipping of output image */
 	if(!Moptop_Config_Get_Boolean("moptop.multrun.image.flip.x",&flip_x))
