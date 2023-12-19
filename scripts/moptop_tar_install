@@ -55,7 +55,11 @@ end
 #
 if ( -d /icc/bin/lib/${HOSTTYPE} ) then
     echo "Adding /icc/bin/lib/${HOSTTYPE} to LD_LIBRARY_PATH."
-    setenv LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/icc/bin/lib/${HOSTTYPE}"
+    if ( ${?LD_LIBRARY_PATH} ) then
+	setenv LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/icc/bin/lib/${HOSTTYPE}"
+    else
+	setenv LD_LIBRARY_PATH ".:/icc/bin/lib/${HOSTTYPE}"
+    endif
 endif
 #
 # Kill any running processes
